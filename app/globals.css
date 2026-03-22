@@ -1,29 +1,16 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root {
+  --brand-navy: #0c1b2e;
+  --brand-deep: #142d4a;
+  --brand-blue: #1a6bb5;
+  --brand-sky: #4da3e0;
+  --brand-gold: #c9a55c;
+  --brand-cream: #f5f0e8;
+  --brand-warm: #faf7f2;
 }
-
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  background: #0a0c0f;
-  color: #fff;
-  font-family: 'DM Sans', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a { text-decoration: none; color: inherit; }
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-@keyframes scroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1a1a1a; background: #ffffff; -webkit-font-smoothing: antialiased; }
+::selection { background: #c9a55c; color: #0c1b2e; }
