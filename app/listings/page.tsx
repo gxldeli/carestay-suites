@@ -8,6 +8,10 @@ interface Listing { id: number | string; title: string; location: string; beds: 
 export default function AllListingsPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [bedFilter, setBedFilter] = useState("all");
+  const [priceFilter, setPriceFilter] = useState("all");
+  const [areaFilter, setAreaFilter] = useState("all");
   useEffect(() => {
     fetch("/api/listings")
       .then(r => r.json())
@@ -37,8 +41,13 @@ export default function AllListingsPage() {
         .listing-body{padding:16px 18px}
         .listing-tag{background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);color:#0fa;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
         .listing-avail{background:rgba(0,255,170,0.15);color:#0fa;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
+        .filter-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px}
+        .filter-input{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px;color:#fff;font-size:14px;outline:none;font-family:inherit}
+        .filter-input:focus{border-color:rgba(0,255,170,0.4)}
+        .filter-select{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px;color:#fff;font-size:13px;outline:none;font-family:inherit;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(255,255,255,0.4)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+        .filter-select option{background:#12151a;color:#fff}
         @media(max-width:900px){.listings-grid{grid-template-columns:repeat(2,1fr)}}
-        @media(max-width:600px){.listings-grid{grid-template-columns:1fr}.nav-links{display:none!important}.nav-mobile{display:block!important}}
+        @media(max-width:600px){.listings-grid{grid-template-columns:1fr}.nav-links{display:none!important}.nav-mobile{display:block!important}.filter-bar{flex-direction:column}}
       `}</style>
 
       <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(10,12,15,0.95)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -48,7 +57,7 @@ export default function AllListingsPage() {
             <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "#fff" }}>CareStay <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.6)" }}>Suites</span></span>
           </Link>
           <div className="nav-links">
-            {["Listings", "Healthcare", "About", "Contact"].map(i => <a key={i} href={`/#${i.toLowerCase()}`} className="nav-link">{i}</a>)}
+            {[{ label: "Listings", href: "/#listings" }, { label: "Healthcare", href: "/#healthcare" }, { label: "About", href: "/about" }, { label: "Contact", href: "/#contact" }].map(i => <a key={i.label} href={i.href} className="nav-link">{i.label}</a>)}
             <a href="/#contact" className="nav-cta">Inquire Now</a>
           </div>
         </div>
@@ -57,13 +66,54 @@ export default function AllListingsPage() {
       <main style={{ paddingTop: 72 }}>
         <div className="wrap" style={{ padding: "60px 24px 80px" }}>
           <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, marginBottom: 8 }}>All Suites</h1>
-          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", marginBottom: 40 }}>{listings.length} properties available across the GTA</p>
+          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", marginBottom: 24 }}>{listings.length} properties available across the GTA</p>
+
+          {/* Filter Bar */}
+          <div className="filter-bar">
+            <input type="text" placeholder="Search by name or location..." className="filter-input" style={{ flex: "1 1 200px", minWidth: 200 }} value={search} onChange={e => setSearch(e.target.value)} />
+            <select className="filter-select" value={bedFilter} onChange={e => setBedFilter(e.target.value)}>
+              <option value="all">All Beds</option>
+              <option value="1">1 Bedroom</option>
+              <option value="2">2 Bedrooms</option>
+              <option value="3">3+ Bedrooms</option>
+            </select>
+            <select className="filter-select" value={priceFilter} onChange={e => setPriceFilter(e.target.value)}>
+              <option value="all">Any Price</option>
+              <option value="under2500">Under $2,500/mo</option>
+              <option value="2500-3500">$2,500 - $3,500/mo</option>
+              <option value="over3500">$3,500+/mo</option>
+            </select>
+            <select className="filter-select" value={areaFilter} onChange={e => setAreaFilter(e.target.value)}>
+              <option value="all">All Areas</option>
+              <option value="Downtown Toronto">Downtown Toronto</option>
+              <option value="North York">North York</option>
+              <option value="Scarborough">Scarborough</option>
+              <option value="Mississauga">Mississauga</option>
+              <option value="Brampton">Brampton</option>
+              <option value="Etobicoke">Etobicoke</option>
+            </select>
+          </div>
 
           {loading ? (
             <div style={{ textAlign: "center", padding: 60, color: "rgba(255,255,255,0.4)" }}>Loading listings...</div>
-          ) : (
+          ) : (() => {
+            const filtered = listings.filter(l => {
+              const q = search.toLowerCase();
+              if (q && !l.title.toLowerCase().includes(q) && !l.location.toLowerCase().includes(q)) return false;
+              if (bedFilter === "1" && l.beds !== 1) return false;
+              if (bedFilter === "2" && l.beds !== 2) return false;
+              if (bedFilter === "3" && l.beds < 3) return false;
+              if (priceFilter === "under2500" && l.price >= 2500) return false;
+              if (priceFilter === "2500-3500" && (l.price < 2500 || l.price > 3500)) return false;
+              if (priceFilter === "over3500" && l.price <= 3500) return false;
+              if (areaFilter !== "all" && !l.location.toLowerCase().includes(areaFilter.toLowerCase())) return false;
+              return true;
+            });
+            return filtered.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 60, color: "rgba(255,255,255,0.4)" }}>No listings match your filters. Try broadening your search.</div>
+            ) : (
             <div className="listings-grid">
-              {listings.map((l) => (
+              {filtered.map((l) => (
                 <Link key={l.id} href={`/listings/${l.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                   <div className="listing-card">
                     <div style={{ position: "relative", overflow: "hidden" }}>
@@ -91,7 +141,8 @@ export default function AllListingsPage() {
                 </Link>
               ))}
             </div>
-          )}
+            );
+          })()}
         </div>
       </main>
     </>
