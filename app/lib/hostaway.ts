@@ -66,12 +66,15 @@ export interface HostAwayListing {
   roomTypeId: number;
   bathroomType: string;
   thumbnailUrl: string;
-  pictures: Array<{ url: string; caption: string }>;
+  pictures: Array<{ url: string; caption: string; originalUrl?: string }>;
+  images: Array<{ url: string; caption?: string; originalUrl?: string }>;
+  listingImages: Array<{ url: string; originalUrl?: string }>;
   amenities: string[];
   price: number;
   currencyCode: string;
   isActive: number;
   tags: string[];
+  [key: string]: unknown;
 }
 
 export async function getListings(): Promise<HostAwayListing[]> {
@@ -103,7 +106,20 @@ export async function getListings(): Promise<HostAwayListing[]> {
   // Filter to only listings tagged with "carestay"
   // If no tag filter needed, remove this filter
   console.log("[HostAway] Raw listings count:", (data.result || []).length);
-  if (data.result?.[0]) console.log("[HostAway] First listing:", JSON.stringify(data.result[0]).substring(0, 500));
+  if (data.result?.[0]) {
+    const first = data.result[0];
+    console.log("[HostAway] First listing keys:", Object.keys(first));
+    console.log("[HostAway] First listing image fields:", {
+      thumbnailUrl: first.thumbnailUrl,
+      hasPictures: !!first.pictures, picturesCount: first.pictures?.length,
+      hasImages: !!first.images, imagesCount: first.images?.length,
+      hasPhotos: !!first.photos, photosCount: first.photos?.length,
+      hasListingImages: !!first.listingImages, listingImagesCount: first.listingImages?.length,
+    });
+    if (first.pictures?.[0]) console.log("[HostAway] First picture object:", JSON.stringify(first.pictures[0]).substring(0, 300));
+    if (first.images?.[0]) console.log("[HostAway] First image object:", JSON.stringify(first.images[0]).substring(0, 300));
+    if (first.listingImages?.[0]) console.log("[HostAway] First listingImage object:", JSON.stringify(first.listingImages[0]).substring(0, 300));
+  }
   const listings = data.result || [];
 
   return listings;
