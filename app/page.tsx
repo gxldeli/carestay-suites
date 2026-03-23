@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, ReactNode } from "react";
 import Link from "next/link";
 
 /* ─── DATA ─── */
-const LISTINGS = [
+const SHOWCASE_LISTINGS = [
   { id: 1, title: "The Pinnacle Suite", location: "Downtown Toronto", beds: 1, baths: 1, price: 2800, sqft: 580, img: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80", tag: "Near UHN", available: true },
   { id: 2, title: "Lakeview Residence", location: "Harbourfront", beds: 2, baths: 1, price: 3600, sqft: 820, img: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80", tag: "Near St. Michael's", available: true },
   { id: 3, title: "Midtown Medical Suite", location: "Yonge & Eglinton", beds: 1, baths: 1, price: 2600, sqft: 540, img: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80", tag: "Near Sunnybrook", available: false },
@@ -253,7 +253,29 @@ function Stats() {
 }
 
 /* ─── LISTINGS ─── */
+interface ListingCard { id: number; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean }
+
 function ListingsSection() {
+  const [apiListings, setApiListings] = useState<ListingCard[]>([]);
+  useEffect(() => {
+    fetch("/api/listings")
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === "success" && data.listings) {
+          setApiListings(data.listings.map((l: { id: number; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string }) => ({
+            id: l.id, title: l.title, location: l.location, beds: l.beds, baths: l.baths,
+            price: l.price, sqft: l.sqft, img: l.img, tag: "Verified", available: true,
+          })));
+        }
+      })
+      .catch(err => console.error("Failed to fetch API listings:", err));
+  }, []);
+
+  const allListings: (ListingCard & { source: "api" | "showcase" })[] = [
+    ...apiListings.map(l => ({ ...l, source: "api" as const })),
+    ...SHOWCASE_LISTINGS.map(l => ({ ...l, source: "showcase" as const, available: false })),
+  ];
+
   return (
     <section id="listings" className="pad" style={{ background: "#0a0c0f" }}>
       <div className="wrap">
@@ -265,15 +287,15 @@ function ListingsSection() {
           </div>
         </FadeIn>
         <div className="listings-grid">
-          {LISTINGS.map((l, i) => (
-            <FadeIn key={l.id} delay={i * 0.06}>
+          {allListings.map((l, i) => (
+            <FadeIn key={`${l.source}-${l.id}`} delay={i * 0.06}>
               <Link href={`/listings/${l.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                 <div className="listing-card">
                   <div style={{ position: "relative", overflow: "hidden" }}>
                     <img src={l.img} alt={l.title} className="listing-img" />
                     <div className="listing-tags">
                       <span className="listing-tag">{l.tag}</span>
-                      <span className={l.available ? "listing-avail" : "listing-wait"}>{l.available ? "Available" : "Waitlist"}</span>
+                      <span className={l.available ? "listing-avail" : "listing-wait"}>{l.available ? "Available" : l.source === "showcase" ? "Coming Soon" : "Waitlist"}</span>
                     </div>
                   </div>
                   <div className="listing-body">
