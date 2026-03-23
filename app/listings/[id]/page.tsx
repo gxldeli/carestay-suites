@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
@@ -20,10 +21,41 @@ const CARESTAY_STANDARD = [
   { icon: "💆", name: "Massage Gun", desc: "Full body recovery tool" },
 ];
 
+function Nav({ scrolled }: { scrolled: boolean }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: scrolled ? "rgba(10,12,15,0.95)" : "rgba(10,12,15,0.92)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)", transition: "all 0.4s" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 72 }}>
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: "linear-gradient(135deg,#0fa,#0af)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#0a0c0f" }}>CS</div>
+          <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "#fff" }}>CareStay <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.6)" }}>Suites</span></span>
+        </Link>
+        <div className="nav-links">
+          {["Listings", "Healthcare", "About", "Contact"].map(i => <a key={i} href={`/#${i.toLowerCase()}`} className="nav-link">{i}</a>)}
+          <a href="/#contact" className="nav-cta">Inquire Now</a>
+        </div>
+        <button className="nav-mobile" onClick={() => setOpen(!open)} style={{ background: "none", border: "none", fontSize: 28, color: "#fff", cursor: "pointer" }}>{open ? "\u2715" : "\u2630"}</button>
+      </div>
+      {open && (
+        <div style={{ background: "rgba(10,12,15,0.98)", padding: "16px 24px 24px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          {["Listings", "Healthcare", "About", "Contact"].map(i => <a key={i} href={`/#${i.toLowerCase()}`} onClick={() => setOpen(false)} style={{ display: "block", color: "rgba(255,255,255,0.8)", textDecoration: "none", fontSize: 17, padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{i}</a>)}
+          <a href="/#contact" onClick={() => setOpen(false)} style={{ display: "block", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", textAlign: "center", padding: 16, borderRadius: 10, fontWeight: 700, fontSize: 16, marginTop: 16, textDecoration: "none" }}>Inquire Now</a>
+        </div>
+      )}
+    </nav>
+  );
+}
+
 export default function ListingPage() {
   const params = useParams();
   const id = Number(params.id);
   const listing = LISTINGS.find((l) => l.id === id);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   if (!listing) {
     return (
@@ -41,21 +73,20 @@ export default function ListingPage() {
         html{scroll-behavior:smooth}
         body{font-family:'DM Sans',system-ui,sans-serif;color:#fff;background:#0a0c0f;-webkit-font-smoothing:antialiased}
         .wrap{max-width:1200px;margin:0 auto;width:100%;padding:0 24px}
+        .nav-links{display:flex;align-items:center;gap:28px}
+        .nav-mobile{display:none}
+        .nav-link{color:rgba(255,255,255,0.7);text-decoration:none;font-size:14px;font-weight:500}
+        .nav-link:hover{color:#fff}
+        .nav-cta{background:linear-gradient(135deg,#0fa,#0af);color:#0a0c0f;padding:10px 22px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none}
+        @media(max-width:768px){
+          .nav-links{display:none!important}
+          .nav-mobile{display:block!important}
+        }
       `}</style>
 
-      {/* Nav */}
-      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(10,12,15,0.92)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <div className="wrap" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
-          <Link href="/" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: "#fff", textDecoration: "none" }}>
-            CareStay<span style={{ color: "#0fa" }}>.</span>
-          </Link>
-          <Link href="/#listings" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>
-            All Suites
-          </Link>
-        </div>
-      </nav>
+      <Nav scrolled={scrolled} />
 
-      <main style={{ paddingTop: 64 }}>
+      <main style={{ paddingTop: 72 }}>
         {/* Hero Image */}
         <div style={{ position: "relative", width: "100%", height: "clamp(300px, 50vh, 520px)", overflow: "hidden" }}>
           <img
