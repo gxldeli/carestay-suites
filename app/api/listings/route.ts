@@ -8,8 +8,10 @@ interface OverridesData { listings: Record<string, ListingOverride>; customListi
 const globalStore = globalThis as unknown as { __adminOverrides?: OverridesData };
 function getOverrides(): OverridesData { return globalStore.__adminOverrides || { listings: {}, customListings: [] }; }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const includeHidden = searchParams.get("includeHidden") === "true";
     const listings = await getListings();
 
     const overrides = getOverrides();
@@ -39,7 +41,7 @@ export async function GET() {
           hidden: ov.hidden || false,
         };
       })
-      .filter((l) => !l.hidden);
+      .filter((l) => includeHidden || !l.hidden);
 
     // Append custom listings
     const custom = overrides.customListings.map((cl) => ({
