@@ -31,14 +31,14 @@ function Nav({ scrolled }: { scrolled: boolean }) {
           <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "#fff" }}>CareStay <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.6)" }}>Suites</span></span>
         </Link>
         <div className="nav-links">
-          {[{ l: "Listings", h: "/#listings" }, { l: "Healthcare", h: "/#healthcare" }, { l: "About", h: "/about" }, { l: "Contact", h: "/#contact" }].map(i => <a key={i.l} href={i.h} className="nav-link">{i.l}</a>)}
+          {[{ l: "Listings", h: "/#listings" }, { l: "Healthcare", h: "/healthcare" }, { l: "About", h: "/about" }, { l: "Contact", h: "/#contact" }].map(i => <a key={i.l} href={i.h} className="nav-link">{i.l}</a>)}
           <a href="/#contact" className="nav-cta">Inquire Now</a>
         </div>
         <button className="nav-mobile" onClick={() => setOpen(!open)} style={{ background: "none", border: "none", fontSize: 28, color: "#fff", cursor: "pointer" }}>{open ? "\u2715" : "\u2630"}</button>
       </div>
       {open && (
         <div style={{ background: "rgba(10,12,15,0.98)", padding: "16px 24px 24px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          {[{ l: "Listings", h: "/#listings" }, { l: "Healthcare", h: "/#healthcare" }, { l: "About", h: "/about" }, { l: "Contact", h: "/#contact" }].map(i => <a key={i.l} href={i.h} onClick={() => setOpen(false)} style={{ display: "block", color: "rgba(255,255,255,0.8)", textDecoration: "none", fontSize: 17, padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{i.l}</a>)}
+          {[{ l: "Listings", h: "/#listings" }, { l: "Healthcare", h: "/healthcare" }, { l: "About", h: "/about" }, { l: "Contact", h: "/#contact" }].map(i => <a key={i.l} href={i.h} onClick={() => setOpen(false)} style={{ display: "block", color: "rgba(255,255,255,0.8)", textDecoration: "none", fontSize: 17, padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{i.l}</a>)}
           <a href="/#contact" onClick={() => setOpen(false)} style={{ display: "block", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", textAlign: "center", padding: 16, borderRadius: 10, fontWeight: 700, fontSize: 16, marginTop: 16, textDecoration: "none" }}>Inquire Now</a>
         </div>
       )}
@@ -277,7 +277,7 @@ export default function ListingPage() {
             </div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Quick Links</div>
-              {[{ label: "Browse Suites", href: "/#listings" }, { label: "Healthcare", href: "/#healthcare" }, { label: "How It Works", href: "/#about" }, { label: "Contact", href: "/#contact" }].map(l => (
+              {[{ label: "Browse Suites", href: "/#listings" }, { label: "Healthcare", href: "/healthcare" }, { label: "How It Works", href: "/#about" }, { label: "Contact", href: "/#contact" }].map(l => (
                 <a key={l.label} href={l.href} style={{ display: "block", fontSize: 13, color: "rgba(255,255,255,0.35)", textDecoration: "none", marginBottom: 8 }}>{l.label}</a>
               ))}
             </div>
