@@ -43,9 +43,10 @@ export async function GET(
 
     return NextResponse.json({ status: "success", listing: transformed });
   } catch (error) {
-    console.error("Error fetching listing:", error);
+    console.error("[API /listings/id] Error:", error instanceof Error ? error.message : error);
+    console.error("[API /listings/id] Stack:", error instanceof Error ? error.stack : "N/A");
     return NextResponse.json(
-      { status: "error", message: "Failed to fetch listing" },
+      { status: "error", message: error instanceof Error ? error.message : "Failed to fetch listing" },
       { status: 500 }
     );
   }
