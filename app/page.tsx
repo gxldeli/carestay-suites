@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, ReactNode } from "react";
+import Link from "next/link";
 
 /* ─── DATA ─── */
 const LISTINGS = [
@@ -266,29 +267,31 @@ function ListingsSection() {
         <div className="listings-grid">
           {LISTINGS.map((l, i) => (
             <FadeIn key={l.id} delay={i * 0.06}>
-              <div className="listing-card">
-                <div style={{ position: "relative", overflow: "hidden" }}>
-                  <img src={l.img} alt={l.title} className="listing-img" />
-                  <div className="listing-tags">
-                    <span className="listing-tag">{l.tag}</span>
-                    <span className={l.available ? "listing-avail" : "listing-wait"}>{l.available ? "Available" : "Waitlist"}</span>
-                  </div>
-                </div>
-                <div className="listing-body">
-                  <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 4 }}>{l.title}</h3>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>{l.location}</p>
-                  <div style={{ display: "flex", gap: 14, marginBottom: 14, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
-                    <span>{l.beds} Bed</span><span>{l.baths} Bath</span><span>{l.sqft} sqft</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14 }}>
-                    <div>
-                      <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "#fff" }}>${l.price.toLocaleString()}</span>
-                      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>/mo</span>
+              <Link href={`/listings/${l.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                <div className="listing-card">
+                  <div style={{ position: "relative", overflow: "hidden" }}>
+                    <img src={l.img} alt={l.title} className="listing-img" />
+                    <div className="listing-tags">
+                      <span className="listing-tag">{l.tag}</span>
+                      <span className={l.available ? "listing-avail" : "listing-wait"}>{l.available ? "Available" : "Waitlist"}</span>
                     </div>
-                    <span style={{ background: "rgba(0,255,170,0.1)", color: "#0fa", padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>View Suite →</span>
+                  </div>
+                  <div className="listing-body">
+                    <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 4 }}>{l.title}</h3>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>{l.location}</p>
+                    <div style={{ display: "flex", gap: 14, marginBottom: 14, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+                      <span>{l.beds} Bed</span><span>{l.baths} Bath</span><span>{l.sqft} sqft</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14 }}>
+                      <div>
+                        <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "#fff" }}>${l.price.toLocaleString()}</span>
+                        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>/mo</span>
+                      </div>
+                      <span style={{ background: "rgba(0,255,170,0.1)", color: "#0fa", padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>View Suite →</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             </FadeIn>
           ))}
         </div>
