@@ -1,0 +1,52 @@
+import { NextResponse } from "next/server";
+import { getListing } from "@/app/lib/hostaway";
+
+export async function GET(
+  _request: Request,
+  { params }: { params: { id: string } }
+) {
+  const id = parseInt(params.id, 10);
+  if (isNaN(id)) {
+    return NextResponse.json(
+      { status: "error", message: "Invalid listing ID" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const listing = await getListing(id);
+    if (!listing) {
+      return NextResponse.json(
+        { status: "error", message: "Listing not found" },
+        { status: 404 }
+      );
+    }
+
+    const transformed = {
+      id: listing.id,
+      title: listing.name,
+      location: listing.city || "Toronto",
+      beds: listing.bedrooms || 1,
+      baths: listing.bathrooms || 1,
+      price: listing.price ? Math.round(listing.price * 30) : 0,
+      sqft: listing.squareFeet || 0,
+      img: listing.thumbnailUrl || listing.pictures?.[0]?.url || "",
+      images: listing.pictures?.map((p) => p.url) || [],
+      description: listing.description || "",
+      available: true,
+      amenities: listing.amenities || [],
+      address: listing.address || "",
+      latitude: listing.latitude,
+      longitude: listing.longitude,
+      maxGuests: listing.maxGuests,
+    };
+
+    return NextResponse.json({ status: "success", listing: transformed });
+  } catch (error) {
+    console.error("Error fetching listing:", error);
+    return NextResponse.json(
+      { status: "error", message: "Failed to fetch listing" },
+      { status: 500 }
+    );
+  }
+}
