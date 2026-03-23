@@ -1,28 +1,28 @@
 "use client";
+
 import { useState, useEffect, useRef, ReactNode } from "react";
 
+/* ─── DATA ─── */
 const LISTINGS = [
-  { id: 1, title: "The Pinnacle Suite", location: "Downtown Toronto", beds: 1, baths: 1, price: 3200, sqft: 620, img: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80", tag: "Near UHN", available: true },
-  { id: 2, title: "Lakeview Residence", location: "Harbourfront", beds: 2, baths: 1, price: 4100, sqft: 850, img: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80", tag: "Near St. Michael's", available: true },
-  { id: 3, title: "Midtown Medical Suite", location: "Yonge & Eglinton", beds: 1, baths: 1, price: 2900, sqft: 550, img: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80", tag: "Near Sunnybrook", available: false },
-  { id: 4, title: "King West Luxury", location: "King West Village", beds: 2, baths: 2, price: 4300, sqft: 920, img: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&q=80", tag: "Near Toronto General", available: true },
+  { id: 1, title: "The Pinnacle Suite", location: "Downtown Toronto", beds: 1, baths: 1, price: 2800, sqft: 580, img: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80", tag: "Near UHN", available: true },
+  { id: 2, title: "Lakeview Residence", location: "Harbourfront", beds: 2, baths: 1, price: 3600, sqft: 820, img: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80", tag: "Near St. Michael's", available: true },
+  { id: 3, title: "Midtown Medical Suite", location: "Yonge & Eglinton", beds: 1, baths: 1, price: 2600, sqft: 540, img: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80", tag: "Near Sunnybrook", available: false },
+  { id: 4, title: "King West Luxury", location: "King West Village", beds: 2, baths: 2, price: 4100, sqft: 920, img: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&q=80", tag: "Near Toronto Western", available: true },
   { id: 5, title: "Scarborough Heights", location: "Scarborough", beds: 2, baths: 1, price: 2800, sqft: 780, img: "https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=800&q=80", tag: "Near Scarborough Health", available: true },
-  { id: 6, title: "North York Terrace", location: "North York", beds: 1, baths: 1, price: 2700, sqft: 520, img: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800&q=80", tag: "Near North York General", available: true },
+  { id: 6, title: "North York Terrace", location: "North York", beds: 1, baths: 1, price: 2500, sqft: 520, img: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800&q=80", tag: "Near North York General", available: true },
 ];
 
-const HOSPITALS = [
-  "Toronto General Hospital", "SickKids", "Mount Sinai", "Sunnybrook",
-  "St. Michael's", "Princess Margaret", "Humber River", "Scarborough Health Network",
-  "North York General", "Credit Valley Hospital", "Trillium Health"
+const HOSPITALS = ["Toronto General", "SickKids", "Mount Sinai", "Sunnybrook", "St. Michael's", "Princess Margaret", "Humber River", "Scarborough Health", "North York General", "Credit Valley", "Trillium Health"];
+
+const CARESTAY_STANDARD = [
+  { icon: "🕶", name: "Blue Light Glasses", desc: "3 pairs in different strengths" },
+  { icon: "👕", name: "Spare Scrubs", desc: "S, M, L — always a backup ready" },
+  { icon: "🦶", name: "Foot Massager", desc: "Shiatsu relief after 12hr shifts" },
+  { icon: "🌙", name: "Blackout + White Noise", desc: "Day-sleep setup for nights" },
+  { icon: "💆", name: "Massage Gun", desc: "Full body recovery tool" },
 ];
 
-const STATS = [
-  { num: "60+", label: "Properties Managed" },
-  { num: "150+", label: "Healthcare Professionals Housed" },
-  { num: "30+", label: "Hospital Partnerships" },
-  { num: "4.9", label: "Average Rating" },
-];
-
+/* ─── HOOKS ─── */
 function useInView(threshold = 0.15) {
   const ref = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
@@ -36,220 +36,265 @@ function useInView(threshold = 0.15) {
   return [ref, inView] as const;
 }
 
-function FadeIn({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
+function FadeIn({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
   const [ref, inView] = useInView();
   return (
-    <div ref={ref} className={className} style={{
-      opacity: inView ? 1 : 0,
-      transform: inView ? "translateY(0)" : "translateY(30px)",
-      transition: `opacity 0.7s ease ${delay}s, transform 0.7s ease ${delay}s`,
-    }}>{children}</div>
+    <div ref={ref} style={{ opacity: inView ? 1 : 0, transform: inView ? "translateY(0)" : "translateY(24px)", transition: `opacity 0.6s ease ${delay}s, transform 0.6s ease ${delay}s` }}>{children}</div>
   );
 }
 
+/* ─── STYLES ─── */
+function Styles() {
+  return <style>{`
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    @keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'DM Sans',system-ui,sans-serif;color:#fff;background:#0a0c0f;-webkit-font-smoothing:antialiased}
+
+    .wrap{max-width:1200px;margin:0 auto;width:100%}
+    .pad{padding:80px 24px}
+
+    /* Hero */
+    .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+    .hero-img-wrap{position:relative}
+    .hero-h1{font-family:'Cormorant Garamond',serif;font-size:52px;font-weight:700;line-height:1.08;color:#fff;letter-spacing:-0.03em}
+    .hero-ctas{display:flex;gap:12px;flex-wrap:wrap}
+    .hero-ctas a{padding:16px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;text-align:center}
+    .cta-primary{background:linear-gradient(135deg,#0fa,#0af);color:#0a0c0f}
+    .cta-secondary{background:rgba(255,255,255,0.06);color:#fff;border:1px solid rgba(255,255,255,0.12)}
+
+    /* Stats */
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+    .stat-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:24px 16px;text-align:center}
+    .stat-num{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700;background:linear-gradient(135deg,#0fa,#0af);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .stat-label{font-size:12px;color:rgba(255,255,255,0.45);margin-top:4px;font-weight:500}
+
+    /* Listings */
+    .listings-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+    .listing-card{background:#12151a;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.06)}
+    .listing-img{width:100%;height:200px;object-fit:cover;display:block}
+    .listing-body{padding:16px 18px}
+    .listing-tags{position:absolute;top:10px;left:10px;display:flex;gap:6px}
+    .listing-tag{background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);color:#0fa;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
+    .listing-avail{background:rgba(0,255,170,0.15);color:#0fa;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
+    .listing-wait{background:rgba(255,77,77,0.15);color:#f66;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
+
+    /* Standard */
+    .standard-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+    .standard-card{background:rgba(0,255,170,0.03);border:1px solid rgba(0,255,170,0.1);border-radius:14px;padding:24px 16px;text-align:center}
+
+    /* Healthcare */
+    .health-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+    .pain-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .pain-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:20px}
+
+    /* Steps */
+    .steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+    .step-card{position:relative;padding:28px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px}
+
+    /* Form */
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .form-input{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:13px 16px;color:#fff;font-size:14px;outline:none;font-family:inherit}
+    .form-input:focus{border-color:rgba(0,255,170,0.4)}
+    .form-label{display:block;font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase}
+
+    /* Footer */
+    .footer-grid{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap}
+    .footer-links{display:flex;gap:48px}
+
+    /* Nav */
+    .nav-links{display:flex;align-items:center;gap:28px}
+    .nav-mobile{display:none}
+    .nav-link{color:rgba(255,255,255,0.7);text-decoration:none;font-size:14px;font-weight:500}
+    .nav-cta{background:linear-gradient(135deg,#0fa,#0af);color:#0a0c0f;padding:10px 22px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none}
+
+    /* Section headers */
+    .sh-label{font-size:12px;font-weight:700;color:#0fa;letter-spacing:0.1em;text-transform:uppercase}
+    .sh-title{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:700;color:#fff;margin-top:10px;letter-spacing:-0.02em;line-height:1.15}
+    .sh-sub{font-size:15px;color:rgba(255,255,255,0.4);margin-top:12px;line-height:1.7;max-width:520px}
+    .sh-center{text-align:center}
+    .sh-center .sh-sub{margin-left:auto;margin-right:auto}
+
+    /* Tub banner */
+    .tub-banner{background:rgba(0,255,170,0.04);border-top:1px solid rgba(0,255,170,0.08);border-bottom:1px solid rgba(0,255,170,0.08);padding:20px 24px;text-align:center}
+    .tub-text{font-size:15px;color:rgba(255,255,255,0.6)}
+    .tub-text span{color:#0fa;font-weight:700}
+
+    @media(max-width:1024px){
+      .listings-grid{grid-template-columns:repeat(2,1fr)}
+      .standard-grid{grid-template-columns:repeat(3,1fr)}
+      .hero-h1{font-size:42px}
+    }
+    @media(max-width:768px){
+      .hero-grid{grid-template-columns:1fr;gap:32px}
+      .hero-img-wrap{display:none}
+      .hero-h1{font-size:36px}
+      .hero-ctas a{width:100%;padding:16px 24px;font-size:16px}
+      .stats-grid{grid-template-columns:1fr 1fr}
+      .listings-grid{grid-template-columns:1fr}
+      .standard-grid{grid-template-columns:1fr 1fr}
+      .health-grid{grid-template-columns:1fr}
+      .pain-grid{grid-template-columns:1fr}
+      .steps-grid{grid-template-columns:1fr}
+      .form-grid{grid-template-columns:1fr}
+      .footer-grid{flex-direction:column}
+      .footer-links{flex-direction:column;gap:28px}
+      .nav-links{display:none!important}
+      .nav-mobile{display:block!important}
+      .pad{padding:56px 18px}
+      .sh-title{font-size:28px}
+      .stat-num{font-size:30px}
+    }
+    @media(max-width:480px){
+      .standard-grid{grid-template-columns:1fr}
+      .hero-h1{font-size:30px}
+    }
+  `}</style>;
+}
+
+/* ─── NAV ─── */
 function Nav({ scrolled }: { scrolled: boolean }) {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   return (
-    <nav style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-      background: scrolled ? "rgba(10,12,15,0.95)" : "transparent",
-      backdropFilter: scrolled ? "blur(20px)" : "none",
-      borderBottom: scrolled ? "1px solid rgba(255,255,255,0.06)" : "none",
-      transition: "all 0.4s ease",
-      padding: "0 40px",
-    }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", height: 72 }}>
+    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: scrolled ? "rgba(10,12,15,0.95)" : "transparent", backdropFilter: scrolled ? "blur(20px)" : "none", borderBottom: scrolled ? "1px solid rgba(255,255,255,0.06)" : "none", transition: "all 0.4s" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 72 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 8, background: "linear-gradient(135deg, #0fa, #0af)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#0a0c0f" }}>CS</div>
-          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 20, color: "#fff", letterSpacing: "-0.02em" }}>CareStay <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.6)" }}>Suites</span></span>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: "linear-gradient(135deg,#0fa,#0af)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#0a0c0f" }}>CS</div>
+          <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "#fff" }}>CareStay <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.6)" }}>Suites</span></span>
         </div>
-        <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
-          {["Listings", "Healthcare", "About", "Contact"].map(item => (
-            <a key={item} href={`#${item.toLowerCase()}`} style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", transition: "color 0.2s" }}
-              onMouseEnter={e => (e.target as HTMLElement).style.color = "#0fa"}
-              onMouseLeave={e => (e.target as HTMLElement).style.color = "rgba(255,255,255,0.7)"}
-            >{item}</a>
-          ))}
-          <a href="#contact" style={{
-            background: "linear-gradient(135deg, #0fa, #0af)",
-            color: "#0a0c0f", padding: "10px 24px", borderRadius: 8,
-            fontWeight: 700, fontSize: 13, letterSpacing: "0.03em", transition: "transform 0.2s, box-shadow 0.2s",
-          }}
-            onMouseEnter={e => { (e.target as HTMLElement).style.transform = "translateY(-2px)"; (e.target as HTMLElement).style.boxShadow = "0 8px 30px rgba(0,255,170,0.25)"; }}
-            onMouseLeave={e => { (e.target as HTMLElement).style.transform = "translateY(0)"; (e.target as HTMLElement).style.boxShadow = "none"; }}
-          >Inquire Now</a>
+        <div className="nav-links">
+          {["Listings", "Healthcare", "About", "Contact"].map(i => <a key={i} href={`#${i.toLowerCase()}`} className="nav-link">{i}</a>)}
+          <a href="#contact" className="nav-cta">Inquire Now</a>
         </div>
+        <button className="nav-mobile" onClick={() => setOpen(!open)} style={{ background: "none", border: "none", fontSize: 28, color: "#fff", cursor: "pointer" }}>{open ? "✕" : "☰"}</button>
       </div>
+      {open && (
+        <div style={{ background: "rgba(10,12,15,0.98)", padding: "16px 24px 24px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          {["Listings", "Healthcare", "About", "Contact"].map(i => <a key={i} href={`#${i.toLowerCase()}`} onClick={() => setOpen(false)} style={{ display: "block", color: "rgba(255,255,255,0.8)", textDecoration: "none", fontSize: 17, padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{i}</a>)}
+          <a href="#contact" onClick={() => setOpen(false)} style={{ display: "block", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", textAlign: "center", padding: 16, borderRadius: 10, fontWeight: 700, fontSize: 16, marginTop: 16, textDecoration: "none" }}>Inquire Now</a>
+        </div>
+      )}
     </nav>
   );
 }
 
+/* ─── HERO ─── */
 function Hero() {
   return (
-    <section style={{
-      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      position: "relative", overflow: "hidden",
-      background: "linear-gradient(165deg, #0a0c0f 0%, #0d1117 40%, #0a1628 100%)",
-    }}>
-      <div style={{ position: "absolute", inset: 0, opacity: 0.04, backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.3) 1px, transparent 0)", backgroundSize: "40px 40px" }} />
-      <div style={{ position: "absolute", top: "10%", right: "5%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,255,170,0.06) 0%, transparent 70%)", filter: "blur(60px)" }} />
-      <div style={{ position: "absolute", bottom: "10%", left: "10%", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,170,255,0.05) 0%, transparent 70%)", filter: "blur(60px)" }} />
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "120px 40px 80px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center", position: "relative", zIndex: 1 }}>
-        <div>
-          <FadeIn>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(0,255,170,0.08)", border: "1px solid rgba(0,255,170,0.2)", borderRadius: 100, padding: "6px 16px", marginBottom: 24 }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#0fa", animation: "pulse 2s infinite" }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#0fa", letterSpacing: "0.06em", textTransform: "uppercase" }}>Now Accepting Applications</span>
-            </div>
-          </FadeIn>
-          <FadeIn delay={0.1}>
-            <h1 style={{
-              fontFamily: "'Cormorant Garamond', serif", fontWeight: 700,
-              fontSize: 56, lineHeight: 1.1, color: "#fff",
-              letterSpacing: "-0.03em", marginBottom: 20,
-            }}>
-              Premium Furnished Housing for{" "}
-              <span style={{ background: "linear-gradient(135deg, #0fa, #0af)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                Healthcare Professionals
-              </span>
-            </h1>
-          </FadeIn>
+    <section style={{ minHeight: "100vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden", background: "linear-gradient(165deg,#0a0c0f 0%,#0d1117 40%,#0a1628 100%)" }}>
+      <div style={{ position: "absolute", inset: 0, opacity: 0.04, backgroundImage: "radial-gradient(circle at 1px 1px,rgba(255,255,255,0.3) 1px,transparent 0)", backgroundSize: "40px 40px" }} />
+      <div style={{ position: "absolute", top: "10%", right: "5%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,255,170,0.06) 0%,transparent 70%)", filter: "blur(60px)" }} />
+      <div className="pad" style={{ maxWidth: 1200, margin: "0 auto", width: "100%", position: "relative", zIndex: 1, paddingTop: 120, paddingBottom: 80 }}>
+        <div className="hero-grid">
+          <div>
+            <FadeIn>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(0,255,170,0.08)", border: "1px solid rgba(0,255,170,0.2)", borderRadius: 100, padding: "8px 18px", marginBottom: 28 }}>
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#0fa", animation: "pulse 2s infinite" }} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#0fa", letterSpacing: "0.06em", textTransform: "uppercase" }}>Now Accepting Applications</span>
+              </div>
+            </FadeIn>
+            <FadeIn delay={0.1}>
+              <h1 className="hero-h1">
+                Premium Furnished Housing for{" "}
+                <span style={{ background: "linear-gradient(135deg,#0fa,#0af)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Healthcare Professionals</span>
+              </h1>
+            </FadeIn>
+            <FadeIn delay={0.2}>
+              <p style={{ fontSize: 17, lineHeight: 1.7, color: "rgba(255,255,255,0.55)", maxWidth: 500, margin: "24px 0 36px" }}>
+                Move-in ready suites across the GTA. Verified properties. No scams, no deposits lost, no bait-and-switch. Trusted by nurses, physicians, and medical staff.
+              </p>
+            </FadeIn>
+            <FadeIn delay={0.3}>
+              <div className="hero-ctas">
+                <a href="#listings" className="cta-primary">Browse Suites</a>
+                <a href="#healthcare" className="cta-secondary">I&apos;m a Healthcare Professional</a>
+              </div>
+            </FadeIn>
+          </div>
           <FadeIn delay={0.2}>
-            <p style={{ fontSize: 17, lineHeight: 1.7, color: "rgba(255,255,255,0.55)", maxWidth: 480, marginBottom: 36 }}>
-              Move-in ready suites across the GTA. Verified properties. No scams, no deposits lost, no bait-and-switch. Trusted by nurses, physicians, and medical staff at Toronto&apos;s top hospitals.
-            </p>
-          </FadeIn>
-          <FadeIn delay={0.3}>
-            <div style={{ display: "flex", gap: 14 }}>
-              <a href="#listings" style={{
-                background: "linear-gradient(135deg, #0fa, #0af)", color: "#0a0c0f",
-                padding: "14px 32px", borderRadius: 10, fontWeight: 700, fontSize: 15,
-                transition: "transform 0.2s, box-shadow 0.2s",
-              }}
-                onMouseEnter={e => { (e.target as HTMLElement).style.transform = "translateY(-2px)"; (e.target as HTMLElement).style.boxShadow = "0 12px 40px rgba(0,255,170,0.3)"; }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.transform = "translateY(0)"; (e.target as HTMLElement).style.boxShadow = "none"; }}
-              >Browse Suites</a>
-              <a href="#healthcare" style={{
-                background: "rgba(255,255,255,0.06)", color: "#fff",
-                padding: "14px 32px", borderRadius: 10, fontWeight: 600, fontSize: 15,
-                border: "1px solid rgba(255,255,255,0.1)", transition: "all 0.2s",
-              }}
-                onMouseEnter={e => { (e.target as HTMLElement).style.background = "rgba(255,255,255,0.1)"; }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.background = "rgba(255,255,255,0.06)"; }}
-              >I&apos;m a Healthcare Professional</a>
+            <div className="hero-img-wrap">
+              <div style={{ borderRadius: 20, overflow: "hidden", boxShadow: "0 40px 80px rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80" alt="Luxury furnished suite" style={{ width: "100%", height: 440, objectFit: "cover", display: "block" }} />
+              </div>
+              <div style={{ position: "absolute", bottom: -16, left: -16, background: "rgba(10,12,15,0.92)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 10, background: "linear-gradient(135deg,#0fa,#0af)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🏥</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Hospital Proximity</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>All suites within 20 min of major hospitals</div>
+                </div>
+              </div>
             </div>
           </FadeIn>
         </div>
-        <FadeIn delay={0.2}>
-          <div style={{ position: "relative" }}>
-            <div style={{ borderRadius: 20, overflow: "hidden", boxShadow: "0 40px 80px rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80" alt="Luxury furnished suite" style={{ width: "100%", height: 420, objectFit: "cover", display: "block" }} />
-            </div>
-            <div style={{
-              position: "absolute", bottom: -20, left: -20,
-              background: "rgba(10,12,15,0.9)", backdropFilter: "blur(20px)",
-              border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14,
-              padding: "16px 20px", display: "flex", alignItems: "center", gap: 12,
-            }}>
-              <div style={{ width: 44, height: 44, borderRadius: 10, background: "linear-gradient(135deg, #0fa, #0af)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🏥</div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Hospital Proximity</div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>All suites within 20 min of major hospitals</div>
-              </div>
-            </div>
-          </div>
-        </FadeIn>
       </div>
     </section>
   );
 }
 
-function StatsSection() {
+/* ─── STATS ─── */
+function Stats() {
   const [ref, inView] = useInView();
   return (
     <section ref={ref} style={{ background: "#0d1117", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 40px", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 40 }}>
-        {STATS.map((s, i) => (
-          <div key={i} style={{ textAlign: "center", opacity: inView ? 1 : 0, transform: inView ? "translateY(0)" : "translateY(20px)", transition: `all 0.6s ease ${i * 0.1}s` }}>
-            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 40, background: "linear-gradient(135deg, #0fa, #0af)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{s.num}</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", fontWeight: 500, letterSpacing: "0.04em", marginTop: 4 }}>{s.label}</div>
-          </div>
-        ))}
+      <div className="pad" style={{ maxWidth: 1200, margin: "0 auto", paddingTop: 40, paddingBottom: 40 }}>
+        <div className="stats-grid">
+          {[{ n: "60+", l: "Properties Managed" }, { n: "150+", l: "Healthcare Pros Housed" }, { n: "30+", l: "Hospital Partnerships" }, { n: "4.9", l: "Average Rating" }].map((s, i) => (
+            <div key={i} className="stat-card" style={{ opacity: inView ? 1 : 0, transform: inView ? "translateY(0)" : "translateY(20px)", transition: `all 0.6s ease ${i * 0.1}s` }}>
+              <div className="stat-num">{s.n}</div>
+              <div className="stat-label">{s.l}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
-function ListingCard({ listing, delay }: { listing: typeof LISTINGS[0]; delay: number }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <FadeIn delay={delay}>
-      <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{
-        background: "#12151a", borderRadius: 16, overflow: "hidden",
-        border: `1px solid ${hovered ? "rgba(0,255,170,0.15)" : "rgba(255,255,255,0.06)"}`,
-        transition: "transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease",
-        transform: hovered ? "translateY(-6px)" : "translateY(0)",
-        boxShadow: hovered ? "0 20px 60px rgba(0,0,0,0.4)" : "0 4px 20px rgba(0,0,0,0.2)",
-        cursor: "pointer",
-      }}>
-        <div style={{ position: "relative", overflow: "hidden" }}>
-          <img src={listing.img} alt={listing.title} style={{
-            width: "100%", height: 220, objectFit: "cover", display: "block",
-            transition: "transform 0.5s ease", transform: hovered ? "scale(1.05)" : "scale(1)",
-          }} />
-          <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 8 }}>
-            <span style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(10px)", color: "#0fa", padding: "4px 12px", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>{listing.tag}</span>
-            {listing.available ? (
-              <span style={{ background: "rgba(0,255,170,0.15)", color: "#0fa", padding: "4px 12px", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>Available</span>
-            ) : (
-              <span style={{ background: "rgba(255,77,77,0.15)", color: "#f66", padding: "4px 12px", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>Waitlist</span>
-            )}
-          </div>
-        </div>
-        <div style={{ padding: "18px 20px" }}>
-          <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 4 }}>{listing.title}</h3>
-          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 14 }}>{listing.location}</p>
-          <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{listing.beds} Bed</span>
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{listing.baths} Bath</span>
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{listing.sqft} sqft</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14 }}>
-            <div>
-              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 24, color: "#fff" }}>${listing.price.toLocaleString()}</span>
-              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>/month</span>
-            </div>
-            <span style={{
-              background: hovered ? "linear-gradient(135deg, #0fa, #0af)" : "rgba(255,255,255,0.06)",
-              color: hovered ? "#0a0c0f" : "rgba(255,255,255,0.6)",
-              padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 700, transition: "all 0.3s ease",
-            }}>View Suite →</span>
-          </div>
-        </div>
-      </div>
-    </FadeIn>
-  );
-}
-
+/* ─── LISTINGS ─── */
 function ListingsSection() {
   return (
-    <section id="listings" style={{ background: "#0a0c0f", padding: "80px 40px" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+    <section id="listings" className="pad" style={{ background: "#0a0c0f" }}>
+      <div className="wrap">
         <FadeIn>
-          <div style={{ textAlign: "center", marginBottom: 50 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#0fa", letterSpacing: "0.1em", textTransform: "uppercase" }}>Featured Suites</span>
-            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 40, color: "#fff", marginTop: 10 }}>Curated Properties Near You</h2>
-            <p style={{ fontSize: 15, color: "rgba(255,255,255,0.4)", maxWidth: 500, margin: "12px auto 0" }}>Every suite is verified, professionally furnished, and located within 20 minutes of major GTA hospitals.</p>
+          <div className="sh-center" style={{ marginBottom: 48 }}>
+            <div className="sh-label">Featured Suites</div>
+            <h2 className="sh-title">Curated Properties Near You</h2>
+            <p className="sh-sub">Every suite is verified, professionally furnished, and located near major GTA hospitals.</p>
           </div>
         </FadeIn>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
-          {LISTINGS.map((l, i) => <ListingCard key={l.id} listing={l} delay={i * 0.08} />)}
+        <div className="listings-grid">
+          {LISTINGS.map((l, i) => (
+            <FadeIn key={l.id} delay={i * 0.06}>
+              <div className="listing-card">
+                <div style={{ position: "relative", overflow: "hidden" }}>
+                  <img src={l.img} alt={l.title} className="listing-img" />
+                  <div className="listing-tags">
+                    <span className="listing-tag">{l.tag}</span>
+                    <span className={l.available ? "listing-avail" : "listing-wait"}>{l.available ? "Available" : "Waitlist"}</span>
+                  </div>
+                </div>
+                <div className="listing-body">
+                  <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 4 }}>{l.title}</h3>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>{l.location}</p>
+                  <div style={{ display: "flex", gap: 14, marginBottom: 14, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+                    <span>{l.beds} Bed</span><span>{l.baths} Bath</span><span>{l.sqft} sqft</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14 }}>
+                    <div>
+                      <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "#fff" }}>${l.price.toLocaleString()}</span>
+                      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>/mo</span>
+                    </div>
+                    <span style={{ background: "rgba(0,255,170,0.1)", color: "#0fa", padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>View Suite →</span>
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+          ))}
         </div>
         <FadeIn delay={0.3}>
-          <div style={{ textAlign: "center", marginTop: 40 }}>
-            <a href="#contact" style={{ color: "#0fa", fontSize: 14, fontWeight: 600, borderBottom: "1px solid rgba(0,255,170,0.3)", paddingBottom: 2 }}>
-              Don&apos;t see what you need? Tell us your requirements →
-            </a>
+          <div style={{ textAlign: "center", marginTop: 36 }}>
+            <a href="#contact" style={{ color: "#0fa", fontSize: 14, fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(0,255,170,0.3)", paddingBottom: 2 }}>Don&apos;t see what you need? Tell us your requirements →</a>
           </div>
         </FadeIn>
       </div>
@@ -257,44 +302,77 @@ function ListingsSection() {
   );
 }
 
-function HealthcareSection() {
-  const painPoints = [
-    { icon: "🛡️", title: "Verified & Scam-Free", desc: "Every property is personally inspected. No fake listings, no surprise deposits, no bait-and-switch." },
-    { icon: "📍", title: "Hospital-Adjacent", desc: "All suites within 20 minutes of your assignment hospital. We know where you need to be." },
-    { icon: "📋", title: "Move-In Ready", desc: "Fully furnished. WiFi, linens, kitchen essentials — packed and ready from day one." },
-    { icon: "📅", title: "Flexible 30-90 Day Terms", desc: "Month-to-month available. Extend or shorten your stay. No 12-month lease lock-in." },
+/* ─── HOSPITAL SCROLL ─── */
+function HospitalBanner() {
+  return (
+    <div style={{ background: "#0a0c0f", padding: "36px 0", overflow: "hidden", borderTop: "1px solid rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+      <div style={{ display: "flex", gap: 48, animation: "scroll 25s linear infinite", whiteSpace: "nowrap" }}>
+        {[...HOSPITALS, ...HOSPITALS].map((h, i) => <span key={i} style={{ fontSize: 14, color: "rgba(255,255,255,0.2)", fontWeight: 500 }}>{h}</span>)}
+      </div>
+    </div>
+  );
+}
+
+/* ─── CARESTAY STANDARD ─── */
+function Standard() {
+  return (
+    <>
+      <section id="about" className="pad" style={{ background: "#0a0c0f" }}>
+        <div className="wrap">
+          <FadeIn>
+            <div className="sh-center" style={{ marginBottom: 40 }}>
+              <div className="sh-label">The CareStay Standard</div>
+              <h2 className="sh-title">Every Suite. Every Stay. No Exceptions.</h2>
+              <p className="sh-sub">We don&apos;t just give you a bed and WiFi. Every CareStay suite comes equipped with items built specifically for healthcare professionals.</p>
+            </div>
+          </FadeIn>
+          <div className="standard-grid">
+            {CARESTAY_STANDARD.map((item, i) => (
+              <FadeIn key={i} delay={i * 0.06}>
+                <div className="standard-card">
+                  <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 6 }}>{item.name}</h3>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>{item.desc}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* Tub callout */}
+      <div className="tub-banner">
+        <p className="tub-text">🛁 <span>75% of our suites</span> feature soaking tubs for post-shift recovery</p>
+      </div>
+    </>
+  );
+}
+
+/* ─── HEALTHCARE ─── */
+function Healthcare() {
+  const points = [
+    { icon: "🛡️", title: "Verified & Scam-Free", desc: "Every property personally inspected. No fake listings." },
+    { icon: "📍", title: "Hospital-Adjacent", desc: "All suites within 20 min of your assignment hospital." },
+    { icon: "📋", title: "Move-In Ready", desc: "Fully furnished with everything from day one." },
+    { icon: "📅", title: "Flexible Terms", desc: "Month-to-month. No 12-month lease lock-in." },
   ];
   return (
-    <section id="healthcare" style={{ background: "#0d1117", padding: "80px 40px" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
+    <section id="healthcare" className="pad" style={{ background: "#0d1117" }}>
+      <div className="wrap">
+        <div className="health-grid">
           <FadeIn>
             <div>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#0fa", letterSpacing: "0.1em", textTransform: "uppercase" }}>For Healthcare Professionals</span>
-              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 38, color: "#fff", marginTop: 10, lineHeight: 1.15 }}>
-                Housing That Understands<br />Your Assignment
-              </h2>
-              <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", marginTop: 16, lineHeight: 1.7, maxWidth: 460 }}>
-                We know the frustration — fake listings, unresponsive hosts, deposits that vanish. CareStay Suites exists because healthcare professionals deserve better. Every property is verified by our team. Every stay is protected.
-              </p>
-              <div style={{ display: "flex", gap: 12, marginTop: 28 }}>
-                <a href="#contact" style={{
-                  background: "linear-gradient(135deg, #0fa, #0af)", color: "#0a0c0f",
-                  padding: "12px 28px", borderRadius: 10, fontWeight: 700, fontSize: 14,
-                }}>Join the Waitlist</a>
+              <div className="sh-label">For Healthcare Professionals</div>
+              <h2 className="sh-title">Housing That Understands Your Assignment</h2>
+              <p className="sh-sub" style={{ maxWidth: 460 }}>We know the frustration — fake listings, unresponsive hosts, deposits that vanish. CareStay exists because healthcare professionals deserve better.</p>
+              <div style={{ marginTop: 28 }}>
+                <a href="#contact" className="cta-primary" style={{ display: "inline-block", padding: "14px 32px", borderRadius: 10, fontWeight: 700, fontSize: 15, textDecoration: "none" }}>Join the Waitlist</a>
               </div>
             </div>
           </FadeIn>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            {painPoints.map((p, i) => (
-              <FadeIn key={i} delay={i * 0.1}>
-                <div style={{
-                  background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
-                  borderRadius: 14, padding: 20, transition: "border-color 0.3s, background 0.3s",
-                }}
-                  onMouseEnter={e => { (e.currentTarget).style.borderColor = "rgba(0,255,170,0.2)"; (e.currentTarget).style.background = "rgba(0,255,170,0.03)"; }}
-                  onMouseLeave={e => { (e.currentTarget).style.borderColor = "rgba(255,255,255,0.06)"; (e.currentTarget).style.background = "rgba(255,255,255,0.03)"; }}
-                >
+          <div className="pain-grid">
+            {points.map((p, i) => (
+              <FadeIn key={i} delay={i * 0.08}>
+                <div className="pain-card">
                   <div style={{ fontSize: 28, marginBottom: 10 }}>{p.icon}</div>
                   <h3 style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 6 }}>{p.title}</h3>
                   <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>{p.desc}</p>
@@ -308,41 +386,30 @@ function HealthcareSection() {
   );
 }
 
-function HospitalBanner() {
-  return (
-    <section style={{ background: "#0a0c0f", padding: "40px 0", overflow: "hidden", borderTop: "1px solid rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-      <div style={{ display: "flex", gap: 50, animation: "scroll 30s linear infinite", whiteSpace: "nowrap" }}>
-        {[...HOSPITALS, ...HOSPITALS].map((h, i) => (
-          <span key={i} style={{ fontSize: 14, color: "rgba(255,255,255,0.2)", fontWeight: 500 }}>{h}</span>
-        ))}
-      </div>
-    </section>
-  );
-}
-
+/* ─── HOW IT WORKS ─── */
 function HowItWorks() {
   const steps = [
-    { num: "01", title: "Tell Us Your Needs", desc: "Assignment dates, hospital location, budget, preferences. 2-minute form." },
-    { num: "02", title: "We Match You", desc: "Our team finds verified suites near your hospital. You review options within 24 hours." },
-    { num: "03", title: "Book & Move In", desc: "Sign digitally. Move into a fully furnished, professionally cleaned suite. Done." },
+    { n: "01", t: "Tell Us Your Needs", d: "Assignment dates, hospital, budget. 2-minute form." },
+    { n: "02", t: "We Match You", d: "Verified suites near your hospital. Options in 24 hours." },
+    { n: "03", t: "Book & Move In", d: "Sign digitally. Fully furnished suite waiting for you." },
   ];
   return (
-    <section style={{ background: "#0a0c0f", padding: "80px 40px" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+    <section className="pad" style={{ background: "#0a0c0f" }}>
+      <div className="wrap">
         <FadeIn>
-          <div style={{ textAlign: "center", marginBottom: 50 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#0fa", letterSpacing: "0.1em", textTransform: "uppercase" }}>How It Works</span>
-            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 38, color: "#fff", marginTop: 10 }}>Move In, Not Stressed Out</h2>
+          <div className="sh-center" style={{ marginBottom: 48 }}>
+            <div className="sh-label">How It Works</div>
+            <h2 className="sh-title">Move In, Not Stressed Out</h2>
           </div>
         </FadeIn>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 30 }}>
+        <div className="steps-grid">
           {steps.map((s, i) => (
-            <FadeIn key={i} delay={i * 0.12}>
-              <div style={{ position: "relative", padding: 30, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16 }}>
-                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 800, fontSize: 52, color: "rgba(0,255,170,0.08)", position: "absolute", top: 16, right: 20 }}>{s.num}</div>
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: "linear-gradient(135deg, rgba(0,255,170,0.1), rgba(0,170,255,0.1))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 18, color: "#0fa", fontWeight: 800 }}>{s.num}</div>
-                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 22, color: "#fff", marginBottom: 8 }}>{s.title}</h3>
-                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>{s.desc}</p>
+            <FadeIn key={i} delay={i * 0.1}>
+              <div className="step-card">
+                <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 800, fontSize: 48, color: "rgba(0,255,170,0.08)", position: "absolute", top: 14, right: 18 }}>{s.n}</div>
+                <div style={{ width: 46, height: 46, borderRadius: 12, background: "linear-gradient(135deg,rgba(0,255,170,0.1),rgba(0,170,255,0.1))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: 16, color: "#0fa", fontWeight: 800 }}>{s.n}</div>
+                <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 22, color: "#fff", marginBottom: 8 }}>{s.t}</h3>
+                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>{s.d}</p>
               </div>
             </FadeIn>
           ))}
@@ -352,59 +419,29 @@ function HowItWorks() {
   );
 }
 
-function ContactForm() {
-  const [submitted, setSubmitted] = useState(false);
+/* ─── CONTACT ─── */
+function Contact() {
+  const [done, setDone] = useState(false);
   return (
-    <section id="contact" style={{ background: "#0d1117", padding: "80px 40px" }}>
-      <div style={{ maxWidth: 700, margin: "0 auto" }}>
+    <section id="contact" className="pad" style={{ background: "#0d1117" }}>
+      <div style={{ maxWidth: 680, margin: "0 auto" }}>
         <FadeIn>
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#0fa", letterSpacing: "0.1em", textTransform: "uppercase" }}>Get Started</span>
-            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 38, color: "#fff", marginTop: 10 }}>Find Your Suite</h2>
-            <p style={{ fontSize: 15, color: "rgba(255,255,255,0.4)", marginTop: 10 }}>Tell us about your assignment and we&apos;ll match you within 24 hours.</p>
+          <div className="sh-center" style={{ marginBottom: 36 }}>
+            <div className="sh-label">Get Started</div>
+            <h2 className="sh-title">Find Your Suite</h2>
+            <p className="sh-sub" style={{ marginLeft: "auto", marginRight: "auto" }}>Tell us about your assignment and we&apos;ll match you within 24 hours.</p>
           </div>
         </FadeIn>
-        {!submitted ? (
-          <FadeIn delay={0.15}>
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: 36 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-                {[
-                  { label: "Full Name", ph: "Jane Smith", type: "text" },
-                  { label: "Email", ph: "jane@hospital.ca", type: "email" },
-                  { label: "Phone", ph: "(647) 000-0000", type: "tel" },
-                  { label: "Hospital / Facility", ph: "Toronto General", type: "text" },
-                ].map((f, i) => (
-                  <div key={i}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", marginBottom: 6, letterSpacing: "0.04em" }}>{f.label}</label>
-                    <input type={f.type} placeholder={f.ph} style={{
-                      width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: 10, padding: "12px 16px", color: "#fff", fontSize: 14, outline: "none",
-                      transition: "border-color 0.2s",
-                    }}
-                      onFocus={e => e.target.style.borderColor = "rgba(0,255,170,0.4)"}
-                      onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
-                    />
-                  </div>
+        {!done ? (
+          <FadeIn delay={0.1}>
+            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: "28px 22px" }}>
+              <div className="form-grid" style={{ marginBottom: 14 }}>
+                {[{ l: "Full Name", p: "Jane Smith", t: "text" }, { l: "Email", p: "jane@hospital.ca", t: "email" }, { l: "Phone", p: "(647) 000-0000", t: "tel" }, { l: "Hospital / Facility", p: "Toronto General", t: "text" }].map((f, i) => (
+                  <div key={i}><label className="form-label">{f.l}</label><input type={f.t} placeholder={f.p} className="form-input" /></div>
                 ))}
               </div>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", marginBottom: 6, letterSpacing: "0.04em" }}>Move-in Date & Duration</label>
-                <input type="text" placeholder="e.g., April 15 — 3 months" style={{
-                  width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 10, padding: "12px 16px", color: "#fff", fontSize: 14, outline: "none",
-                }}
-                  onFocus={e => e.target.style.borderColor = "rgba(0,255,170,0.4)"}
-                  onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
-                />
-              </div>
-              <button onClick={() => setSubmitted(true)} style={{
-                width: "100%", background: "linear-gradient(135deg, #0fa, #0af)", color: "#0a0c0f",
-                padding: "14px", borderRadius: 10, fontWeight: 800, fontSize: 15, border: "none",
-                cursor: "pointer", transition: "transform 0.2s, box-shadow 0.2s", letterSpacing: "0.02em",
-              }}
-                onMouseEnter={e => { (e.target as HTMLElement).style.transform = "translateY(-2px)"; (e.target as HTMLElement).style.boxShadow = "0 12px 40px rgba(0,255,170,0.3)"; }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.transform = "translateY(0)"; (e.target as HTMLElement).style.boxShadow = "none"; }}
-              >Submit Inquiry</button>
+              <div style={{ marginBottom: 14 }}><label className="form-label">Move-in Date &amp; Duration</label><input type="text" placeholder="e.g., April 15 — 3 months" className="form-input" /></div>
+              <button onClick={() => setDone(true)} style={{ width: "100%", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: 16, borderRadius: 10, fontWeight: 800, fontSize: 16, border: "none", cursor: "pointer", fontFamily: "inherit" }}>Submit Inquiry</button>
               <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", textAlign: "center", marginTop: 12 }}>We respond within 24 hours. No spam, ever.</p>
             </div>
           </FadeIn>
@@ -412,8 +449,8 @@ function ContactForm() {
           <FadeIn>
             <div style={{ textAlign: "center", padding: 60, background: "rgba(0,255,170,0.04)", border: "1px solid rgba(0,255,170,0.15)", borderRadius: 20 }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
-              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 28, color: "#fff", marginBottom: 8 }}>Application Received</h3>
-              <p style={{ fontSize: 15, color: "rgba(255,255,255,0.5)" }}>Our team will match you with available suites within 24 hours.</p>
+              <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 28, color: "#fff", marginBottom: 8 }}>Application Received</h3>
+              <p style={{ fontSize: 15, color: "rgba(255,255,255,0.5)" }}>We&apos;ll match you with available suites within 24 hours.</p>
             </div>
           </FadeIn>
         )}
@@ -422,42 +459,42 @@ function ContactForm() {
   );
 }
 
+/* ─── FOOTER ─── */
 function Footer() {
   return (
-    <footer style={{ background: "#0a0c0f", borderTop: "1px solid rgba(255,255,255,0.05)", padding: "48px 40px 32px" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #0fa, #0af)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: "#0a0c0f" }}>CS</div>
-            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>CareStay Suites</span>
+    <footer style={{ background: "#0a0c0f", borderTop: "1px solid rgba(255,255,255,0.05)", padding: "48px 24px 32px" }}>
+      <div className="wrap">
+        <div className="footer-grid">
+          <div style={{ maxWidth: 280 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#0fa,#0af)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: "#0a0c0f" }}>CS</div>
+              <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>CareStay Suites</span>
+            </div>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>Premium furnished housing for healthcare professionals across the Greater Toronto Area.</p>
           </div>
-          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", maxWidth: 280, lineHeight: 1.5 }}>Premium furnished housing for healthcare professionals across the Greater Toronto Area.</p>
-        </div>
-        <div style={{ display: "flex", gap: 60 }}>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Quick Links</div>
-            {["Listings", "Healthcare", "About", "Contact"].map(l => (
-              <a key={l} href={`#${l.toLowerCase()}`} style={{ display: "block", fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8, transition: "color 0.2s" }}
-                onMouseEnter={e => (e.target as HTMLElement).style.color = "#0fa"} onMouseLeave={e => (e.target as HTMLElement).style.color = "rgba(255,255,255,0.35)"}
-              >{l}</a>
-            ))}
-          </div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Contact</div>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>info@carestaysuites.com</p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>(647) 499-3889</p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Toronto, Ontario</p>
+          <div className="footer-links">
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Quick Links</div>
+              {["Listings", "Healthcare", "About", "Contact"].map(l => <a key={l} href={`#${l.toLowerCase()}`} style={{ display: "block", fontSize: 13, color: "rgba(255,255,255,0.35)", textDecoration: "none", marginBottom: 8 }}>{l}</a>)}
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Contact</div>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>info@carestaysuites.com</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>(647) 499-3889</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Toronto, Ontario</p>
+            </div>
           </div>
         </div>
-      </div>
-      <div style={{ maxWidth: 1200, margin: "32px auto 0", paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)" }}>© 2026 CareStay Suites. All rights reserved.</span>
-        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)" }}>Operated by BookedHosts</span>
+        <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)" }}>© 2026 CareStay Suites. All rights reserved.</span>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)" }}>Operated by BookedHosts</span>
+        </div>
       </div>
     </footer>
   );
 }
 
+/* ─── PAGE ─── */
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -466,16 +503,18 @@ export default function Home() {
     return () => window.removeEventListener("scroll", h);
   }, []);
   return (
-    <main>
+    <>
+      <Styles />
       <Nav scrolled={scrolled} />
       <Hero />
-      <StatsSection />
+      <Stats />
       <ListingsSection />
       <HospitalBanner />
-      <HealthcareSection />
+      <Standard />
+      <Healthcare />
       <HowItWorks />
-      <ContactForm />
+      <Contact />
       <Footer />
-    </main>
+    </>
   );
 }
