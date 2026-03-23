@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
-const LISTINGS = [
+const FALLBACK_LISTINGS = [
   { id: 1, title: "The Pinnacle Suite", location: "Downtown Toronto", beds: 1, baths: 1, price: 2800, sqft: 580, img: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80", tag: "Near UHN", available: true, desc: "A sleek studio in the heart of downtown Toronto, steps from University Health Network. Fully furnished with blackout blinds, high-speed Wi-Fi, and everything a healthcare professional needs." },
   { id: 2, title: "Lakeview Residence", location: "Harbourfront", beds: 2, baths: 1, price: 3600, sqft: 820, img: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80", tag: "Near St. Michael's", available: true, desc: "Spacious two-bedroom with stunning lake views. Walking distance to St. Michael's Hospital. In-suite laundry, full kitchen, and a dedicated workspace." },
   { id: 3, title: "Midtown Medical Suite", location: "Yonge & Eglinton", beds: 1, baths: 1, price: 2600, sqft: 540, img: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80", tag: "Near Sunnybrook", available: false, desc: "Cozy midtown suite near Sunnybrook Health Sciences Centre. Quick TTC access, quiet neighbourhood, and move-in ready with all essentials." },
@@ -46,10 +46,15 @@ function Nav({ scrolled }: { scrolled: boolean }) {
   );
 }
 
+interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[] }
+
 export default function ListingPage() {
   const params = useParams();
-  const id = Number(params.id);
-  const listing = LISTINGS.find((l) => l.id === id);
+  const rawId = params.id as string;
+  const numericId = Number(rawId);
+  const fallback = FALLBACK_LISTINGS.find((l) => l.id === numericId);
+  const [listing, setListing] = useState<ListingData | null>(fallback || null);
+  const [loading, setLoading] = useState(!fallback);
   const [scrolled, setScrolled] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [name, setName] = useState("");
@@ -62,10 +67,36 @@ export default function ListingPage() {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  useEffect(() => {
+    fetch(`/api/listings`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === "success" && data.listings) {
+          const match = data.listings.find((l: { id: number | string }) => String(l.id) === rawId);
+          if (match) {
+            setListing({
+              id: match.id, title: match.title, location: match.location, beds: match.beds, baths: match.baths,
+              price: match.price, sqft: match.sqft, img: match.images?.[0] || match.img, tag: match.location || "GTA",
+              available: true, desc: match.description || "", description: match.description, images: match.images,
+            });
+          }
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [rawId]);
   const handleSubmit = async () => {
     await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, moveIn, duration, listing: listing?.title }) });
     setSubmitted(true);
   };
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ fontSize: 16, color: "rgba(255,255,255,0.5)" }}>Loading...</div>
+      </div>
+    );
+  }
 
   if (!listing) {
     return (
@@ -128,7 +159,7 @@ export default function ListingPage() {
                 <span>{listing.sqft} sqft</span>
               </div>
 
-              <p style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(255,255,255,0.7)", marginBottom: 48 }}>{listing.desc}</p>
+              <p style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(255,255,255,0.7)", marginBottom: 48 }}>{listing.desc || listing.description || ""}</p>
 
               {/* CareStay Standard */}
               <div style={{ marginBottom: 48 }}>
