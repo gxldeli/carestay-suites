@@ -102,11 +102,9 @@ export async function getListings(): Promise<HostAwayListing[]> {
 
   // Filter to only listings tagged with "carestay"
   // If no tag filter needed, remove this filter
-  const listings = (data.result || []).filter((l: HostAwayListing) => {
-    // Show all active listings for now
-    // To filter by tag, uncomment: return l.isActive === 1 && l.tags?.includes("carestay");
-    return l.isActive === 1;
-  });
+  console.log("[HostAway] Raw listings count:", (data.result || []).length);
+  if (data.result?.[0]) console.log("[HostAway] First listing:", JSON.stringify(data.result[0]).substring(0, 500));
+  const listings = data.result || [];
 
   return listings;
 }
