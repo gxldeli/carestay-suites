@@ -264,7 +264,7 @@ function ListingsSection() {
         if (data.status === "success" && data.listings) {
           setApiListings(data.listings.map((l: { id: number; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string }) => ({
             id: l.id, title: l.title, location: l.location, beds: l.beds, baths: l.baths,
-            price: l.price, sqft: l.sqft, img: l.img, tag: "Verified", available: true,
+            price: l.price, sqft: l.sqft, img: l.img, tag: l.location || "GTA", available: true,
           })));
         }
       })
