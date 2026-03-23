@@ -30,9 +30,10 @@ export async function GET() {
       count: transformed.length,
     });
   } catch (error) {
-    console.error("Error fetching listings:", error);
+    console.error("[API /listings] Error:", error instanceof Error ? error.message : error);
+    console.error("[API /listings] Stack:", error instanceof Error ? error.stack : "N/A");
     return NextResponse.json(
-      { status: "error", message: "Failed to fetch listings", listings: [] },
+      { status: "error", message: error instanceof Error ? error.message : "Failed to fetch listings", listings: [] },
       { status: 500 }
     );
   }

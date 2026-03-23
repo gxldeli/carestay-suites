@@ -13,6 +13,13 @@ async function getAccessToken(): Promise<string> {
     return cachedToken.token;
   }
 
+  if (!HOSTAWAY_CLIENT_ID || !HOSTAWAY_CLIENT_SECRET) {
+    console.error("[HostAway] Missing credentials — HOSTAWAY_CLIENT_ID:", HOSTAWAY_CLIENT_ID ? "set" : "MISSING", "HOSTAWAY_CLIENT_SECRET:", HOSTAWAY_CLIENT_SECRET ? "set" : "MISSING");
+    throw new Error("HostAway credentials not configured");
+  }
+
+  console.log("[HostAway] Requesting access token for client_id:", HOSTAWAY_CLIENT_ID);
+
   const res = await fetch(`${HOSTAWAY_API_BASE}/accessTokens`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -24,7 +31,9 @@ async function getAccessToken(): Promise<string> {
   });
 
   if (!res.ok) {
-    throw new Error(`HostAway auth failed: ${res.status}`);
+    const body = await res.text();
+    console.error(`[HostAway] Auth failed: ${res.status} ${res.statusText}`, body);
+    throw new Error(`HostAway auth failed: ${res.status} — ${body}`);
   }
 
   const data = await res.json();
@@ -34,6 +43,7 @@ async function getAccessToken(): Promise<string> {
     expires: Date.now() + 23 * 60 * 60 * 1000,
   };
 
+  console.log("[HostAway] Access token obtained successfully");
   return cachedToken.token;
 }
 
@@ -67,6 +77,7 @@ export interface HostAwayListing {
 export async function getListings(): Promise<HostAwayListing[]> {
   const token = await getAccessToken();
 
+  console.log("[HostAway] Fetching listings...");
   const res = await fetch(`${HOSTAWAY_API_BASE}/listings?limit=100&includeResources=1`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -77,7 +88,8 @@ export async function getListings(): Promise<HostAwayListing[]> {
   });
 
   if (!res.ok) {
-    console.error(`HostAway listings fetch failed: ${res.status}`);
+    const body = await res.text();
+    console.error(`[HostAway] Listings fetch failed: ${res.status} ${res.statusText}`, body);
     return [];
   }
 
@@ -102,6 +114,7 @@ export async function getListings(): Promise<HostAwayListing[]> {
 export async function getListing(id: number): Promise<HostAwayListing | null> {
   const token = await getAccessToken();
 
+  console.log(`[HostAway] Fetching listing ${id}...`);
   const res = await fetch(`${HOSTAWAY_API_BASE}/listings/${id}`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -110,9 +123,16 @@ export async function getListing(id: number): Promise<HostAwayListing | null> {
     next: { revalidate: 300 },
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`[HostAway] Listing ${id} fetch failed: ${res.status} ${res.statusText}`, body);
+    return null;
+  }
   const data = await res.json();
-  if (data.status !== "success") return null;
+  if (data.status !== "success") {
+    console.error(`[HostAway] Listing ${id} API error:`, data);
+    return null;
+  }
   return data.result;
 }
 
