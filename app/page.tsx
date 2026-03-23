@@ -509,7 +509,6 @@ export default function Home() {
       <Hero />
       <Stats />
       <ListingsSection />
-      <CareStayStandard />
       <HospitalBanner />
       <Standard />
       <Healthcare />
