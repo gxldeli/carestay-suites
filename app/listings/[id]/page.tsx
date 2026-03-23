@@ -57,6 +57,7 @@ export default function ListingPage() {
   const [loading, setLoading] = useState(!fallback);
   const [scrolled, setScrolled] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [selectedImg, setSelectedImg] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -131,12 +132,29 @@ export default function ListingPage() {
         {/* Hero Image */}
         <div style={{ position: "relative", width: "100%", height: "clamp(300px, 50vh, 520px)", overflow: "hidden" }}>
           <img
-            src={listing.img}
+            src={selectedImg || listing.img}
             alt={listing.title}
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, #0a0c0f 0%, transparent 50%)" }} />
         </div>
+
+        {/* Image Gallery Strip */}
+        {listing.images && listing.images.length > 1 && (
+          <div className="wrap" style={{ marginTop: -40, position: "relative", zIndex: 3, marginBottom: -40 }}>
+            <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
+              {listing.images.slice(0, 8).map((imgUrl, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedImg(imgUrl)}
+                  style={{ flexShrink: 0, width: 80, height: 56, borderRadius: 8, overflow: "hidden", border: (selectedImg || listing.img) === imgUrl ? "2px solid #0fa" : "2px solid transparent", cursor: "pointer", padding: 0, background: "none" }}
+                >
+                  <img src={imgUrl} alt={`${listing.title} ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         <div className="wrap" style={{ marginTop: -80, position: "relative", zIndex: 2 }}>
@@ -230,12 +248,52 @@ export default function ListingPage() {
         </div>
 
         {/* Back link */}
-        <div className="wrap" style={{ padding: "60px 24px 80px" }}>
+        <div className="wrap" style={{ padding: "60px 24px 40px" }}>
           <Link href="/#listings" style={{ color: "#0fa", fontSize: 14, fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(0,255,170,0.3)", paddingBottom: 2 }}>
             Browse all suites
           </Link>
         </div>
+
+        {/* Feedback Section */}
+        <section style={{ background: "#0d1117", padding: "60px 24px", textAlign: "center" }}>
+          <div style={{ maxWidth: 600, margin: "0 auto" }}>
+            <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: "#fff", marginBottom: 12 }}>Designed For You. Shaped By You.</h2>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.45)", lineHeight: 1.7, marginBottom: 20 }}>We&apos;re always improving CareStay based on feedback from healthcare professionals like you.</p>
+            <a href="mailto:feedback@carestaysuites.com" style={{ color: "#0fa", fontSize: 14, fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(0,255,170,0.3)", paddingBottom: 2 }}>Send us feedback →</a>
+          </div>
+        </section>
       </main>
+
+      {/* Footer */}
+      <footer style={{ background: "#0a0c0f", borderTop: "1px solid rgba(255,255,255,0.05)", padding: "48px 24px 32px" }}>
+        <div className="wrap">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 32 }}>
+            <div style={{ maxWidth: 280 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#0fa,#0af)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: "#0a0c0f" }}>CS</div>
+                <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>CareStay Suites</span>
+              </div>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>Premium furnished housing for healthcare professionals across the Greater Toronto Area.</p>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Quick Links</div>
+              {[{ label: "Browse Suites", href: "/#listings" }, { label: "Healthcare", href: "/#healthcare" }, { label: "How It Works", href: "/#about" }, { label: "Contact", href: "/#contact" }].map(l => (
+                <a key={l.label} href={l.href} style={{ display: "block", fontSize: 13, color: "rgba(255,255,255,0.35)", textDecoration: "none", marginBottom: 8 }}>{l.label}</a>
+              ))}
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Contact</div>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>info@carestaysuites.com</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>(647) 499-3889</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Toronto, Ontario</p>
+            </div>
+          </div>
+          <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)" }}>© 2026 CareStay Suites. All rights reserved.</span>
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)" }}>Operated by BookedHosts</span>
+          </div>
+        </div>
+      </footer>
     </>
   );
 }
