@@ -425,6 +425,15 @@ function HowItWorks() {
 /* ─── CONTACT ─── */
 function Contact() {
   const [done, setDone] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [hospital, setHospital] = useState("");
+  const [moveIn, setMoveIn] = useState("");
+  const handleSubmit = async () => {
+    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, hospital, moveIn }) });
+    setDone(true);
+  };
   return (
     <section id="contact" className="pad" style={{ background: "#0d1117" }}>
       <div style={{ maxWidth: 680, margin: "0 auto" }}>
@@ -439,12 +448,13 @@ function Contact() {
           <FadeIn delay={0.1}>
             <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: "28px 22px" }}>
               <div className="form-grid" style={{ marginBottom: 14 }}>
-                {[{ l: "Full Name", p: "Jane Smith", t: "text" }, { l: "Email", p: "jane@hospital.ca", t: "email" }, { l: "Phone", p: "(647) 000-0000", t: "tel" }, { l: "Hospital / Facility", p: "Toronto General", t: "text" }].map((f, i) => (
-                  <div key={i}><label className="form-label">{f.l}</label><input type={f.t} placeholder={f.p} className="form-input" /></div>
-                ))}
+                <div><label className="form-label">Full Name</label><input type="text" placeholder="Jane Smith" className="form-input" value={name} onChange={e => setName(e.target.value)} /></div>
+                <div><label className="form-label">Email</label><input type="email" placeholder="jane@hospital.ca" className="form-input" value={email} onChange={e => setEmail(e.target.value)} /></div>
+                <div><label className="form-label">Phone</label><input type="tel" placeholder="(647) 000-0000" className="form-input" value={phone} onChange={e => setPhone(e.target.value)} /></div>
+                <div><label className="form-label">Hospital / Facility</label><input type="text" placeholder="Toronto General" className="form-input" value={hospital} onChange={e => setHospital(e.target.value)} /></div>
               </div>
-              <div style={{ marginBottom: 14 }}><label className="form-label">Move-in Date &amp; Duration</label><input type="text" placeholder="e.g., April 15 — 3 months" className="form-input" /></div>
-              <button onClick={() => setDone(true)} style={{ width: "100%", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: 16, borderRadius: 10, fontWeight: 800, fontSize: 16, border: "none", cursor: "pointer", fontFamily: "inherit" }}>Submit Inquiry</button>
+              <div style={{ marginBottom: 14 }}><label className="form-label">Move-in Date &amp; Duration</label><input type="text" placeholder="e.g., April 15 — 3 months" className="form-input" value={moveIn} onChange={e => setMoveIn(e.target.value)} /></div>
+              <button onClick={handleSubmit} style={{ width: "100%", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: 16, borderRadius: 10, fontWeight: 800, fontSize: 16, border: "none", cursor: "pointer", fontFamily: "inherit" }}>Submit Inquiry</button>
               <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", textAlign: "center", marginTop: 12 }}>We respond within 24 hours. No spam, ever.</p>
             </div>
           </FadeIn>

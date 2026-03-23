@@ -51,11 +51,21 @@ export default function ListingPage() {
   const id = Number(params.id);
   const listing = LISTINGS.find((l) => l.id === id);
   const [scrolled, setScrolled] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [moveIn, setMoveIn] = useState("");
+  const [duration, setDuration] = useState("");
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  const handleSubmit = async () => {
+    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, moveIn, duration, listing: listing?.title }) });
+    setSubmitted(true);
+  };
 
   if (!listing) {
     return (
@@ -145,31 +155,39 @@ export default function ListingPage() {
                   <span style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", marginLeft: 6 }}>/mo</span>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "14px 16px" }}>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Move-in</div>
-                    <div style={{ fontSize: 14, color: "#fff" }}>Flexible</div>
+                {!submitted ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Full Name</div>
+                      <input type="text" placeholder="Jane Smith" value={name} onChange={e => setName(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Email</div>
+                      <input type="email" placeholder="jane@hospital.ca" value={email} onChange={e => setEmail(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Phone</div>
+                      <input type="tel" placeholder="(647) 000-0000" value={phone} onChange={e => setPhone(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Move-in Date</div>
+                      <input type="text" placeholder="e.g., April 15" value={moveIn} onChange={e => setMoveIn(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Duration</div>
+                      <input type="text" placeholder="e.g., 3 months" value={duration} onChange={e => setDuration(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                    </div>
+                    <button onClick={handleSubmit} style={{ width: "100%", padding: "16px 0", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", borderRadius: 10, fontWeight: 700, fontSize: 15, textAlign: "center", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                      Submit Inquiry
+                    </button>
                   </div>
-                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "14px 16px" }}>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Minimum Stay</div>
-                    <div style={{ fontSize: 14, color: "#fff" }}>1 Month</div>
+                ) : (
+                  <div style={{ textAlign: "center", padding: "24px 0", marginBottom: 20 }}>
+                    <div style={{ fontSize: 36, marginBottom: 8 }}>✓</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 4 }}>Inquiry Sent</div>
+                    <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>We&apos;ll be in touch within 24 hours.</div>
                   </div>
-                </div>
-
-                <a
-                  href={`https://wa.me/16476091604?text=${encodeURIComponent(`Hi, I'm interested in ${listing.title} (${listing.location}). Is it still available?`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ display: "block", width: "100%", padding: "16px 0", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", borderRadius: 10, fontWeight: 700, fontSize: 15, textAlign: "center", textDecoration: "none", marginBottom: 10 }}
-                >
-                  Inquire Now
-                </a>
-                <a
-                  href="/#contact"
-                  style={{ display: "block", width: "100%", padding: "16px 0", background: "rgba(255,255,255,0.06)", color: "#fff", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, fontWeight: 700, fontSize: 15, textAlign: "center", textDecoration: "none" }}
-                >
-                  Contact Us
-                </a>
+                )}
 
                 <div style={{ marginTop: 20, padding: "14px 16px", background: "rgba(0,255,170,0.05)", borderRadius: 10, border: "1px solid rgba(0,255,170,0.1)" }}>
                   <div style={{ fontSize: 13, color: "#0fa", fontWeight: 600, marginBottom: 4 }}>Healthcare Rate</div>
