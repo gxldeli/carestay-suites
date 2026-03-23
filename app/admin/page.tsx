@@ -7,6 +7,10 @@ interface ListingOverride {
   hidden?: boolean;
   soakingTub?: boolean;
   carestayStandard?: boolean;
+  titleOverride?: string;
+  descriptionOverride?: string;
+  nearbyHospital?: string;
+  hospitalDistance?: string;
 }
 
 interface ApiListing {
@@ -29,6 +33,7 @@ interface CustomListing {
   price: number;
   sqft: number;
   img: string;
+  images: string[];
   description: string;
   nearbyHospital: string;
   hospitalDistance: string;
@@ -67,6 +72,7 @@ export default function AdminPage() {
   const [listings, setListings] = useState<ApiListing[]>([]);
   const [overrides, setOverrides] = useState<OverridesData>({ listings: {}, customListings: [] });
   const [saving, setSaving] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   // Custom listing form
   const [newTitle, setNewTitle] = useState("");
@@ -134,11 +140,34 @@ export default function AdminPage() {
     setSaving(null);
   };
 
+  const saveExpandedOverrides = async (id: number, fields: Partial<ListingOverride>) => {
+    setSaving(`${id}-expanded`);
+    console.log("[Admin] Saving expanded overrides for", id, fields);
+    await adminPost("updateListing", { id: String(id), ...fields });
+    setSaving(null);
+  };
+
+  const SHOWCASE_PRESETS = [
+    { title: "Yorkville Penthouse", location: "Downtown Toronto", beds: "2", baths: "2", price: "4500", sqft: "950", hospital: "Mount Sinai", distance: "5 min walk", desc: "Luxury penthouse in Toronto's most prestigious neighborhood. Walking distance to Mount Sinai and SickKids.", imgs: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800\nhttps://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800", tub: true, standard: true },
+    { title: "Liberty Village Loft", location: "Liberty Village", beds: "1", baths: "1", price: "2700", sqft: "620", hospital: "St. Joseph's", distance: "8 min drive", desc: "Industrial-chic loft with high ceilings and exposed brick.", imgs: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800\nhttps://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800", tub: false, standard: true },
+    { title: "Vaughan Metropolitan", location: "Vaughan", beds: "2", baths: "1", price: "3000", sqft: "780", hospital: "Mackenzie Health", distance: "12 min drive", desc: "Brand new condo at VMC with direct subway access.", imgs: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800\nhttps://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=800", tub: false, standard: false },
+    { title: "SickKids Quarter", location: "University District", beds: "1", baths: "1", price: "3100", sqft: "540", hospital: "SickKids", distance: "5 min walk", desc: "Steps from SickKids and Princess Margaret. Ideal for pediatric nurses.", imgs: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800\nhttps://images.unsplash.com/photo-1484154218962-a197022b5858?w=800", tub: true, standard: true },
+    { title: "Burlington Lakefront", location: "Burlington", beds: "2", baths: "1", price: "3100", sqft: "810", hospital: "Joseph Brant", distance: "10 min drive", desc: "Waterfront living with charming downtown Burlington nearby.", imgs: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800\nhttps://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=800", tub: false, standard: true },
+  ];
+
+  const applyPreset = (idx: number) => {
+    const p = SHOWCASE_PRESETS[idx];
+    setNewTitle(p.title); setNewLocation(p.location); setNewBeds(p.beds); setNewBaths(p.baths);
+    setNewPrice(p.price); setNewSqft(p.sqft); setNewHospital(p.hospital); setNewDistance(p.distance);
+    setNewDesc(p.desc); setNewImg(p.imgs); setNewTub(p.tub); setNewStandard(p.standard);
+  };
+
   const addCustomListing = async () => {
     if (!newTitle || !newPrice) return alert("Title and price are required");
+    const imgLines = newImg.split("\n").map(s => s.trim()).filter(Boolean);
     await adminPost("addCustomListing", {
       title: newTitle, location: newLocation, beds: Number(newBeds), baths: Number(newBaths),
-      price: Number(newPrice), sqft: Number(newSqft), img: newImg, description: newDesc,
+      price: Number(newPrice), sqft: Number(newSqft), img: imgLines[0] || "", images: imgLines, description: newDesc,
       nearbyHospital: newHospital, hospitalDistance: newDistance, soakingTub: newTub, carestayStandard: newStandard,
     });
     setNewTitle(""); setNewLocation(""); setNewBeds("1"); setNewBaths("1"); setNewPrice(""); setNewSqft("");
@@ -203,20 +232,21 @@ export default function AdminPage() {
               <tbody>
                 {listings.map((l) => {
                   const ov = overrides.listings[String(l.id)] || {};
+                  const isExpanded = expandedId === l.id;
                   return (
-                    <tr key={l.id}>
+                    <tr key={l.id} onClick={() => setExpandedId(isExpanded ? null : l.id)} style={{ cursor: "pointer" }}>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           {l.img && <img src={l.img} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} />}
                           <div>
-                            <div style={{ fontWeight: 600, fontSize: 14 }}>{l.title}</div>
-                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>ID: {l.id}</div>
+                            <div style={{ fontWeight: 600, fontSize: 14 }}>{ov.titleOverride || l.title}</div>
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>ID: {l.id} {isExpanded ? "▲" : "▼"}</div>
                           </div>
                         </div>
                       </td>
                       <td style={tdStyle}>{l.location}</td>
                       <td style={tdStyle}>${l.price.toLocaleString()}</td>
-                      <td style={tdStyle}>
+                      <td style={tdStyle} onClick={e => e.stopPropagation()}>
                         <input
                           type="number" placeholder="—"
                           value={ov.priceOverride ?? ""}
@@ -225,15 +255,63 @@ export default function AdminPage() {
                         />
                         {saving === `${l.id}-priceOverride` && <span style={{ fontSize: 10, color: "#0fa", marginLeft: 4 }}>saving...</span>}
                       </td>
-                      <td style={tdStyle}><Toggle checked={!ov.hidden} onChange={(v) => updateOverride(l.id, "hidden", !v)} /></td>
-                      <td style={tdStyle}><Toggle checked={!!ov.soakingTub} onChange={(v) => updateOverride(l.id, "soakingTub", v)} /></td>
-                      <td style={tdStyle}><Toggle checked={!!ov.carestayStandard} onChange={(v) => updateOverride(l.id, "carestayStandard", v)} /></td>
+                      <td style={tdStyle} onClick={e => e.stopPropagation()}><Toggle checked={!ov.hidden} onChange={(v) => updateOverride(l.id, "hidden", !v)} /></td>
+                      <td style={tdStyle} onClick={e => e.stopPropagation()}><Toggle checked={!!ov.soakingTub} onChange={(v) => updateOverride(l.id, "soakingTub", v)} /></td>
+                      <td style={tdStyle} onClick={e => e.stopPropagation()}><Toggle checked={!!ov.carestayStandard} onChange={(v) => updateOverride(l.id, "carestayStandard", v)} /></td>
                     </tr>
                   );
                 })}
               </tbody>
+              {/* Expanded Edit Form — rendered outside table */}
             </table>
           </div>
+          {expandedId !== null && (() => {
+            const l = listings.find(x => x.id === expandedId);
+            if (!l) return null;
+            const ov = overrides.listings[String(l.id)] || {};
+            return (
+              <div style={{ background: "rgba(0,255,170,0.03)", border: "1px solid rgba(0,255,170,0.1)", borderRadius: 12, padding: 20, marginTop: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0fa" }}>Edit: {l.title}</h3>
+                  <button onClick={() => setExpandedId(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 18, cursor: "pointer" }}>✕</button>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Title Override</label>
+                    <input style={inputStyle} defaultValue={ov.titleOverride || ""} placeholder={l.title} onBlur={e => { if (e.target.value !== (ov.titleOverride || "")) saveExpandedOverrides(l.id, { titleOverride: e.target.value || undefined }); }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Price Override ($/mo)</label>
+                    <input style={inputStyle} type="number" defaultValue={ov.priceOverride ?? ""} placeholder={String(l.price)} onBlur={e => { if (String(e.target.value) !== String(ov.priceOverride ?? "")) saveExpandedOverrides(l.id, { priceOverride: e.target.value ? Number(e.target.value) : undefined }); }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Nearby Hospital</label>
+                    <input style={inputStyle} defaultValue={ov.nearbyHospital || ""} placeholder="e.g., Toronto General" onBlur={e => { if (e.target.value !== (ov.nearbyHospital || "")) saveExpandedOverrides(l.id, { nearbyHospital: e.target.value || undefined }); }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Hospital Distance</label>
+                    <input style={inputStyle} defaultValue={ov.hospitalDistance || ""} placeholder="e.g., 5 min walk" onBlur={e => { if (e.target.value !== (ov.hospitalDistance || "")) saveExpandedOverrides(l.id, { hospitalDistance: e.target.value || undefined }); }} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Description Override</label>
+                  <textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} defaultValue={ov.descriptionOverride || ""} placeholder="Override the API description..." onBlur={e => { if (e.target.value !== (ov.descriptionOverride || "")) saveExpandedOverrides(l.id, { descriptionOverride: e.target.value || undefined }); }} />
+                </div>
+                <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                    <Toggle checked={!ov.hidden} onChange={(v) => saveExpandedOverrides(l.id, { hidden: !v })} /> Visible
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                    <Toggle checked={!!ov.soakingTub} onChange={(v) => saveExpandedOverrides(l.id, { soakingTub: v })} /> Soaking Tub
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                    <Toggle checked={!!ov.carestayStandard} onChange={(v) => saveExpandedOverrides(l.id, { carestayStandard: v })} /> CareStay Standard
+                  </label>
+                  {saving === `${expandedId}-expanded` && <span style={{ fontSize: 12, color: "#0fa" }}>Saving...</span>}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Custom Listings */}
@@ -275,6 +353,18 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Quick Add Showcase */}
+          <div style={{ marginBottom: 20, padding: "14px 16px", background: "rgba(0,170,255,0.04)", border: "1px solid rgba(0,170,255,0.12)", borderRadius: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#0af", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>Quick Add Showcase</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {SHOWCASE_PRESETS.map((p, i) => (
+                <button key={i} onClick={() => applyPreset(i)} style={{ padding: "6px 14px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  {p.title}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Add Custom Listing Form */}
           <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: "rgba(255,255,255,0.7)" }}>Add Custom Listing</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -288,8 +378,15 @@ export default function AdminPage() {
             <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Hospital Distance</label><input style={inputStyle} value={newDistance} onChange={(e) => setNewDistance(e.target.value)} placeholder="5 min walk" /></div>
           </div>
           <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Image URL</label>
-            <input style={inputStyle} value={newImg} onChange={(e) => setNewImg(e.target.value)} placeholder="https://images.unsplash.com/..." />
+            <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Image URLs (one per line)</label>
+            <textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} value={newImg} onChange={(e) => setNewImg(e.target.value)} placeholder={"https://images.unsplash.com/photo-1...\nhttps://images.unsplash.com/photo-2..."} />
+            {newImg.trim() && (
+              <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                {newImg.split("\n").filter(s => s.trim()).map((url, i) => (
+                  <img key={i} src={url.trim()} alt={`Preview ${i + 1}`} style={{ width: 60, height: 42, objectFit: "cover", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }} />
+                ))}
+              </div>
+            )}
           </div>
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Description</label>

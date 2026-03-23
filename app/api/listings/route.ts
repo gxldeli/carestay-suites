@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getListings } from "@/app/lib/hostaway";
 
 // Access the same in-memory overrides store used by /api/admin
-interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean }
-interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean }
+interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string }
+interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean }
 interface OverridesData { listings: Record<string, ListingOverride>; customListings: CustomListing[] }
 const globalStore = globalThis as unknown as { __adminOverrides?: OverridesData };
 function getOverrides(): OverridesData { return globalStore.__adminOverrides || { listings: {}, customListings: [] }; }
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
         const ov = overrides.listings[String(l.id)] || {};
         return {
           id: l.id,
-          title: l.name,
+          title: ov.titleOverride || l.name,
           location: l.city || "Toronto",
           beds: l.bedrooms || 1,
           baths: l.bathrooms || 1,
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
           sqft: l.squareFeet || 0,
           img: l.pictures?.[0]?.originalUrl || l.pictures?.[0]?.url || l.images?.[0]?.url || l.listingImages?.[0]?.url || l.thumbnailUrl || "",
           images: (l.pictures?.map((p) => p.originalUrl || p.url) || l.images?.map((p) => p.url) || l.listingImages?.map((p) => p.url) || (l.thumbnailUrl ? [l.thumbnailUrl] : [])),
-          description: l.description || "",
+          description: ov.descriptionOverride || l.description || "",
           available: true,
           amenities: l.amenities || [],
           address: l.address || "",
@@ -39,6 +39,8 @@ export async function GET(request: Request) {
           soakingTub: ov.soakingTub || false,
           carestayStandard: ov.carestayStandard || false,
           hidden: ov.hidden || false,
+          nearbyHospital: ov.nearbyHospital || "",
+          hospitalDistance: ov.hospitalDistance || "",
         };
       })
       .filter((l) => includeHidden || !l.hidden);
@@ -52,8 +54,8 @@ export async function GET(request: Request) {
       baths: cl.baths,
       price: cl.price,
       sqft: cl.sqft,
-      img: cl.img,
-      images: cl.img ? [cl.img] : [],
+      img: cl.images?.[0] || cl.img,
+      images: cl.images?.length ? cl.images : (cl.img ? [cl.img] : []),
       description: cl.description,
       available: true,
       amenities: [] as string[],

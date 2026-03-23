@@ -7,6 +7,10 @@ export interface ListingOverride {
   hidden?: boolean;
   soakingTub?: boolean;
   carestayStandard?: boolean;
+  titleOverride?: string;
+  descriptionOverride?: string;
+  nearbyHospital?: string;
+  hospitalDistance?: string;
 }
 
 export interface CustomListing {
@@ -18,6 +22,7 @@ export interface CustomListing {
   price: number;
   sqft: number;
   img: string;
+  images: string[];
   description: string;
   nearbyHospital: string;
   hospitalDistance: string;
