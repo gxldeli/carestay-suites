@@ -275,6 +275,8 @@ function ListingsSection() {
     ...apiListings.map(l => ({ ...l, source: "api" as const })),
     ...SHOWCASE_LISTINGS.map(l => ({ ...l, source: "showcase" as const, available: false })),
   ];
+  const displayedListings = allListings.slice(0, 9);
+  const hasMore = allListings.length > 9;
 
   return (
     <section id="listings" className="pad" style={{ background: "#0a0c0f" }}>
@@ -287,7 +289,7 @@ function ListingsSection() {
           </div>
         </FadeIn>
         <div className="listings-grid">
-          {allListings.map((l, i) => (
+          {displayedListings.map((l, i) => (
             <FadeIn key={`${l.source}-${l.id}`} delay={i * 0.06}>
               <Link href={`/listings/${l.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                 <div className="listing-card">
@@ -317,8 +319,15 @@ function ListingsSection() {
             </FadeIn>
           ))}
         </div>
+        {hasMore && (
+          <FadeIn delay={0.3}>
+            <div style={{ textAlign: "center", marginTop: 36 }}>
+              <Link href="/listings" style={{ display: "inline-block", background: "rgba(0,255,170,0.1)", color: "#0fa", padding: "12px 28px", borderRadius: 10, fontSize: 14, fontWeight: 700, textDecoration: "none", border: "1px solid rgba(0,255,170,0.2)" }}>View All Suites →</Link>
+            </div>
+          </FadeIn>
+        )}
         <FadeIn delay={0.3}>
-          <div style={{ textAlign: "center", marginTop: 36 }}>
+          <div style={{ textAlign: "center", marginTop: 20 }}>
             <a href="#contact" style={{ color: "#0fa", fontSize: 14, fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(0,255,170,0.3)", paddingBottom: 2 }}>Don&apos;t see what you need? Tell us your requirements →</a>
           </div>
         </FadeIn>
