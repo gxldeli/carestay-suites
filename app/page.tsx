@@ -73,10 +73,11 @@ function Styles() {
 
     /* Listings */
     .listings-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-    .listing-card{background:#12151a;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.06)}
-    .listing-img{width:100%;height:200px;object-fit:cover;display:block}
+    .listing-card{background:#12151a;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);transition:transform 0.2s}
+    .listing-card:hover{transform:translateY(-4px)}
+    .listing-img{width:100%;height:220px;object-fit:cover;display:block}
     .listing-body{padding:16px 18px}
-    .listing-tags{position:absolute;top:10px;left:10px;display:flex;gap:6px}
+    .listing-tags{position:absolute;bottom:10px;left:10px;display:flex;gap:6px}
     .listing-tag{background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);color:#0fa;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
     .listing-avail{background:rgba(0,255,170,0.15);color:#0fa;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
     .listing-wait{background:rgba(255,77,77,0.15);color:#f66;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}

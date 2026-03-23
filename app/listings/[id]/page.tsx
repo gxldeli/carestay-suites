@@ -143,7 +143,7 @@ export default function ListingPage() {
         {listing.images && listing.images.length > 1 && (
           <div className="wrap" style={{ marginTop: -40, position: "relative", zIndex: 3, marginBottom: -40 }}>
             <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
-              {listing.images.slice(0, 8).map((imgUrl, i) => (
+              {listing.images.slice(0, 30).map((imgUrl, i) => (
                 <button
                   key={i}
                   onClick={() => setSelectedImg(imgUrl)}

@@ -37,7 +37,7 @@ export default function AllListingsPage() {
         .listings-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
         .listing-card{background:#12151a;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);transition:transform 0.2s}
         .listing-card:hover{transform:translateY(-4px)}
-        .listing-img{width:100%;height:200px;object-fit:cover;display:block}
+        .listing-img{width:100%;height:220px;object-fit:cover;display:block}
         .listing-body{padding:16px 18px}
         .listing-tag{background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);color:#0fa;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
         .listing-avail{background:rgba(0,255,170,0.15);color:#0fa;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
@@ -118,7 +118,7 @@ export default function AllListingsPage() {
                   <div className="listing-card">
                     <div style={{ position: "relative", overflow: "hidden" }}>
                       <img src={l.img} alt={l.title} className="listing-img" />
-                      <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 6 }}>
+                      <div style={{ position: "absolute", bottom: 10, left: 10, display: "flex", gap: 6 }}>
                         <span className="listing-tag">{l.location}</span>
                         <span className="listing-avail">Available</span>
                       </div>

@@ -62,6 +62,7 @@ export async function POST(request: Request) {
     if (action === "updateListing") {
       const { id, ...fields } = payload as { id: string } & ListingOverride;
       overrides.listings[id] = { ...overrides.listings[id], ...fields };
+      console.log("[Admin API] Updated listing", id, "fields:", fields, "result:", overrides.listings[id]);
     } else if (action === "addCustomListing") {
       const listing = payload as Omit<CustomListing, "id">;
       const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;

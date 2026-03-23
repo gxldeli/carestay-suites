@@ -90,11 +90,12 @@ export default function AdminPage() {
 
   const loadData = useCallback(async () => {
     const [listRes, adminRes] = await Promise.all([
-      fetch("/api/listings"),
+      fetch("/api/listings?includeHidden=true"),
       fetch("/api/admin"),
     ]);
     const listData = await listRes.json();
     const adminData = await adminRes.json();
+    console.log("[Admin] Loaded listings:", listData.count, "overrides:", Object.keys(adminData.data?.listings || {}).length);
     if (listData.status === "success") setListings(listData.listings || []);
     if (adminData.status === "success") setOverrides(adminData.data);
   }, []);
@@ -127,7 +128,9 @@ export default function AdminPage() {
   const updateOverride = async (id: string | number, field: string, value: unknown) => {
     const key = `${id}-${field}`;
     setSaving(key);
-    await adminPost("updateListing", { id: String(id), [field]: value });
+    console.log("[Admin] Updating override:", { id: String(id), field, value });
+    const result = await adminPost("updateListing", { id: String(id), [field]: value });
+    console.log("[Admin] Update result:", result.status, "overrides for", id, ":", result.data?.listings?.[String(id)]);
     setSaving(null);
   };
 
