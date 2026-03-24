@@ -59,13 +59,15 @@ export interface HostAwayListing {
   latitude: number;
   longitude: number;
   bedrooms: number;
+  bedroomsNumber: number;
   bathrooms: number;
   maxGuests: number;
   beds: number;
   bedsNumber: number;
   personCapacity: number;
   guestsIncluded: number;
-  listingRooms: unknown[];
+  roomsNumber: number;
+  listingRooms: Array<{ roomType?: string; type?: string; [key: string]: unknown }>;
   listingBedTypes: unknown[];
   squareFeet: number;
   propertyTypeId: number;
@@ -101,6 +103,23 @@ const AMENITY_ID_MAP: Record<number, string> = {
   55: "Cleaning Before Checkout", 56: "Waterfront", 57: "Beachfront",
   58: "Ski In Ski Out", 59: "Self Check-in", 60: "Smart Lock", 61: "Lockbox",
 };
+
+// Extract bedroom count from listing, trying multiple HostAway field names and listingRooms
+export function extractBedroomCount(listing: HostAwayListing): number {
+  // Try direct fields first
+  if (listing.bedrooms && listing.bedrooms > 0) return listing.bedrooms;
+  if (listing.bedroomsNumber && listing.bedroomsNumber > 0) return listing.bedroomsNumber;
+  if (listing.roomsNumber && listing.roomsNumber > 0) return listing.roomsNumber;
+  // Try counting bedrooms from listingRooms array
+  if (listing.listingRooms && Array.isArray(listing.listingRooms) && listing.listingRooms.length > 0) {
+    const bedroomRooms = listing.listingRooms.filter((r) => {
+      const type = (r.roomType || r.type || "").toString().toLowerCase();
+      return type.includes("bedroom") || type.includes("bed room");
+    });
+    if (bedroomRooms.length > 0) return bedroomRooms.length;
+  }
+  return 0;
+}
 
 export function extractAmenityNames(listing: HostAwayListing): string[] {
   // Try listingAmenities (array of objects) first — this is the standard HostAway format
@@ -171,8 +190,10 @@ export async function getListings(): Promise<HostAwayListing[]> {
     console.log("[HostAway] First listing raw amenities:", JSON.stringify(first.amenities)?.substring(0, 500));
     console.log("[HostAway] First listing specs:", {
       maxGuests: first.maxGuests, personCapacity: first.personCapacity, guestsIncluded: first.guestsIncluded,
-      bedrooms: first.bedrooms, beds: first.beds, bedsNumber: first.bedsNumber, bathrooms: first.bathrooms,
-      listingRooms: JSON.stringify(first.listingRooms)?.substring(0, 300),
+      bedrooms: first.bedrooms, bedroomsNumber: first.bedroomsNumber, roomsNumber: first.roomsNumber,
+      beds: first.beds, bedsNumber: first.bedsNumber, bathrooms: first.bathrooms,
+      extractedBedrooms: extractBedroomCount(first),
+      listingRooms: JSON.stringify(first.listingRooms)?.substring(0, 500),
       listingBedTypes: JSON.stringify(first.listingBedTypes)?.substring(0, 300),
     });
   }
@@ -203,8 +224,16 @@ export async function getListing(id: number): Promise<HostAwayListing | null> {
     console.error(`[HostAway] Listing ${id} API error:`, data);
     return null;
   }
-  console.log(`[HostAway] Listing ${id} raw amenities:`, JSON.stringify(data.result?.amenities)?.substring(0, 500));
-  return data.result;
+  const result = data.result;
+  console.log(`[HostAway] Listing ${id} raw amenities:`, JSON.stringify(result?.amenities)?.substring(0, 500));
+  console.log(`[HostAway] Listing ${id} specs:`, {
+    bedrooms: result?.bedrooms, bedroomsNumber: result?.bedroomsNumber, roomsNumber: result?.roomsNumber,
+    beds: result?.beds, bedsNumber: result?.bedsNumber, bathrooms: result?.bathrooms,
+    maxGuests: result?.maxGuests, personCapacity: result?.personCapacity,
+    extractedBedrooms: result ? extractBedroomCount(result) : 0,
+    listingRooms: JSON.stringify(result?.listingRooms)?.substring(0, 500),
+  });
+  return result;
 }
 
 export async function getListingCalendar(

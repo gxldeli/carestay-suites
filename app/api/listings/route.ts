@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getListings, extractAmenityNames } from "@/app/lib/hostaway";
+import { getListings, extractAmenityNames, extractBedroomCount } from "@/app/lib/hostaway";
 import { redis } from "@/app/lib/redis";
 
 // Upstash Redis overrides store
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
           latitude: l.latitude,
           longitude: l.longitude,
           maxGuests: l.personCapacity || l.maxGuests || l.guestsIncluded || 0,
-          bedrooms: l.bedrooms || 0,
+          bedrooms: extractBedroomCount(l),
           soakingTub: ov.soakingTub || false,
           carestayStandard: ov.carestayStandard || false,
           hidden: ov.hidden || false,

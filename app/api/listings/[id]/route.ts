@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getListing, extractAmenityNames } from "@/app/lib/hostaway";
+import { getListing, extractAmenityNames, extractBedroomCount } from "@/app/lib/hostaway";
 
 export async function GET(
   _request: Request,
@@ -39,7 +39,7 @@ export async function GET(
       latitude: listing.latitude,
       longitude: listing.longitude,
       maxGuests: listing.personCapacity || listing.maxGuests || listing.guestsIncluded || 0,
-      bedrooms: listing.bedrooms || 0,
+      bedrooms: extractBedroomCount(listing),
     };
 
     return NextResponse.json({ status: "success", listing: transformed });
