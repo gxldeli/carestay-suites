@@ -343,37 +343,58 @@ export default function ListingPage() {
               {/* Amenities */}
               <div style={{ marginBottom: 48 }}>
                 <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Amenities</h2>
-                <div className="amenity-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                  {(() => {
+                {(() => {
                     const iconMap: Record<string, string> = {
-                      "wifi": "📶", "wireless internet": "📶", "internet": "📶",
-                      "kitchen": "🍳", "cooking basics": "🍳",
+                      "wifi": "📶", "wireless internet": "📶", "wireless": "📶", "internet": "📶",
+                      "kitchen": "🍳",
+                      "cooking basics": "🥘",
                       "parking": "🅿️", "free parking": "🅿️", "garage": "🅿️", "street parking": "🅿️",
                       "washer": "🧺", "laundry": "🧺", "washing machine": "🧺",
                       "dryer": "👕",
                       "air conditioning": "❄️", "ac": "❄️", "a/c": "❄️", "central air": "❄️",
                       "heating": "🔥", "heat": "🔥", "central heating": "🔥",
+                      "indoor fireplace": "🪵", "fireplace": "🪵",
                       "tv": "📺", "cable tv": "📺", "smart tv": "📺", "television": "📺",
                       "gym": "💪", "fitness": "💪", "fitness center": "💪", "exercise equipment": "💪",
                       "pool": "🏊", "swimming pool": "🏊",
                       "elevator": "🛗", "lift": "🛗",
-                      "balcony": "🌇", "patio": "🌇", "deck": "🌇", "terrace": "🌇",
+                      "balcony": "🌇", "patio": "🌇", "deck": "🌇", "terrace": "🌇", "patio or balcony": "🌇",
                       "dishwasher": "🍽️",
                       "coffee maker": "☕", "coffee": "☕", "espresso machine": "☕",
-                      "iron": "👔",
+                      "iron": "🫠",
                       "hair dryer": "💇", "hairdryer": "💇",
                       "workspace": "💻", "dedicated workspace": "💻", "laptop friendly workspace": "💻",
-                      "smart lock": "🔒", "lockbox": "🔒", "keypad": "🔒", "self check-in": "🔒",
+                      "smart lock": "🔐", "lockbox": "🔐", "keypad": "🔐", "self check-in": "🔐",
                       "subway": "🚇", "transit": "🚇",
                       "soaking tub": "🛁", "bathtub": "🛁", "hot tub": "🛁",
                       "concierge": "🛎️", "doorman": "🛎️", "front desk": "🛎️",
                       "pet friendly": "🐾", "pets allowed": "🐾",
-                      "microwave": "🍽️", "oven": "🍳", "stove": "🍳", "refrigerator": "🍳", "fridge": "🍳",
-                      "smoke detector": "🔔", "carbon monoxide detector": "🔔", "fire extinguisher": "🔔",
+                      "microwave": "📡", "oven": "🫕", "stove": "🫕", "refrigerator": "🧊", "fridge": "🧊", "freezer": "🧊",
+                      "smoke detector": "🔔",
+                      "carbon monoxide detector": "🛡️",
+                      "fire extinguisher": "🧯",
                       "first aid kit": "🩹",
-                      "hangers": "👔", "closet": "👔",
-                      "bed linens": "🛏️", "linens": "🛏️", "towels": "🛏️", "extra pillows": "🛏️",
-                      "shampoo": "🧴", "essentials": "🧴", "toiletries": "🧴",
+                      "hangers": "👔", "closet": "👔", "clothing storage": "🗄️",
+                      "bed linens": "🛏️", "linens": "🛏️", "towels": "🛏️", "extra pillows": "🛏️", "extra pillows and blankets": "🛏️",
+                      "shampoo": "🧴",
+                      "essentials": "🧹",
+                      "toiletries": "🧴",
+                      "toaster": "🍞",
+                      "outdoor furniture": "🪑",
+                      "cleaning products": "🧽", "cleaning before checkout": "🧽",
+                      "bbq grill": "🔥", "bbq": "🔥", "barbecue": "🔥",
+                      "rain shower": "🚿", "shower": "🚿",
+                      "shower gel": "🧼", "body soap": "🧼",
+                      "suitable for children": "👶", "family friendly": "👶",
+                      "suitable for infants": "🍼",
+                      "bathrobe": "👘",
+                      "wine glasses": "🍷",
+                      "baking sheet": "🍪",
+                      "hot water": "🚰",
+                      "private entrance": "🚪",
+                      "ev charger": "⚡",
+                      "wheelchair accessible": "♿",
+                      "dishes and silverware": "🍽️",
                     };
                     const getIcon = (name: string) => {
                       const lower = name.toLowerCase().trim();
@@ -383,22 +404,62 @@ export default function ListingPage() {
                       }
                       return "✓";
                     };
+
+                    // Deduplicate: merge "Internet"/"Wireless Internet"/"Wireless" into "WiFi"
+                    const WIFI_VARIANTS = new Set(["internet", "wireless internet", "wireless", "wifi"]);
                     const DEFAULT_AMENITIES = ["WiFi", "Kitchen", "Air Conditioning", "Heating", "Washer", "Dryer", "TV", "Hair Dryer", "Iron", "Coffee Maker", "Workspace", "Free Parking"];
-                    const amenities = listing.amenities && listing.amenities.length > 0 ? listing.amenities : DEFAULT_AMENITIES;
-                    const visible = showAllAmenities ? amenities : amenities.slice(0, 9);
-                    return visible.map((a: string, i: number) => (
-                      <div key={`${a}-${i}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10 }}>
-                        <span style={{ fontSize: 20 }}>{getIcon(a)}</span>
-                        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{a}</span>
-                      </div>
-                    ));
+                    const rawAmenities = listing.amenities && listing.amenities.length > 0 ? listing.amenities : DEFAULT_AMENITIES;
+
+                    // Deduplicate
+                    const seen = new Set<string>();
+                    let hasWifi = false;
+                    const deduped: string[] = [];
+                    for (const a of rawAmenities) {
+                      const lower = a.toLowerCase().trim();
+                      if (WIFI_VARIANTS.has(lower)) {
+                        if (!hasWifi) { hasWifi = true; deduped.push("WiFi"); }
+                        continue;
+                      }
+                      if (seen.has(lower)) continue;
+                      seen.add(lower);
+                      deduped.push(a);
+                    }
+
+                    // Sort by priority
+                    const PRIORITY: Record<string, number> = {
+                      "wifi": 1, "coffee maker": 2, "coffee": 2, "kitchen": 3, "air conditioning": 4,
+                      "washer": 5, "washing machine": 5, "dryer": 6, "free parking": 7, "parking": 7, "street parking": 7,
+                      "tv": 8, "cable tv": 8, "smart tv": 8, "workspace": 9, "dedicated workspace": 9,
+                      "laptop friendly workspace": 9, "heating": 10, "hair dryer": 11, "iron": 12,
+                      "balcony": 13, "patio": 13, "patio or balcony": 13, "pool": 14, "swimming pool": 14,
+                      "gym": 15, "fitness center": 15, "pet friendly": 16, "pets allowed": 16,
+                    };
+                    const getPriority = (name: string) => PRIORITY[name.toLowerCase().trim()] || 100;
+                    const sorted = [...deduped].sort((a, b) => {
+                      const pa = getPriority(a), pb = getPriority(b);
+                      if (pa !== pb) return pa - pb;
+                      return a.localeCompare(b);
+                    });
+
+                    const visible = showAllAmenities ? sorted : sorted.slice(0, 9);
+                    return (
+                      <>
+                        <div className="amenity-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                          {visible.map((a: string, i: number) => (
+                            <div key={`${a}-${i}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10 }}>
+                              <span style={{ fontSize: 20 }}>{getIcon(a)}</span>
+                              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{a}</span>
+                            </div>
+                          ))}
+                        </div>
+                        {sorted.length > 9 && (
+                          <button onClick={() => setShowAllAmenities(!showAllAmenities)} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "12px 24px", color: "#0fa", fontSize: 14, fontWeight: 600, cursor: "pointer", width: "100%", fontFamily: "inherit", marginTop: 12 }}>
+                            {showAllAmenities ? "Show Less" : `See More (${sorted.length - 9} more)`}
+                          </button>
+                        )}
+                      </>
+                    );
                   })()}
-                </div>
-                {(listing.amenities?.length || 0) > 9 && (
-                  <button onClick={() => setShowAllAmenities(!showAllAmenities)} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "12px 24px", color: "#0fa", fontSize: 14, fontWeight: 600, cursor: "pointer", width: "100%", fontFamily: "inherit", marginTop: 12 }}>
-                    {showAllAmenities ? "Show Less" : `See More (${listing.amenities!.length - 9} more)`}
-                  </button>
-                )}
               </div>
 
               {/* CareStay Standard */}
