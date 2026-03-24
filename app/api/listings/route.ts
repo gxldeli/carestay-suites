@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { getListings } from "@/app/lib/hostaway";
+import { redis } from "@/app/lib/redis";
 
-// Access the same in-memory overrides store used by /api/admin
+// Upstash Redis overrides store
 interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string; sortOrder?: number; featured?: boolean }
 interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean; sortOrder?: number; featured?: boolean }
 interface OverridesData { listings: Record<string, ListingOverride>; customListings: CustomListing[] }
-const globalStore = globalThis as unknown as { __adminOverrides?: OverridesData };
-function getOverrides(): OverridesData { return globalStore.__adminOverrides || { listings: {}, customListings: [] }; }
 
 export async function GET(request: Request) {
   try {
@@ -14,7 +13,7 @@ export async function GET(request: Request) {
     const includeHidden = searchParams.get("includeHidden") === "true";
     const listings = await getListings();
 
-    const overrides = getOverrides();
+    const overrides = (await redis.get<OverridesData>("admin:overrides")) || { listings: {}, customListings: [] };
 
     // Transform HostAway data into our frontend format
     const transformed = listings
