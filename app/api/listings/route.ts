@@ -23,7 +23,7 @@ export async function GET(request: Request) {
           id: l.id,
           title: ov.titleOverride || l.name,
           location: l.city || "Toronto",
-          beds: l.beds || l.bedrooms || 1,
+          beds: l.bedsNumber || l.beds || 1,
           baths: l.bathrooms || 1,
           price: ov.priceOverride ?? (l.price ? Math.round(l.price * 30) : 0),
           sqft: l.squareFeet || 0,

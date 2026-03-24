@@ -26,7 +26,7 @@ export async function GET(
       id: listing.id,
       title: listing.name,
       location: listing.city || "Toronto",
-      beds: listing.beds || listing.bedrooms || 1,
+      beds: listing.bedsNumber || listing.beds || 1,
       baths: listing.bathrooms || 1,
       price: listing.price ? Math.round(listing.price * 30) : 0,
       sqft: listing.squareFeet || 0,
