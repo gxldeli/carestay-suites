@@ -258,18 +258,31 @@ export default function ListingPage() {
               <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 42, fontWeight: 700, lineHeight: 1.1, marginBottom: 6 }}>{listing.title}</h1>
 
               {/* Mini Review Link */}
-              <a href="#reviews" style={{ display: "inline-block", color: "#f0c040", fontSize: 13, fontWeight: 600, textDecoration: "none", marginBottom: 8 }}>★ {avgStars.toFixed(1)} · {displayTotalCount} reviews</a>
+              <a href="#reviews" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#f0c040", fontSize: 13, fontWeight: 600, textDecoration: "none", marginBottom: 8 }}>
+                <span style={{ display: "inline-flex", gap: 1 }}>
+                  {[1,2,3,4,5].map(i => {
+                    const fill = Math.min(1, Math.max(0, avgStars - (i - 1)));
+                    return (
+                      <span key={i} style={{ position: "relative", display: "inline-block", width: 14, height: 14, fontSize: 14, lineHeight: 1 }}>
+                        <span style={{ color: "rgba(255,255,255,0.15)" }}>★</span>
+                        <span style={{ position: "absolute", left: 0, top: 0, width: `${fill * 100}%`, overflow: "hidden", color: "#f0c040" }}>★</span>
+                      </span>
+                    );
+                  })}
+                </span>
+                <span>{avgStars.toFixed(1)} · {displayTotalCount} reviews</span>
+              </a>
 
               {/* Specs */}
-              <div style={{ display: "flex", gap: 12, marginBottom: 28 }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
                 {[
                   { val: listing.beds, label: `Bed${listing.beds > 1 ? "s" : ""}` },
                   { val: listing.baths, label: `Bath${listing.baths > 1 ? "s" : ""}` },
                   { val: listing.sqft.toLocaleString(), label: "sqft" },
                 ].map(s => (
-                  <div key={s.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "14px 20px", textAlign: "center", minWidth: 80 }}>
-                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: "#fff", lineHeight: 1 }}>{s.val}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{s.label}</div>
+                  <div key={s.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px 16px", textAlign: "center", minWidth: 64 }}>
+                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: "#fff", lineHeight: 1 }}>{s.val}</div>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 3, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{s.label}</div>
                   </div>
                 ))}
               </div>
@@ -335,8 +348,7 @@ export default function ListingPage() {
                 </div>
               </div>
 
-              {/* Social Proof + Guest Reviews */}
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", letterSpacing: "0.03em", marginBottom: 10 }}>Rated by healthcare professionals across the GTA</p>
+              {/* Guest Reviews */}
               <div id="reviews" style={{ marginBottom: 48 }}>
                 <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 6 }}>Guest Reviews</h2>
                 <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, marginBottom: 24 }}>
@@ -494,15 +506,13 @@ export default function ListingPage() {
       )}
 
       {/* Mobile Sticky Price Bar */}
-      {showMobileBar && (
-        <div className="mobile-sticky-bar" style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 99, background: "rgba(10,12,15,0.97)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(255,255,255,0.08)", padding: "12px 24px", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "#fff" }}>${listing.price.toLocaleString()}</span>
-            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>/mo</span>
-          </div>
-          <a href="#inquiry-section" style={{ background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: "12px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: "none" }}>Inquire Now</a>
+      <div className="mobile-sticky-bar" style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 99, background: "rgba(10,12,15,0.97)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(255,255,255,0.08)", padding: "12px 24px", alignItems: "center", justifyContent: "space-between", transform: showMobileBar ? "translateY(0)" : "translateY(100%)", transition: "transform 0.3s ease" }}>
+        <div>
+          <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "#fff" }}>${listing.price.toLocaleString()}</span>
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>/mo</span>
         </div>
-      )}
+        <a href="#inquiry-section" style={{ background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: "12px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: "none" }}>Inquire Now</a>
+      </div>
     </>
   );
 }
