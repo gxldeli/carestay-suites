@@ -39,6 +39,7 @@ export async function GET(
       latitude: listing.latitude,
       longitude: listing.longitude,
       maxGuests: listing.maxGuests,
+      bedrooms: listing.bedrooms || 0,
     };
 
     return NextResponse.json({ status: "success", listing: transformed });

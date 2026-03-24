@@ -54,7 +54,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
   );
 }
 
-interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; featured?: boolean; videoUrl?: string; amenities?: string[]; latitude?: number; longitude?: number }
+interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; featured?: boolean; videoUrl?: string; amenities?: string[]; latitude?: number; longitude?: number; maxGuests?: number; bedrooms?: number }
 
 export default function ListingPage() {
   const params = useParams();
@@ -144,6 +144,7 @@ export default function ListingPage() {
               available: true, desc: match.description || "", description: match.description, images: match.images,
               nearbyHospital: match.nearbyHospital || "", featured: match.featured || false, videoUrl: match.videoUrl || "", amenities: match.amenities || [],
               latitude: match.latitude || undefined, longitude: match.longitude || undefined,
+              maxGuests: match.maxGuests || undefined, bedrooms: match.bedrooms || undefined,
             });
           }
         }
@@ -156,7 +157,7 @@ export default function ListingPage() {
     document.title = `${listing.title} | CareStay Suites - Furnished Housing GTA`;
     let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
     if (!meta) { meta = document.createElement("meta"); meta.name = "description"; document.head.appendChild(meta); }
-    meta.content = `${listing.title} - ${listing.beds} bed/${listing.baths} bath furnished apartment in ${listing.location}. Month-to-month. All-in pricing. Near ${listing.nearbyHospital || "major GTA hospitals"}.`;
+    meta.content = `${listing.title} - ${listing.beds} bed/${listing.baths} bath furnished apartment in ${listing.location}. Month-to-month. All-in pricing. Near ${listing.nearbyHospital || "major hospitals"}.`;
   }, [listing]);
   useEffect(() => {
     if (!listing) return;
@@ -247,6 +248,15 @@ export default function ListingPage() {
               alt={listing.title}
               style={{ width: "100%", height: "100%", maxHeight: 500, objectFit: "cover", display: "block", transition: "transform 0.3s ease-in-out, opacity 0.3s ease-in-out", transform: slideDir === "left" ? "translateX(-100%)" : slideDir === "right" ? "translateX(100%)" : "translateX(0)", opacity: slideDir ? 0 : 1 }}
             />
+            {/* Gallery Badges */}
+            <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 8, zIndex: 2 }}>
+              {listing.featured && (
+                <span onClick={e => e.stopPropagation()} style={{ background: "#d4a844", color: "#1a1200", padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 700, letterSpacing: "0.02em", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>★ Guest Favourite</span>
+              )}
+              {avgStars >= 4.8 && (
+                <span onClick={e => e.stopPropagation()} style={{ background: "rgba(255,255,255,0.9)", color: "#1a1a1a", padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 700, letterSpacing: "0.02em", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>◆ Highest Rated</span>
+              )}
+            </div>
             {images.length > 1 && (
               <>
                 <button onClick={e => { e.stopPropagation(); goPrev(); }} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>‹</button>
@@ -308,15 +318,17 @@ export default function ListingPage() {
               </a>
 
               {/* Specs */}
-              <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
                 {[
-                  { val: listing.beds, label: `Bed${listing.beds > 1 ? "s" : ""}` },
-                  { val: listing.baths, label: `Bath${listing.baths > 1 ? "s" : ""}` },
-                  { val: listing.sqft.toLocaleString(), label: "sqft" },
-                ].map(s => (
-                  <div key={s.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px 16px", textAlign: "center", minWidth: 64 }}>
-                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: "#fff", lineHeight: 1 }}>{s.val}</div>
-                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 3, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{s.label}</div>
+                  listing.maxGuests ? { icon: "👥", val: listing.maxGuests, label: `Guest${listing.maxGuests > 1 ? "s" : ""}` } : null,
+                  listing.bedrooms ? { icon: "🛏️", val: listing.bedrooms, label: `Bedroom${listing.bedrooms > 1 ? "s" : ""}` } : null,
+                  { icon: "🛋️", val: listing.beds, label: `Bed${listing.beds > 1 ? "s" : ""}` },
+                  { icon: "🚿", val: listing.baths, label: `Bath${listing.baths > 1 ? "s" : ""}` },
+                ].filter(Boolean).map(s => (
+                  <div key={s!.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px 16px", textAlign: "center", minWidth: 64 }}>
+                    <div style={{ fontSize: 16, marginBottom: 2 }}>{s!.icon}</div>
+                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: "#fff", lineHeight: 1 }}>{s!.val}</div>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 3, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{s!.label}</div>
                   </div>
                 ))}
               </div>
@@ -673,7 +685,7 @@ export default function ListingPage() {
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#0fa,#0af)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: "#0a0c0f" }}>CS</div>
                 <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>CareStay Suites</span>
               </div>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>Premium furnished housing for healthcare professionals across the Greater Toronto Area.</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>Premium furnished housing for healthcare professionals, primarily across the Greater Toronto Area.</p>
             </div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Quick Links</div>
@@ -684,7 +696,6 @@ export default function ListingPage() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Contact</div>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>info@carestaysuites.com</p>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>(647) 499-3889</p>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Toronto, Ontario</p>
             </div>
           </div>

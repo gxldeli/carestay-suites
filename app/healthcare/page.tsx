@@ -123,7 +123,7 @@ export default function HealthcarePage() {
               <span style={{ fontSize: 12, fontWeight: 600, color: "#0fa", letterSpacing: "0.06em", textTransform: "uppercase" }}>For Healthcare Professionals</span>
             </div>
             <h1 className="hero-h1" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 52, fontWeight: 700, lineHeight: 1.08, color: "#fff", letterSpacing: "-0.03em", maxWidth: 700, marginBottom: 24 }}>
-              Housing Built for Healthcare Professionals in the GTA
+              Housing Built for Healthcare Professionals
             </h1>
             <p style={{ fontSize: 18, lineHeight: 1.7, color: "rgba(255,255,255,0.55)", maxWidth: 600, marginBottom: 32 }}>
               Fully furnished suites near every major hospital. No scams, no surprises — just move in and focus on what matters.
@@ -185,7 +185,7 @@ export default function HealthcarePage() {
           <div className="wrap">
             <div style={{ textAlign: "center", marginBottom: 48 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#0fa", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>Near Your Hospital</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: "#fff", lineHeight: 1.15 }}>Suites Near Every Major GTA Hospital</h2>
+              <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: "#fff", lineHeight: 1.15 }}>Suites Near Major Hospitals</h2>
               <p style={{ fontSize: 15, color: "rgba(255,255,255,0.4)", marginTop: 12, maxWidth: 520, margin: "12px auto 0" }}>We have properties within 15 minutes of these facilities.</p>
             </div>
             <div className="hospital-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
@@ -258,7 +258,7 @@ export default function HealthcarePage() {
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#0fa,#0af)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: "#0a0c0f" }}>CS</div>
                 <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>CareStay Suites</span>
               </div>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>Premium furnished housing for healthcare professionals across the Greater Toronto Area.</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>Premium furnished housing for healthcare professionals, primarily across the Greater Toronto Area.</p>
             </div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Quick Links</div>
@@ -269,7 +269,6 @@ export default function HealthcarePage() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Contact</div>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>info@carestaysuites.com</p>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>(647) 499-3889</p>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Toronto, Ontario</p>
             </div>
           </div>

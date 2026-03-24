@@ -3,7 +3,7 @@ import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 export const metadata: Metadata = {
   title: "CareStay Suites | Premium Furnished Housing for Healthcare Professionals | GTA",
-  description: "Move-in ready furnished apartments for travel nurses, medical staff, and corporate stays across the Greater Toronto Area. Verified properties. Month-to-month. No scams.",
+  description: "Move-in ready furnished apartments for travel nurses, medical staff, and corporate stays, primarily across the Greater Toronto Area. Verified properties. Month-to-month. No scams.",
 };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
