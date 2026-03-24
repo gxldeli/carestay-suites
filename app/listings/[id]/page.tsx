@@ -78,6 +78,8 @@ export default function ListingPage() {
   const [reviews, setReviews] = useState<ReviewItem[]>(DEFAULT_REVIEWS);
   const [reviewTotalCount, setReviewTotalCount] = useState(0);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [showFullDesc, setShowFullDesc] = useState(false);
+  const [showAllAmenities, setShowAllAmenities] = useState(false);
   useEffect(() => {
     if (!lightboxOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLightboxOpen(false); if (e.key === "ArrowRight") goNext(); if (e.key === "ArrowLeft") goPrev(); };
@@ -305,7 +307,25 @@ export default function ListingPage() {
 
               {/* Description */}
               <div style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(255,255,255,0.7)", marginBottom: 48 }}>
-                {(listing.desc || listing.description || "").split("\n").map((line, i) => <p key={i} style={{ marginBottom: line.trim() ? 12 : 0 }}>{line}</p>)}
+                {(() => {
+                  const fullText = listing.desc || listing.description || "";
+                  const lines = fullText.split("\n");
+                  const truncated = !showFullDesc && fullText.length > 400;
+                  const displayLines = truncated ? fullText.substring(0, 400).split("\n") : lines;
+                  return (
+                    <>
+                      <div style={{ position: "relative" }}>
+                        {displayLines.map((line, i) => <p key={i} style={{ marginBottom: line.trim() ? 12 : 0 }}>{line}{truncated && i === displayLines.length - 1 ? "..." : ""}</p>)}
+                        {truncated && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 48, background: "linear-gradient(transparent, #0a0c10)" }} />}
+                      </div>
+                      {fullText.length > 400 && (
+                        <button onClick={() => setShowFullDesc(!showFullDesc)} style={{ background: "none", border: "none", color: "#0fa", fontSize: 14, fontWeight: 600, cursor: "pointer", padding: "8px 0 0", fontFamily: "inherit" }}>
+                          {showFullDesc ? "Show Less" : "See More"}
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Hospital Badge */}
@@ -363,7 +383,8 @@ export default function ListingPage() {
                       return "✓";
                     };
                     const amenities = listing.amenities && listing.amenities.length > 0 ? listing.amenities : [];
-                    return amenities.map((a: string, i: number) => (
+                    const visible = showAllAmenities ? amenities : amenities.slice(0, 9);
+                    return visible.map((a: string, i: number) => (
                       <div key={`${a}-${i}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10 }}>
                         <span style={{ fontSize: 20 }}>{getIcon(a)}</span>
                         <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{a}</span>
@@ -371,6 +392,11 @@ export default function ListingPage() {
                     ));
                   })()}
                 </div>
+                {(listing.amenities?.length || 0) > 9 && (
+                  <button onClick={() => setShowAllAmenities(!showAllAmenities)} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "12px 24px", color: "#0fa", fontSize: 14, fontWeight: 600, cursor: "pointer", width: "100%", fontFamily: "inherit", marginTop: 12 }}>
+                    {showAllAmenities ? "Show Less" : `See More (${listing.amenities!.length - 9} more)`}
+                  </button>
+                )}
               </div>
 
               {/* CareStay Standard */}
@@ -421,7 +447,7 @@ export default function ListingPage() {
                 ))}
                 {reviews.length > 3 && !showAllReviews && (
                   <button onClick={() => setShowAllReviews(true)} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "12px 24px", color: "#0fa", fontSize: 14, fontWeight: 600, cursor: "pointer", width: "100%", fontFamily: "inherit", marginTop: 4 }}>
-                    See all {reviews.length} reviews
+                    See More Reviews
                   </button>
                 )}
               </div>
