@@ -54,7 +54,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
   );
 }
 
-interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; featured?: boolean; videoUrl?: string; amenities?: string[] }
+interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; featured?: boolean; videoUrl?: string; amenities?: string[]; latitude?: number; longitude?: number }
 
 export default function ListingPage() {
   const params = useParams();
@@ -143,6 +143,7 @@ export default function ListingPage() {
               price: match.price, sqft: match.sqft, img: match.images?.[0] || match.img, tag: match.location || "GTA",
               available: true, desc: match.description || "", description: match.description, images: match.images,
               nearbyHospital: match.nearbyHospital || "", featured: match.featured || false, videoUrl: match.videoUrl || "", amenities: match.amenities || [],
+              latitude: match.latitude || undefined, longitude: match.longitude || undefined,
             });
           }
         }
@@ -220,6 +221,7 @@ export default function ListingPage() {
           .detail-sidebar{display:none!important}
           .mobile-sticky-bar{display:flex!important}
           .inquiry-form-grid{grid-template-columns:1fr!important}
+          .map-iframe{height:300px!important}
         }
         .detail-sidebar{display:block}
         .mobile-sticky-bar{display:none}
@@ -489,6 +491,27 @@ export default function ListingPage() {
                     );
                   })()}
               </div>
+
+              {/* Where You'll Be — Map */}
+              {listing.latitude && listing.longitude && (
+                <div style={{ marginBottom: 48 }}>
+                  <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Where You&apos;ll Be</h2>
+                  <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <iframe
+                      className="map-iframe"
+                      src={`https://maps.google.com/maps?q=${listing.latitude},${listing.longitude}&z=14&output=embed`}
+                      style={{ width: "100%", height: 400, border: "none", display: "block", filter: "invert(0.9) hue-rotate(180deg) brightness(1.1) contrast(1.1)" }}
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      title="Map location"
+                    />
+                  </div>
+                  <div style={{ marginTop: 12, fontSize: 15, color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>
+                    📍 {listing.location}
+                  </div>
+                </div>
+              )}
 
               {/* CareStay Standard */}
               <div style={{ marginBottom: 48 }}>
