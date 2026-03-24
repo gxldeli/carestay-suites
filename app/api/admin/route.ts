@@ -42,6 +42,7 @@ export interface ReviewItem {
   text: string;
   date: string;
   verified: boolean;
+  stayInfo?: string;
 }
 
 export interface ListingReviews {
@@ -103,11 +104,11 @@ export async function POST(request: Request) {
       if (!overrides.reviews[listingId]) overrides.reviews[listingId] = { totalCount: 0, items: [] };
       overrides.reviews[listingId].totalCount = totalCount;
     } else if (action === "addReview") {
-      const { listingId, name, stars, text, date, verified } = payload as { listingId: string; name: string; stars: number; text: string; date: string; verified: boolean };
+      const { listingId, name, stars, text, date, verified, stayInfo } = payload as { listingId: string; name: string; stars: number; text: string; date: string; verified: boolean; stayInfo?: string };
       if (!overrides.reviews) overrides.reviews = {};
       if (!overrides.reviews[listingId]) overrides.reviews[listingId] = { totalCount: 0, items: [] };
       const id = `rev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      overrides.reviews[listingId].items.push({ id, name, stars, text, date, verified });
+      overrides.reviews[listingId].items.push({ id, name, stars, text, date, verified, stayInfo: stayInfo || "" });
     } else if (action === "updateReview") {
       const { listingId, reviewId, ...fields } = payload as { listingId: string; reviewId: string } & Partial<ReviewItem>;
       if (overrides.reviews?.[listingId]) {
