@@ -14,6 +14,7 @@ export interface ListingOverride {
   hospitalDistance?: string;
   sortOrder?: number;
   featured?: boolean;
+  videoUrl?: string;
 }
 
 export interface CustomListing {
