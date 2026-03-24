@@ -4,12 +4,12 @@ import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
-interface ReviewItem { id: string; name: string; stars: number; text: string; date: string; verified: boolean }
+interface ReviewItem { id: string; name: string; stars: number; text: string; date: string; verified: boolean; stayInfo?: string }
 interface ReviewData { totalCount: number; items: ReviewItem[] }
 const DEFAULT_REVIEWS: ReviewItem[] = [
-  { id: "d1", name: "Sarah M.", stars: 5, text: "Best housing I\u2019ve found in 4 years of travel nursing. The scrubs and foot massager were such thoughtful touches. Finally felt like someone actually thought about what we need.", date: "2026-02-15", verified: true },
-  { id: "d2", name: "Dr. James K.", stars: 5, text: "Clean, quiet, and exactly what was advertised. The video walkthrough gave me total confidence before committing. Would recommend to any colleague.", date: "2026-01-28", verified: true },
-  { id: "d3", name: "Maria L.", stars: 5, text: "Finally a place that understands shift work. Blackout curtains and white noise machine saved my sleep between night shifts. The soaking tub is a lifesaver.", date: "2026-03-05", verified: true },
+  { id: "d1", name: "Sarah M.", stars: 5, text: "Best housing I\u2019ve found in 4 years of travel nursing. The scrubs and foot massager were such thoughtful touches. Finally felt like someone actually thought about what we need.", date: "2026-02-15", verified: true, stayInfo: "Stayed 3 months" },
+  { id: "d2", name: "Dr. James K.", stars: 5, text: "Clean, quiet, and exactly what was advertised. The video walkthrough gave me total confidence before committing. Would recommend to any colleague.", date: "2026-01-28", verified: true, stayInfo: "Stayed 6 weeks" },
+  { id: "d3", name: "Maria L.", stars: 5, text: "Finally a place that understands shift work. Blackout curtains and white noise machine saved my sleep between night shifts. The soaking tub is a lifesaver.", date: "2026-03-05", verified: true, stayInfo: "Stayed 2 months" },
 ];
 
 const FALLBACK_LISTINGS = [
@@ -335,27 +335,33 @@ export default function ListingPage() {
                 </div>
               </div>
 
-              {/* Guest Reviews */}
+              {/* Social Proof + Guest Reviews */}
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", letterSpacing: "0.03em", marginBottom: 10 }}>Rated by healthcare professionals across the GTA</p>
               <div id="reviews" style={{ marginBottom: 48 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
-                  <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700 }}>Guest Reviews</h2>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#f0c040" }}>{avgStars.toFixed(1)} out of 5</span>
-                    <span style={{ color: "#f0c040", fontSize: 20 }}>{"★".repeat(Math.round(avgStars))}{"☆".repeat(5 - Math.round(avgStars))}</span>
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>{ratingLabel} · {displayTotalCount} reviews</span>
+                <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 6 }}>Guest Reviews</h2>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, marginBottom: 24 }}>
+                  <span style={{ color: "#f0c040", fontSize: 18 }}>{"★".repeat(Math.round(avgStars))}{"☆".repeat(5 - Math.round(avgStars))}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#f0c040" }}>{avgStars.toFixed(1)}</span>
+                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>{ratingLabel} · {displayTotalCount} reviews</span>
                 </div>
                 {(showAllReviews ? reviews : reviews.slice(0, 3)).map(r => (
                   <div key={r.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "20px 22px", marginBottom: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{r.name}</span>
-                        {r.verified && <span style={{ color: "#0af", fontSize: 14 }} title="Verified Guest">✓</span>}
-                        {r.date && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>{r.date}</span>}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{r.name}</span>
+                          {r.verified && <span style={{ color: "#0af", fontSize: 13 }} title="Verified Guest">✓ <span style={{ fontSize: 11, fontWeight: 500 }}>Verified</span></span>}
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+                          {r.date && <span>{r.date}</span>}
+                          {r.stayInfo && <span>· {r.stayInfo}</span>}
+                        </div>
                       </div>
-                      <span style={{ color: "#f0c040", fontSize: 18 }}>{"★".repeat(r.stars)}{"☆".repeat(5 - r.stars)}</span>
+                      <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                        {[1,2,3,4,5].map(i => (
+                          <span key={i} style={{ fontSize: 18, color: i <= r.stars ? "#f0c040" : "rgba(255,255,255,0.15)" }}>★</span>
+                        ))}
+                      </div>
                     </div>
                     <p style={{ fontSize: 14, lineHeight: 1.7, color: "rgba(255,255,255,0.6)" }}>{r.text}</p>
                   </div>

@@ -53,6 +53,7 @@ interface ReviewItem {
   text: string;
   date: string;
   verified: boolean;
+  stayInfo?: string;
 }
 
 interface ListingReviews {
@@ -98,6 +99,7 @@ export default function AdminPage() {
   const [revText, setRevText] = useState("");
   const [revDate, setRevDate] = useState(new Date().toISOString().split("T")[0]);
   const [revVerified, setRevVerified] = useState(true);
+  const [revStayInfo, setRevStayInfo] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
@@ -494,6 +496,7 @@ export default function AdminPage() {
                               <input style={inputStyle} type="date" defaultValue={r.date} id={`edit-date-${r.id}`} />
                             </div>
                             <textarea style={{ ...inputStyle, minHeight: 50, resize: "vertical", marginBottom: 8 }} defaultValue={r.text} id={`edit-text-${r.id}`} />
+                            <input style={{ ...inputStyle, marginBottom: 8 }} defaultValue={r.stayInfo || ""} id={`edit-stayInfo-${r.id}`} placeholder="e.g., Stayed 2 months" />
                             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                               <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
                                 <input type="checkbox" defaultChecked={r.verified} id={`edit-verified-${r.id}`} /> Verified
@@ -504,7 +507,8 @@ export default function AdminPage() {
                                 const text = (document.getElementById(`edit-text-${r.id}`) as HTMLTextAreaElement).value;
                                 const date = (document.getElementById(`edit-date-${r.id}`) as HTMLInputElement).value;
                                 const verified = (document.getElementById(`edit-verified-${r.id}`) as HTMLInputElement).checked;
-                                await adminPost("updateReview", { listingId: reviewListingId, reviewId: r.id, name, stars, text, date, verified });
+                                const stayInfo = (document.getElementById(`edit-stayInfo-${r.id}`) as HTMLInputElement).value;
+                                await adminPost("updateReview", { listingId: reviewListingId, reviewId: r.id, name, stars, text, date, verified, stayInfo });
                                 setEditingReviewId(null);
                               }} style={{ ...btnStyle, padding: "6px 14px", fontSize: 12 }}>Save</button>
                               <button onClick={() => setEditingReviewId(null)} style={{ padding: "6px 14px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
@@ -518,6 +522,7 @@ export default function AdminPage() {
                                 {r.verified && <span style={{ color: "#0af", fontSize: 12 }}>✓ Verified</span>}
                                 <span style={{ color: "#f0c040", fontSize: 12 }}>{"★".repeat(r.stars)}{"☆".repeat(5 - r.stars)}</span>
                                 <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{r.date}</span>
+                                {r.stayInfo && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>· {r.stayInfo}</span>}
                               </div>
                               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.5 }}>{r.text}</p>
                             </div>
@@ -541,14 +546,15 @@ export default function AdminPage() {
                     <input style={inputStyle} type="date" value={revDate} onChange={e => setRevDate(e.target.value)} />
                   </div>
                   <textarea style={{ ...inputStyle, minHeight: 50, resize: "vertical", marginBottom: 8 }} value={revText} onChange={e => setRevText(e.target.value)} placeholder="Review text..." />
+                  <input style={{ ...inputStyle, marginBottom: 8 }} value={revStayInfo} onChange={e => setRevStayInfo(e.target.value)} placeholder="Stay info (e.g., Stayed 2 months)" />
                   <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
                     <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
                       <Toggle checked={revVerified} onChange={setRevVerified} /> Verified Guest
                     </label>
                     <button onClick={async () => {
                       if (!revName || !revText) return alert("Name and text required");
-                      await adminPost("addReview", { listingId: reviewListingId, name: revName, stars: Number(revStars), text: revText, date: revDate, verified: revVerified });
-                      setRevName(""); setRevStars("5"); setRevText(""); setRevDate(new Date().toISOString().split("T")[0]); setRevVerified(true);
+                      await adminPost("addReview", { listingId: reviewListingId, name: revName, stars: Number(revStars), text: revText, date: revDate, verified: revVerified, stayInfo: revStayInfo });
+                      setRevName(""); setRevStars("5"); setRevText(""); setRevDate(new Date().toISOString().split("T")[0]); setRevVerified(true); setRevStayInfo("");
                     }} style={btnStyle}>Add Review</button>
                   </div>
                 </div>
