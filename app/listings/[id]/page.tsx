@@ -136,7 +136,12 @@ export default function ListingPage() {
           .gallery-thumbs{justify-content:flex-start}
           .cs-standard-grid{grid-template-columns:1fr!important}
           .footer-cols{grid-template-columns:1fr!important}
+          .amenity-grid{grid-template-columns:1fr 1fr!important}
         }
+        .gallery-thumbs::-webkit-scrollbar{height:6px}
+        .gallery-thumbs::-webkit-scrollbar-track{background:#12151a;border-radius:3px}
+        .gallery-thumbs::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+        .gallery-thumbs{scrollbar-width:thin;scrollbar-color:#333 #12151a}
       `}</style>
 
       <Nav scrolled={scrolled} />
@@ -195,7 +200,27 @@ export default function ListingPage() {
               </div>
 
               {/* Description */}
-              <p style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(255,255,255,0.7)", marginBottom: 48 }}>{listing.desc || listing.description || ""}</p>
+              <div style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(255,255,255,0.7)", marginBottom: 48 }}>
+                {(listing.desc || listing.description || "").split("\n").map((line, i) => <p key={i} style={{ marginBottom: line.trim() ? 12 : 0 }}>{line}</p>)}
+              </div>
+
+              {/* Amenities */}
+              <div style={{ marginBottom: 48 }}>
+                <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Amenities</h2>
+                <div className="amenity-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                  {[
+                    { emoji: "📶", label: "WiFi" }, { emoji: "🅿️", label: "Parking" }, { emoji: "🧺", label: "Laundry" },
+                    { emoji: "💪", label: "Gym" }, { emoji: "🍳", label: "Kitchen" }, { emoji: "📺", label: "Smart TV" },
+                    { emoji: "🔒", label: "Smart Lock" }, { emoji: "🚇", label: "Subway" }, { emoji: "🛁", label: "Soaking Tub" },
+                    { emoji: "🌇", label: "Balcony" }, { emoji: "🛎️", label: "Concierge" }, { emoji: "🐾", label: "Pet Friendly" },
+                  ].map(a => (
+                    <div key={a.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10 }}>
+                      <span style={{ fontSize: 20 }}>{a.emoji}</span>
+                      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{a.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               {/* CareStay Standard */}
               <div style={{ marginBottom: 48 }}>
@@ -211,6 +236,44 @@ export default function ListingPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Video Walkthrough */}
+              <div style={{ marginBottom: 48 }}>
+                <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Take a Virtual Tour</h2>
+                <div style={{ background: "#12151a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, height: 280, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative", overflow: "hidden" }}>
+                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(0,255,170,0.15)", border: "2px solid rgba(0,255,170,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 0, height: 0, borderTop: "12px solid transparent", borderBottom: "12px solid transparent", borderLeft: "20px solid #0fa", marginLeft: 4 }} />
+                  </div>
+                </div>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 12, lineHeight: 1.6 }}>Every CareStay suite includes a video walkthrough so you know exactly what you&apos;re getting. No surprises.</p>
+              </div>
+
+              {/* Guest Reviews */}
+              <div style={{ marginBottom: 48 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+                  <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700 }}>Guest Reviews</h2>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#f0c040" }}>4.9 out of 5</span>
+                    <span style={{ color: "#f0c040", fontSize: 16 }}>★★★★★</span>
+                  </div>
+                </div>
+                {[
+                  { name: "Sarah M.", role: "Travel Nurse", text: "Best housing I've found in 4 years of travel nursing. The scrubs and foot massager were such thoughtful touches. Finally felt like someone actually thought about what we need." },
+                  { name: "Dr. James K.", role: "Medical Resident", text: "Clean, quiet, and exactly what was advertised. The video walkthrough gave me total confidence before committing. Would recommend to any colleague." },
+                  { name: "Maria L.", role: "ICU Nurse", text: "Finally a place that understands shift work. Blackout curtains and white noise machine saved my sleep between night shifts. The soaking tub is a lifesaver." },
+                ].map(r => (
+                  <div key={r.name} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "20px 22px", marginBottom: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <div>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{r.name}</span>
+                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginLeft: 10 }}>{r.role}</span>
+                      </div>
+                      <span style={{ color: "#f0c040", fontSize: 13 }}>★★★★★</span>
+                    </div>
+                    <p style={{ fontSize: 14, lineHeight: 1.7, color: "rgba(255,255,255,0.6)" }}>{r.text}</p>
+                  </div>
+                ))}
               </div>
             </div>
 
