@@ -35,16 +35,31 @@ export interface CustomListing {
   featured?: boolean;
 }
 
+export interface ReviewItem {
+  id: string;
+  name: string;
+  stars: number;
+  text: string;
+  date: string;
+  verified: boolean;
+}
+
+export interface ListingReviews {
+  totalCount: number;
+  items: ReviewItem[];
+}
+
 interface OverridesData {
   listings: Record<string, ListingOverride>;
   customListings: CustomListing[];
+  reviews: Record<string, ListingReviews>;
 }
 
 const REDIS_KEY = "admin:overrides";
 
 async function getOverrides(): Promise<OverridesData> {
   const data = await redis.get<OverridesData>(REDIS_KEY);
-  return data || { listings: {}, customListings: [] };
+  return data || { listings: {}, customListings: [], reviews: {} };
 }
 
 async function setOverrides(data: OverridesData) {
@@ -82,6 +97,28 @@ export async function POST(request: Request) {
       const { id, ...fields } = payload as { id: string } & Partial<CustomListing>;
       const idx = overrides.customListings.findIndex((l) => l.id === id);
       if (idx !== -1) overrides.customListings[idx] = { ...overrides.customListings[idx], ...fields };
+    } else if (action === "updateReviewSettings") {
+      const { listingId, totalCount } = payload as { listingId: string; totalCount: number };
+      if (!overrides.reviews) overrides.reviews = {};
+      if (!overrides.reviews[listingId]) overrides.reviews[listingId] = { totalCount: 0, items: [] };
+      overrides.reviews[listingId].totalCount = totalCount;
+    } else if (action === "addReview") {
+      const { listingId, name, stars, text, date, verified } = payload as { listingId: string; name: string; stars: number; text: string; date: string; verified: boolean };
+      if (!overrides.reviews) overrides.reviews = {};
+      if (!overrides.reviews[listingId]) overrides.reviews[listingId] = { totalCount: 0, items: [] };
+      const id = `rev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      overrides.reviews[listingId].items.push({ id, name, stars, text, date, verified });
+    } else if (action === "updateReview") {
+      const { listingId, reviewId, ...fields } = payload as { listingId: string; reviewId: string } & Partial<ReviewItem>;
+      if (overrides.reviews?.[listingId]) {
+        const idx = overrides.reviews[listingId].items.findIndex((r) => r.id === reviewId);
+        if (idx !== -1) overrides.reviews[listingId].items[idx] = { ...overrides.reviews[listingId].items[idx], ...fields };
+      }
+    } else if (action === "deleteReview") {
+      const { listingId, reviewId } = payload as { listingId: string; reviewId: string };
+      if (overrides.reviews?.[listingId]) {
+        overrides.reviews[listingId].items = overrides.reviews[listingId].items.filter((r) => r.id !== reviewId);
+      }
     } else {
       return NextResponse.json({ status: "error", message: "Unknown action" }, { status: 400 });
     }

@@ -46,9 +46,24 @@ interface CustomListing {
   featured?: boolean;
 }
 
+interface ReviewItem {
+  id: string;
+  name: string;
+  stars: number;
+  text: string;
+  date: string;
+  verified: boolean;
+}
+
+interface ListingReviews {
+  totalCount: number;
+  items: ReviewItem[];
+}
+
 interface OverridesData {
   listings: Record<string, ListingOverride>;
   customListings: CustomListing[];
+  reviews: Record<string, ListingReviews>;
 }
 
 const PW_KEY = "carestay_admin_pw";
@@ -75,7 +90,14 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
   const [listings, setListings] = useState<ApiListing[]>([]);
-  const [overrides, setOverrides] = useState<OverridesData>({ listings: {}, customListings: [] });
+  const [overrides, setOverrides] = useState<OverridesData>({ listings: {}, customListings: [], reviews: {} });
+  const [reviewListingId, setReviewListingId] = useState<string | null>(null);
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [revName, setRevName] = useState("");
+  const [revStars, setRevStars] = useState("5");
+  const [revText, setRevText] = useState("");
+  const [revDate, setRevDate] = useState(new Date().toISOString().split("T")[0]);
+  const [revVerified, setRevVerified] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
@@ -419,6 +441,120 @@ export default function AdminPage() {
             </label>
           </div>
           <button onClick={addCustomListing} style={btnStyle}>Add Listing</button>
+        </div>
+
+        {/* Reviews Management */}
+        <div style={cardStyle}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Reviews Management</h2>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Select Listing</label>
+            <select
+              style={{ ...inputStyle, cursor: "pointer" }}
+              value={reviewListingId || ""}
+              onChange={e => { setReviewListingId(e.target.value || null); setEditingReviewId(null); }}
+            >
+              <option value="">— Choose a listing —</option>
+              {listings.map(l => <option key={l.id} value={String(l.id)}>{l.title} (ID: {l.id})</option>)}
+              {overrides.customListings.map(cl => <option key={cl.id} value={cl.id}>{cl.title} (Custom)</option>)}
+            </select>
+          </div>
+
+          {reviewListingId && (() => {
+            const rd = overrides.reviews?.[reviewListingId] || { totalCount: 0, items: [] };
+            const avgStars = rd.items.length > 0 ? rd.items.reduce((a, r) => a + r.stars, 0) / rd.items.length : 0;
+            return (
+              <div>
+                {/* Total count setting */}
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20, padding: "14px 16px", background: "rgba(0,255,170,0.03)", border: "1px solid rgba(0,255,170,0.1)", borderRadius: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Display Total Count</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input type="number" min="0" value={rd.totalCount} onChange={async (e) => { await adminPost("updateReviewSettings", { listingId: reviewListingId, totalCount: Number(e.target.value) || 0 }); }} style={{ ...inputStyle, width: 80, padding: "6px 10px", textAlign: "center" }} />
+                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>reviews shown in header (even if fewer are written)</span>
+                    </div>
+                  </div>
+                  {rd.items.length > 0 && (
+                    <div style={{ marginLeft: "auto", textAlign: "right" }}>
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>{rd.items.length} written · avg {avgStars.toFixed(1)}★</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Existing reviews */}
+                {rd.items.length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: 10 }}>Reviews ({rd.items.length})</h3>
+                    {rd.items.map(r => (
+                      <div key={r.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "12px 16px", marginBottom: 8 }}>
+                        {editingReviewId === r.id ? (
+                          <div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 1fr", gap: 8, marginBottom: 8 }}>
+                              <input style={inputStyle} defaultValue={r.name} id={`edit-name-${r.id}`} placeholder="Name" />
+                              <input style={{ ...inputStyle, textAlign: "center" }} type="number" min="1" max="5" defaultValue={r.stars} id={`edit-stars-${r.id}`} />
+                              <input style={inputStyle} type="date" defaultValue={r.date} id={`edit-date-${r.id}`} />
+                            </div>
+                            <textarea style={{ ...inputStyle, minHeight: 50, resize: "vertical", marginBottom: 8 }} defaultValue={r.text} id={`edit-text-${r.id}`} />
+                            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                                <input type="checkbox" defaultChecked={r.verified} id={`edit-verified-${r.id}`} /> Verified
+                              </label>
+                              <button onClick={async () => {
+                                const name = (document.getElementById(`edit-name-${r.id}`) as HTMLInputElement).value;
+                                const stars = Number((document.getElementById(`edit-stars-${r.id}`) as HTMLInputElement).value);
+                                const text = (document.getElementById(`edit-text-${r.id}`) as HTMLTextAreaElement).value;
+                                const date = (document.getElementById(`edit-date-${r.id}`) as HTMLInputElement).value;
+                                const verified = (document.getElementById(`edit-verified-${r.id}`) as HTMLInputElement).checked;
+                                await adminPost("updateReview", { listingId: reviewListingId, reviewId: r.id, name, stars, text, date, verified });
+                                setEditingReviewId(null);
+                              }} style={{ ...btnStyle, padding: "6px 14px", fontSize: 12 }}>Save</button>
+                              <button onClick={() => setEditingReviewId(null)} style={{ padding: "6px 14px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                <span style={{ fontWeight: 700, fontSize: 13 }}>{r.name}</span>
+                                {r.verified && <span style={{ color: "#0af", fontSize: 12 }}>✓ Verified</span>}
+                                <span style={{ color: "#f0c040", fontSize: 12 }}>{"★".repeat(r.stars)}{"☆".repeat(5 - r.stars)}</span>
+                                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{r.date}</span>
+                              </div>
+                              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.5 }}>{r.text}</p>
+                            </div>
+                            <div style={{ display: "flex", gap: 6, flexShrink: 0, marginLeft: 12 }}>
+                              <button onClick={() => setEditingReviewId(r.id)} style={{ background: "rgba(0,170,255,0.12)", color: "#0af", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Edit</button>
+                              <button onClick={async () => { if (confirm("Delete this review?")) await adminPost("deleteReview", { listingId: reviewListingId, reviewId: r.id }); }} style={{ background: "rgba(255,77,77,0.12)", color: "#f66", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Del</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add review form */}
+                <div style={{ padding: "16px 18px", background: "rgba(0,170,255,0.03)", border: "1px solid rgba(0,170,255,0.1)", borderRadius: 10 }}>
+                  <h3 style={{ fontSize: 13, fontWeight: 700, color: "#0af", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.04em" }}>Add Review</h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 1fr", gap: 8, marginBottom: 8 }}>
+                    <input style={inputStyle} value={revName} onChange={e => setRevName(e.target.value)} placeholder="Reviewer name" />
+                    <input style={{ ...inputStyle, textAlign: "center" }} type="number" min="1" max="5" value={revStars} onChange={e => setRevStars(e.target.value)} placeholder="Stars" />
+                    <input style={inputStyle} type="date" value={revDate} onChange={e => setRevDate(e.target.value)} />
+                  </div>
+                  <textarea style={{ ...inputStyle, minHeight: 50, resize: "vertical", marginBottom: 8 }} value={revText} onChange={e => setRevText(e.target.value)} placeholder="Review text..." />
+                  <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                      <Toggle checked={revVerified} onChange={setRevVerified} /> Verified Guest
+                    </label>
+                    <button onClick={async () => {
+                      if (!revName || !revText) return alert("Name and text required");
+                      await adminPost("addReview", { listingId: reviewListingId, name: revName, stars: Number(revStars), text: revText, date: revDate, verified: revVerified });
+                      setRevName(""); setRevStars("5"); setRevText(""); setRevDate(new Date().toISOString().split("T")[0]); setRevVerified(true);
+                    }} style={btnStyle}>Add Review</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

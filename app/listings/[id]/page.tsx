@@ -4,10 +4,12 @@ import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
-const DEFAULT_REVIEWS = [
-  { name: "Sarah M.", role: "Travel Nurse", text: "Best housing I\u2019ve found in 4 years of travel nursing. The scrubs and foot massager were such thoughtful touches. Finally felt like someone actually thought about what we need." },
-  { name: "Dr. James K.", role: "Medical Resident", text: "Clean, quiet, and exactly what was advertised. The video walkthrough gave me total confidence before committing. Would recommend to any colleague." },
-  { name: "Maria L.", role: "ICU Nurse", text: "Finally a place that understands shift work. Blackout curtains and white noise machine saved my sleep between night shifts. The soaking tub is a lifesaver." },
+interface ReviewItem { id: string; name: string; stars: number; text: string; date: string; verified: boolean }
+interface ReviewData { totalCount: number; items: ReviewItem[] }
+const DEFAULT_REVIEWS: ReviewItem[] = [
+  { id: "d1", name: "Sarah M.", stars: 5, text: "Best housing I\u2019ve found in 4 years of travel nursing. The scrubs and foot massager were such thoughtful touches. Finally felt like someone actually thought about what we need.", date: "2026-02-15", verified: true },
+  { id: "d2", name: "Dr. James K.", stars: 5, text: "Clean, quiet, and exactly what was advertised. The video walkthrough gave me total confidence before committing. Would recommend to any colleague.", date: "2026-01-28", verified: true },
+  { id: "d3", name: "Maria L.", stars: 5, text: "Finally a place that understands shift work. Blackout curtains and white noise machine saved my sleep between night shifts. The soaking tub is a lifesaver.", date: "2026-03-05", verified: true },
 ];
 
 const FALLBACK_LISTINGS = [
@@ -73,8 +75,9 @@ export default function ListingPage() {
   const inquiryRef = useRef<HTMLDivElement>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const touchStartX = useRef(0);
-  // Reviews state — admin API can feed custom reviews here in the future
-  const [reviews] = useState(DEFAULT_REVIEWS);
+  const [reviews, setReviews] = useState<ReviewItem[]>(DEFAULT_REVIEWS);
+  const [reviewTotalCount, setReviewTotalCount] = useState(0);
+  const [showAllReviews, setShowAllReviews] = useState(false);
   useEffect(() => {
     if (!lightboxOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLightboxOpen(false); if (e.key === "ArrowRight") goNext(); if (e.key === "ArrowLeft") goPrev(); };
@@ -123,6 +126,23 @@ export default function ListingPage() {
     if (!meta) { meta = document.createElement("meta"); meta.name = "description"; document.head.appendChild(meta); }
     meta.content = `${listing.title} - ${listing.beds} bed/${listing.baths} bath furnished apartment in ${listing.location}. Month-to-month. All-in pricing. Near ${listing.nearbyHospital || "major GTA hospitals"}.`;
   }, [listing]);
+  useEffect(() => {
+    if (!listing) return;
+    fetch("/api/admin").then(r => r.json()).then(data => {
+      if (data.status === "success" && data.data?.reviews) {
+        const rd = data.data.reviews[String(listing.id)] as ReviewData | undefined;
+        if (rd && rd.items.length > 0) {
+          setReviews(rd.items);
+          setReviewTotalCount(rd.totalCount || rd.items.length);
+        } else {
+          setReviewTotalCount(DEFAULT_REVIEWS.length);
+        }
+      }
+    }).catch(() => {});
+  }, [listing]);
+  const avgStars = reviews.length > 0 ? reviews.reduce((a, r) => a + r.stars, 0) / reviews.length : 4.9;
+  const ratingLabel = avgStars >= 4.5 ? "Exceptional" : avgStars >= 4.0 ? "Excellent" : avgStars >= 3.5 ? "Very Good" : "Good";
+  const displayTotalCount = reviewTotalCount || reviews.length;
   const handleSubmit = async () => {
     await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, moveIn, duration, listing: listing?.title }) });
     setSubmitted(true);
@@ -238,7 +258,7 @@ export default function ListingPage() {
               <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 42, fontWeight: 700, lineHeight: 1.1, marginBottom: 6 }}>{listing.title}</h1>
 
               {/* Mini Review Link */}
-              <a href="#reviews" style={{ display: "inline-block", color: "#f0c040", fontSize: 13, fontWeight: 600, textDecoration: "none", marginBottom: 8 }}>★ 4.9 · {reviews.length} reviews</a>
+              <a href="#reviews" style={{ display: "inline-block", color: "#f0c040", fontSize: 13, fontWeight: 600, textDecoration: "none", marginBottom: 8 }}>★ {avgStars.toFixed(1)} · {displayTotalCount} reviews</a>
 
               {/* Specs */}
               <div style={{ display: "flex", gap: 12, marginBottom: 28 }}>
@@ -317,26 +337,34 @@ export default function ListingPage() {
 
               {/* Guest Reviews */}
               <div id="reviews" style={{ marginBottom: 48 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
                   <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700 }}>Guest Reviews</h2>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#f0c040" }}>4.9 out of 5</span>
-                    <span style={{ color: "#f0c040", fontSize: 20 }}>★★★★★</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#f0c040" }}>{avgStars.toFixed(1)} out of 5</span>
+                    <span style={{ color: "#f0c040", fontSize: 20 }}>{"★".repeat(Math.round(avgStars))}{"☆".repeat(5 - Math.round(avgStars))}</span>
                   </div>
                 </div>
-                {/* TODO: Replace with admin API reviews when available */}
-                {reviews.map(r => (
-                  <div key={r.name} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "20px 22px", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>{ratingLabel} · {displayTotalCount} reviews</span>
+                </div>
+                {(showAllReviews ? reviews : reviews.slice(0, 3)).map(r => (
+                  <div key={r.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "20px 22px", marginBottom: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{r.name}</span>
-                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginLeft: 10 }}>{r.role}</span>
+                        {r.verified && <span style={{ color: "#0af", fontSize: 14 }} title="Verified Guest">✓</span>}
+                        {r.date && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>{r.date}</span>}
                       </div>
-                      <span style={{ color: "#f0c040", fontSize: 20 }}>★★★★★</span>
+                      <span style={{ color: "#f0c040", fontSize: 18 }}>{"★".repeat(r.stars)}{"☆".repeat(5 - r.stars)}</span>
                     </div>
                     <p style={{ fontSize: 14, lineHeight: 1.7, color: "rgba(255,255,255,0.6)" }}>{r.text}</p>
                   </div>
                 ))}
+                {reviews.length > 3 && !showAllReviews && (
+                  <button onClick={() => setShowAllReviews(true)} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "12px 24px", color: "#0fa", fontSize: 14, fontWeight: 600, cursor: "pointer", width: "100%", fontFamily: "inherit", marginTop: 4 }}>
+                    See all {reviews.length} reviews
+                  </button>
+                )}
               </div>
             </div>
 
