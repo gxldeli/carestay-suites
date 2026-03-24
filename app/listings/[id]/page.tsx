@@ -37,14 +37,14 @@ function Nav({ scrolled }: { scrolled: boolean }) {
           <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "#fff" }}>CareStay <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.6)" }}>Suites</span></span>
         </Link>
         <div className="nav-links">
-          {[{ l: "Listings", h: "/#listings" }, { l: "Healthcare", h: "/healthcare" }, { l: "About", h: "/about" }, { l: "Contact", h: "/#contact" }].map(i => <a key={i.l} href={i.h} className="nav-link">{i.l}</a>)}
+          {[{ l: "Listings", h: "/listings" }, { l: "Healthcare", h: "/healthcare" }, { l: "Corporate", h: "/corporate" }, { l: "About", h: "/about" }, { l: "Contact", h: "/#contact" }].map(i => <a key={i.l} href={i.h} className="nav-link">{i.l}</a>)}
           <a href="/#contact" className="nav-cta">Inquire Now</a>
         </div>
         <button className="nav-mobile" onClick={() => setOpen(!open)} style={{ background: "none", border: "none", fontSize: 28, color: "#fff", cursor: "pointer" }}>{open ? "\u2715" : "\u2630"}</button>
       </div>
       {open && (
         <div style={{ background: "rgba(10,12,15,0.98)", padding: "16px 24px 24px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          {[{ l: "Listings", h: "/#listings" }, { l: "Healthcare", h: "/healthcare" }, { l: "About", h: "/about" }, { l: "Contact", h: "/#contact" }].map(i => <a key={i.l} href={i.h} onClick={() => setOpen(false)} style={{ display: "block", color: "rgba(255,255,255,0.8)", textDecoration: "none", fontSize: 17, padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{i.l}</a>)}
+          {[{ l: "Listings", h: "/listings" }, { l: "Healthcare", h: "/healthcare" }, { l: "Corporate", h: "/corporate" }, { l: "About", h: "/about" }, { l: "Contact", h: "/#contact" }].map(i => <a key={i.l} href={i.h} onClick={() => setOpen(false)} style={{ display: "block", color: "rgba(255,255,255,0.8)", textDecoration: "none", fontSize: 17, padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{i.l}</a>)}
           <a href="/#contact" onClick={() => setOpen(false)} style={{ display: "block", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", textAlign: "center", padding: 16, borderRadius: 10, fontWeight: 700, fontSize: 16, marginTop: 16, textDecoration: "none" }}>Inquire Now</a>
         </div>
       )}
@@ -71,8 +71,21 @@ export default function ListingPage() {
   const [duration, setDuration] = useState("");
   const [showMobileBar, setShowMobileBar] = useState(true);
   const inquiryRef = useRef<HTMLDivElement>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const touchStartX = useRef(0);
   // Reviews state — admin API can feed custom reviews here in the future
   const [reviews] = useState(DEFAULT_REVIEWS);
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLightboxOpen(false); if (e.key === "ArrowRight") goNext(); if (e.key === "ArrowLeft") goPrev(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+  const images = listing?.images?.length ? listing.images.slice(0, 30) : listing ? [listing.img] : [];
+  const currentImg = selectedImg || listing?.img || "";
+  const currentIdx = images.indexOf(currentImg);
+  const goNext = () => { if (images.length > 1) setSelectedImg(images[(currentIdx + 1) % images.length]); };
+  const goPrev = () => { if (images.length > 1) setSelectedImg(images[(currentIdx - 1 + images.length) % images.length]); };
   useEffect(() => {
     const onScroll = () => {
       setScrolled(window.scrollY > 20);
@@ -169,12 +182,24 @@ export default function ListingPage() {
       <main style={{ paddingTop: 72 }}>
         {/* Gallery */}
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px 0" }}>
-          <div style={{ borderRadius: 16, overflow: "hidden", maxHeight: 500 }}>
+          <div
+            style={{ borderRadius: 16, overflow: "hidden", maxHeight: 500, position: "relative", cursor: "pointer" }}
+            onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
+            onTouchEnd={e => { const diff = touchStartX.current - e.changedTouches[0].clientX; if (Math.abs(diff) > 50) { diff > 0 ? goNext() : goPrev(); } }}
+            onClick={() => setLightboxOpen(true)}
+          >
             <img
-              src={selectedImg || listing.img}
+              src={currentImg}
               alt={listing.title}
               style={{ width: "100%", height: "100%", maxHeight: 500, objectFit: "cover", display: "block" }}
             />
+            {images.length > 1 && (
+              <>
+                <button onClick={e => { e.stopPropagation(); goPrev(); }} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>‹</button>
+                <button onClick={e => { e.stopPropagation(); goNext(); }} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>›</button>
+                <div style={{ position: "absolute", bottom: 12, right: 12, background: "rgba(0,0,0,0.6)", color: "#fff", padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600 }}>{currentIdx + 1} / {images.length}</div>
+              </>
+            )}
           </div>
 
           {/* Thumbnail Strip */}
@@ -200,7 +225,7 @@ export default function ListingPage() {
             <div>
               {/* Badges */}
               <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                <span style={{ background: "rgba(0,255,170,0.08)", color: "#0fa", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{listing.tag}</span>
+                <span style={{ background: "rgba(0,170,255,0.1)", color: "#0af", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{listing.tag}</span>
                 <span style={{ background: listing.available ? "rgba(0,255,170,0.15)" : "rgba(255,77,77,0.15)", color: listing.available ? "#0fa" : "#f66", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>
                   {listing.available ? "Available" : "Waitlist"}
                 </span>
@@ -215,14 +240,18 @@ export default function ListingPage() {
               {/* Mini Review Link */}
               <a href="#reviews" style={{ display: "inline-block", color: "#f0c040", fontSize: 13, fontWeight: 600, textDecoration: "none", marginBottom: 8 }}>★ 4.9 · {reviews.length} reviews</a>
 
-              {/* Location */}
-              <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", marginBottom: 20 }}>{listing.location}</p>
-
               {/* Specs */}
-              <div style={{ display: "flex", gap: 24, marginBottom: 28, fontSize: 14, color: "rgba(255,255,255,0.6)" }}>
-                <span>{listing.beds} Bed{listing.beds > 1 ? "s" : ""}</span>
-                <span>{listing.baths} Bath{listing.baths > 1 ? "s" : ""}</span>
-                <span>{listing.sqft} sqft</span>
+              <div style={{ display: "flex", gap: 12, marginBottom: 28 }}>
+                {[
+                  { val: listing.beds, label: `Bed${listing.beds > 1 ? "s" : ""}` },
+                  { val: listing.baths, label: `Bath${listing.baths > 1 ? "s" : ""}` },
+                  { val: listing.sqft.toLocaleString(), label: "sqft" },
+                ].map(s => (
+                  <div key={s.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "14px 20px", textAlign: "center", minWidth: 80 }}>
+                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: "#fff", lineHeight: 1 }}>{s.val}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{s.label}</div>
+                  </div>
+                ))}
               </div>
 
               {/* Video Walkthrough */}
@@ -292,7 +321,7 @@ export default function ListingPage() {
                   <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700 }}>Guest Reviews</h2>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: "#f0c040" }}>4.9 out of 5</span>
-                    <span style={{ color: "#f0c040", fontSize: 16 }}>★★★★★</span>
+                    <span style={{ color: "#f0c040", fontSize: 20 }}>★★★★★</span>
                   </div>
                 </div>
                 {/* TODO: Replace with admin API reviews when available */}
@@ -303,7 +332,7 @@ export default function ListingPage() {
                         <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{r.name}</span>
                         <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginLeft: 10 }}>{r.role}</span>
                       </div>
-                      <span style={{ color: "#f0c040", fontSize: 13 }}>★★★★★</span>
+                      <span style={{ color: "#f0c040", fontSize: 20 }}>★★★★★</span>
                     </div>
                     <p style={{ fontSize: 14, lineHeight: 1.7, color: "rgba(255,255,255,0.6)" }}>{r.text}</p>
                   </div>
@@ -412,6 +441,23 @@ export default function ListingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Desktop Lightbox */}
+      {lightboxOpen && (
+        <div onClick={() => setLightboxOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)" }}>
+          <button onClick={() => setLightboxOpen(false)} style={{ position: "absolute", top: 20, right: 24, background: "none", border: "none", color: "#fff", fontSize: 32, cursor: "pointer", zIndex: 201 }}>✕</button>
+          {images.length > 1 && (
+            <>
+              <button onClick={e => { e.stopPropagation(); goPrev(); }} style={{ position: "absolute", left: 20, top: "50%", transform: "translateY(-50%)", width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 201 }}>‹</button>
+              <button onClick={e => { e.stopPropagation(); goNext(); }} style={{ position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)", width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 201 }}>›</button>
+            </>
+          )}
+          <img onClick={e => e.stopPropagation()} src={currentImg} alt={listing.title} style={{ maxWidth: "90vw", maxHeight: "85vh", objectFit: "contain", borderRadius: 12 }} />
+          {images.length > 1 && (
+            <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 600 }}>{currentIdx + 1} / {images.length}</div>
+          )}
+        </div>
+      )}
 
       {/* Mobile Sticky Price Bar */}
       {showMobileBar && (
