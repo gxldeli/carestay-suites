@@ -11,6 +11,8 @@ export interface ListingOverride {
   descriptionOverride?: string;
   nearbyHospital?: string;
   hospitalDistance?: string;
+  sortOrder?: number;
+  featured?: boolean;
 }
 
 export interface CustomListing {
@@ -28,6 +30,8 @@ export interface CustomListing {
   hospitalDistance: string;
   soakingTub: boolean;
   carestayStandard: boolean;
+  sortOrder?: number;
+  featured?: boolean;
 }
 
 interface OverridesData {

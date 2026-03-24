@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getListings } from "@/app/lib/hostaway";
 
 // Access the same in-memory overrides store used by /api/admin
-interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string }
-interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean }
+interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string; sortOrder?: number; featured?: boolean }
+interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean; sortOrder?: number; featured?: boolean }
 interface OverridesData { listings: Record<string, ListingOverride>; customListings: CustomListing[] }
 const globalStore = globalThis as unknown as { __adminOverrides?: OverridesData };
 function getOverrides(): OverridesData { return globalStore.__adminOverrides || { listings: {}, customListings: [] }; }
@@ -41,6 +41,8 @@ export async function GET(request: Request) {
           hidden: ov.hidden || false,
           nearbyHospital: ov.nearbyHospital || "",
           hospitalDistance: ov.hospitalDistance || "",
+          sortOrder: ov.sortOrder ?? 50,
+          featured: ov.featured || false,
         };
       })
       .filter((l) => includeHidden || !l.hidden);
@@ -67,10 +69,12 @@ export async function GET(request: Request) {
       hidden: false,
       nearbyHospital: cl.nearbyHospital,
       hospitalDistance: cl.hospitalDistance,
+      sortOrder: cl.sortOrder ?? 50,
+      featured: cl.featured || false,
       isCustom: true,
     }));
 
-    const all = [...transformed, ...custom];
+    const all = [...transformed, ...custom].sort((a, b) => (a.sortOrder ?? 50) - (b.sortOrder ?? 50));
 
     return NextResponse.json({
       status: "success",
