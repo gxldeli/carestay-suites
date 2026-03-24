@@ -70,11 +70,54 @@ export interface HostAwayListing {
   images: Array<{ url: string; caption?: string; originalUrl?: string }>;
   listingImages: Array<{ url: string; originalUrl?: string }>;
   amenities: string[];
+  listingAmenities: Array<{ amenityId: number; amenityName?: string; name?: string }>;
   price: number;
   currencyCode: string;
   isActive: number;
   tags: string[];
   [key: string]: unknown;
+}
+
+// HostAway amenityId → human-readable name mapping
+const AMENITY_ID_MAP: Record<number, string> = {
+  1: "TV", 2: "Internet", 3: "Wireless Internet", 4: "Air Conditioning", 5: "Wheelchair Accessible",
+  6: "Pool", 7: "Kitchen", 8: "Free Parking", 9: "Hot Tub", 10: "Washer",
+  11: "Dryer", 12: "Breakfast", 13: "Gym", 14: "Indoor Fireplace", 15: "Buzzer",
+  16: "Doorman", 17: "Hair Dryer", 18: "Heating", 19: "Laptop Friendly Workspace", 20: "Iron",
+  21: "Family Friendly", 22: "Smoke Detector", 23: "Carbon Monoxide Detector", 24: "First Aid Kit",
+  25: "Safety Card", 26: "Fire Extinguisher", 27: "Essentials", 28: "Shampoo", 29: "Hangers",
+  30: "Lock on Bedroom Door", 31: "Elevator", 33: "Pets Allowed", 34: "Smoking Allowed",
+  35: "Suitable for Events", 36: "Cable TV", 37: "Coffee Maker", 38: "Cooking Basics",
+  39: "Dishes and Silverware", 40: "Dishwasher", 41: "Microwave", 42: "Refrigerator", 43: "Oven",
+  44: "Stove", 45: "BBQ Grill", 46: "Patio or Balcony", 47: "Garden or Backyard",
+  48: "Beach Essentials", 49: "Private Entrance", 50: "Bed Linens", 51: "Extra Pillows and Blankets",
+  52: "Ethernet Connection", 53: "Luggage Dropoff Allowed", 54: "Long Term Stays Allowed",
+  55: "Cleaning Before Checkout", 56: "Waterfront", 57: "Beachfront",
+  58: "Ski In Ski Out", 59: "Self Check-in", 60: "Smart Lock", 61: "Lockbox",
+};
+
+export function extractAmenityNames(listing: HostAwayListing): string[] {
+  // Try listingAmenities (array of objects) first — this is the standard HostAway format
+  if (listing.listingAmenities && Array.isArray(listing.listingAmenities) && listing.listingAmenities.length > 0) {
+    return listing.listingAmenities.map((a) => {
+      if (a.amenityName) return a.amenityName;
+      if (a.name) return a.name;
+      return AMENITY_ID_MAP[a.amenityId] || `Amenity ${a.amenityId}`;
+    }).filter(Boolean);
+  }
+  // Fall back to amenities if it's already a string array
+  if (listing.amenities && Array.isArray(listing.amenities) && listing.amenities.length > 0) {
+    // Could be string[] or could be objects — handle both
+    return listing.amenities.map((a: unknown) => {
+      if (typeof a === "string") return a;
+      if (typeof a === "object" && a !== null) {
+        const obj = a as Record<string, unknown>;
+        return (obj.amenityName || obj.name || AMENITY_ID_MAP[obj.amenityId as number] || "") as string;
+      }
+      return "";
+    }).filter(Boolean);
+  }
+  return [];
 }
 
 export async function getListings(): Promise<HostAwayListing[]> {

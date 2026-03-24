@@ -70,7 +70,8 @@ export default function ListingPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [moveIn, setMoveIn] = useState("");
-  const [duration, setDuration] = useState("");
+  const [moveOut, setMoveOut] = useState("");
+  const [message, setMessage] = useState("");
   const [showMobileBar, setShowMobileBar] = useState(true);
   const inquiryRef = useRef<HTMLDivElement>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -146,7 +147,7 @@ export default function ListingPage() {
   const ratingLabel = avgStars >= 4.5 ? "Exceptional" : avgStars >= 4.0 ? "Excellent" : avgStars >= 3.5 ? "Very Good" : "Good";
   const displayTotalCount = reviewTotalCount || reviews.length;
   const handleSubmit = async () => {
-    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, moveIn, duration, listing: listing?.title }) });
+    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, moveIn, moveOut, message, listing: listing?.title }) });
     setSubmitted(true);
   };
 
@@ -382,7 +383,8 @@ export default function ListingPage() {
                       }
                       return "✓";
                     };
-                    const amenities = listing.amenities && listing.amenities.length > 0 ? listing.amenities : [];
+                    const DEFAULT_AMENITIES = ["WiFi", "Kitchen", "Air Conditioning", "Heating", "Washer", "Dryer", "TV", "Hair Dryer", "Iron", "Coffee Maker", "Workspace", "Free Parking"];
+                    const amenities = listing.amenities && listing.amenities.length > 0 ? listing.amenities : DEFAULT_AMENITIES;
                     const visible = showAllAmenities ? amenities : amenities.slice(0, 9);
                     return visible.map((a: string, i: number) => (
                       <div key={`${a}-${i}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10 }}>
@@ -501,19 +503,23 @@ export default function ListingPage() {
                     <input type="email" placeholder="jane@hospital.ca" value={email} onChange={e => setEmail(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
                   </div>
                 </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Phone</div>
+                  <input type="tel" placeholder="(647) 000-0000" value={phone} onChange={e => setPhone(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                </div>
                 <div className="inquiry-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                   <div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Phone</div>
-                    <input type="tel" placeholder="(647) 000-0000" value={phone} onChange={e => setPhone(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Move-in Date</div>
+                    <input type="date" value={moveIn} onChange={e => setMoveIn(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit", colorScheme: "dark" }} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Move-in Date</div>
-                    <input type="text" placeholder="e.g., April 15" value={moveIn} onChange={e => setMoveIn(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Move-out Date</div>
+                    <input type="date" value={moveOut} onChange={e => setMoveOut(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit", colorScheme: "dark" }} />
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Duration / Message</div>
-                  <textarea placeholder="e.g., 3 months, any special requests..." value={duration} onChange={e => setDuration(e.target.value)} rows={3} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit", resize: "vertical" }} />
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Message / Special Requests</div>
+                  <textarea placeholder="Any special requests or questions..." value={message} onChange={e => setMessage(e.target.value)} rows={3} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit", resize: "vertical" }} />
                 </div>
                 <button onClick={handleSubmit} style={{ width: "100%", padding: "16px 0", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", borderRadius: 10, fontWeight: 700, fontSize: 15, textAlign: "center", border: "none", cursor: "pointer", fontFamily: "inherit", marginTop: 4 }}>
                   Submit Inquiry

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getListing } from "@/app/lib/hostaway";
+import { getListing, extractAmenityNames } from "@/app/lib/hostaway";
 
 export async function GET(
   _request: Request,
@@ -34,7 +34,7 @@ export async function GET(
       images: (listing.pictures?.map((p) => p.originalUrl || p.url) || listing.images?.map((p) => p.url) || listing.listingImages?.map((p) => p.url) || (listing.thumbnailUrl ? [listing.thumbnailUrl] : [])),
       description: listing.description || "",
       available: true,
-      amenities: listing.amenities || [],
+      amenities: extractAmenityNames(listing),
       address: listing.address || "",
       latitude: listing.latitude,
       longitude: listing.longitude,
