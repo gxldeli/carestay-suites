@@ -35,6 +35,8 @@ export async function GET(request: Request) {
           address: l.address || "",
           latitude: l.latitude,
           longitude: l.longitude,
+          maxGuests: l.maxGuests || 0,
+          bedrooms: l.bedrooms || 0,
           soakingTub: ov.soakingTub || false,
           carestayStandard: ov.carestayStandard || false,
           hidden: ov.hidden || false,

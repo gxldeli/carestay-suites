@@ -29,7 +29,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
 }
 
 const WHO_ITS_FOR = [
-  { icon: "🏢", title: "Relocating Employees", desc: "Staff moving to the GTA who need furnished housing while they settle in." },
+  { icon: "🏢", title: "Relocating Employees", desc: "Staff relocating who need furnished housing while they settle in." },
   { icon: "👥", title: "Project Teams", desc: "Teams on-site for 1-6 month projects who need comfortable, central accommodation." },
   { icon: "💼", title: "Executives", desc: "C-suite and senior staff who expect a premium standard of living." },
   { icon: "🏠", title: "Insurance Displacement", desc: "Families and individuals displaced by home damage who need temporary housing fast." },
@@ -120,7 +120,7 @@ export default function CorporatePage() {
               <span style={{ fontSize: 12, fontWeight: 600, color: "#0af", letterSpacing: "0.06em", textTransform: "uppercase" }}>Corporate &amp; Relocation</span>
             </div>
             <h1 className="hero-h1" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 52, fontWeight: 700, lineHeight: 1.08, color: "#fff", letterSpacing: "-0.03em", maxWidth: 750, marginBottom: 24 }}>
-              Corporate Housing &amp; Employee Relocation in the GTA
+              Corporate Housing &amp; Employee Relocation
             </h1>
             <p style={{ fontSize: 18, lineHeight: 1.7, color: "rgba(255,255,255,0.55)", maxWidth: 600, marginBottom: 32 }}>
               Fully furnished suites for relocating employees, project teams, and executives. Flexible terms, corporate billing, premium standard.
@@ -178,8 +178,8 @@ export default function CorporatePage() {
           <div className="wrap">
             <div style={{ textAlign: "center", marginBottom: 48 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#0af", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>Locations</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: "#fff", lineHeight: 1.15 }}>Properties Across the GTA</h2>
-              <p style={{ fontSize: 15, color: "rgba(255,255,255,0.4)", marginTop: 12, maxWidth: 520, margin: "12px auto 0" }}>90+ managed properties in prime locations throughout the Greater Toronto Area.</p>
+              <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: "#fff", lineHeight: 1.15 }}>Properties Across Ontario</h2>
+              <p style={{ fontSize: 15, color: "rgba(255,255,255,0.4)", marginTop: 12, maxWidth: 520, margin: "12px auto 0" }}>90+ managed properties in prime locations, primarily across the Greater Toronto Area and beyond.</p>
             </div>
             <div className="location-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
               {LOCATIONS.map(loc => (
@@ -251,7 +251,7 @@ export default function CorporatePage() {
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#0fa,#0af)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: "#0a0c0f" }}>CS</div>
                 <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>CareStay Suites</span>
               </div>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>Premium furnished housing for healthcare professionals and corporate teams across the Greater Toronto Area.</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>Premium furnished housing for healthcare professionals and corporate teams, primarily across the Greater Toronto Area.</p>
             </div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Quick Links</div>
@@ -262,7 +262,6 @@ export default function CorporatePage() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Contact</div>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>info@carestaysuites.com</p>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>(647) 499-3889</p>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Toronto, Ontario</p>
             </div>
           </div>

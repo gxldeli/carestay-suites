@@ -204,7 +204,7 @@ function Hero() {
             </FadeIn>
             <FadeIn delay={0.2}>
               <p style={{ fontSize: 17, lineHeight: 1.7, color: "rgba(255,255,255,0.55)", maxWidth: 500, margin: "24px 0 36px" }}>
-                Move-in ready suites across the GTA. Verified properties. No scams, no deposits lost, no bait-and-switch. Trusted by nurses, physicians, and medical staff.
+                Move-in ready suites primarily across the Greater Toronto Area and beyond. Verified properties. No scams, no deposits lost, no bait-and-switch. Trusted by nurses, physicians, and medical staff.
               </p>
             </FadeIn>
             <FadeIn delay={0.3}>
@@ -328,7 +328,7 @@ function ListingsSection() {
           <div className="sh-center" style={{ marginBottom: 48 }}>
             <div className="sh-label">All Suites</div>
             <h2 className="sh-title">Curated Properties Near You</h2>
-            <p className="sh-sub">Every suite is verified, professionally furnished, and located near major GTA hospitals.</p>
+            <p className="sh-sub">Every suite is verified, professionally furnished, and located near major hospitals across the Greater Toronto Area and beyond.</p>
           </div>
         </FadeIn>
         <div className="listings-grid">
@@ -467,7 +467,7 @@ function Healthcare() {
 function HowItWorks() {
   const steps = [
     { n: "01", t: "Tell Us Your Needs", d: "Assignment dates, hospital, budget. 2-minute form." },
-    { n: "02", t: "We Match You", d: "Verified suites near your hospital. Options in 24 hours." },
+    { n: "02", t: "Browse & Tour Virtually", d: "Browse verified suites and take virtual video tours from anywhere. Options in 24 hours." },
     { n: "03", t: "Book & Move In", d: "Sign digitally. Fully furnished suite waiting for you." },
   ];
   return (
@@ -557,7 +557,7 @@ function Footer() {
               <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#0fa,#0af)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: "#0a0c0f" }}>CS</div>
               <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>CareStay Suites</span>
             </div>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>Premium furnished housing for healthcare professionals across the Greater Toronto Area.</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>Premium furnished housing for healthcare professionals, primarily across the Greater Toronto Area.</p>
           </div>
           <div className="footer-links">
             <div>
@@ -567,7 +567,6 @@ function Footer() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Contact</div>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>info@carestaysuites.com</p>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>(647) 499-3889</p>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Toronto, Ontario</p>
             </div>
           </div>

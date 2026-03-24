@@ -87,9 +87,9 @@ export default function AboutPage() {
             <div className="about-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#0fa", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 16 }}>Who We Are</div>
-                <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: "#fff", marginBottom: 20, lineHeight: 1.2 }}>6+ Years Managing Properties Across the GTA</h2>
+                <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: "#fff", marginBottom: 20, lineHeight: 1.2 }}>6+ Years Managing Properties Across the Greater Toronto Area</h2>
                 <p style={{ fontSize: 15, lineHeight: 1.8, color: "rgba(255,255,255,0.6)", marginBottom: 20 }}>
-                  BookedHosts has been managing properties across the Greater Toronto Area for over 6 years. We started as a property management company, handling short-term and mid-term rentals across the city.
+                  BookedHosts has been managing properties primarily across the Greater Toronto Area for over 6 years. We started as a property management company, handling short-term and mid-term rentals across Ontario.
                 </p>
                 <p style={{ fontSize: 15, lineHeight: 1.8, color: "rgba(255,255,255,0.6)", marginBottom: 20 }}>
                   Over time, we noticed something: healthcare professionals were our best tenants — respectful, responsible, and desperate for reliable housing near their hospitals. But they kept getting burned by fake listings, lost deposits, and bait-and-switch scams.
@@ -179,7 +179,7 @@ export default function AboutPage() {
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#0fa,#0af)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: "#0a0c0f" }}>CS</div>
                 <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>CareStay Suites</span>
               </div>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>Premium furnished housing for healthcare professionals across the Greater Toronto Area.</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>Premium furnished housing for healthcare professionals, primarily across the Greater Toronto Area.</p>
             </div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Quick Links</div>
@@ -190,7 +190,6 @@ export default function AboutPage() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Contact</div>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>info@carestaysuites.com</p>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>(647) 499-3889</p>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Toronto, Ontario</p>
             </div>
           </div>

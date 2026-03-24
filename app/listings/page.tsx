@@ -66,7 +66,7 @@ export default function AllListingsPage() {
       <main style={{ paddingTop: 72 }}>
         <div className="wrap" style={{ padding: "60px 24px 80px" }}>
           <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, marginBottom: 8 }}>All Suites</h1>
-          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", marginBottom: 24 }}>{listings.length} properties available across the GTA</p>
+          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", marginBottom: 24 }}>{listings.length} properties available, primarily across the Greater Toronto Area</p>
 
           {/* Filter Bar */}
           <div className="filter-bar">
