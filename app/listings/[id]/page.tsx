@@ -76,6 +76,9 @@ export default function ListingPage() {
   const inquiryRef = useRef<HTMLDivElement>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const [slideDir, setSlideDir] = useState<"left" | "right" | null>(null);
+  const slideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [reviews, setReviews] = useState<ReviewItem[]>(DEFAULT_REVIEWS);
   const [reviewTotalCount, setReviewTotalCount] = useState(0);
   const [showAllReviews, setShowAllReviews] = useState(false);
@@ -90,8 +93,33 @@ export default function ListingPage() {
   const images = listing?.images?.length ? listing.images.slice(0, 30) : listing ? [listing.img] : [];
   const currentImg = selectedImg || listing?.img || "";
   const currentIdx = images.indexOf(currentImg);
-  const goNext = () => { if (images.length > 1) setSelectedImg(images[(currentIdx + 1) % images.length]); };
-  const goPrev = () => { if (images.length > 1) setSelectedImg(images[(currentIdx - 1 + images.length) % images.length]); };
+  const goNext = () => {
+    if (images.length <= 1) return;
+    if (slideTimeoutRef.current) clearTimeout(slideTimeoutRef.current);
+    setSlideDir("left");
+    slideTimeoutRef.current = setTimeout(() => {
+      setSelectedImg(images[(currentIdx + 1) % images.length]);
+      setSlideDir(null);
+    }, 250);
+  };
+  const goPrev = () => {
+    if (images.length <= 1) return;
+    if (slideTimeoutRef.current) clearTimeout(slideTimeoutRef.current);
+    setSlideDir("right");
+    slideTimeoutRef.current = setTimeout(() => {
+      setSelectedImg(images[(currentIdx - 1 + images.length) % images.length]);
+      setSlideDir(null);
+    }, 250);
+  };
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const dx = touchStartX.current - e.changedTouches[0].clientX;
+    const dy = touchStartY.current - e.changedTouches[0].clientY;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) { dx > 0 ? goNext() : goPrev(); }
+  };
   useEffect(() => {
     const onScroll = () => {
       setScrolled(window.scrollY > 20);
@@ -208,14 +236,14 @@ export default function ListingPage() {
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px 0" }}>
           <div
             style={{ borderRadius: 16, overflow: "hidden", maxHeight: 500, position: "relative", cursor: "pointer" }}
-            onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
-            onTouchEnd={e => { const diff = touchStartX.current - e.changedTouches[0].clientX; if (Math.abs(diff) > 50) { diff > 0 ? goNext() : goPrev(); } }}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
             onClick={() => setLightboxOpen(true)}
           >
             <img
               src={currentImg}
               alt={listing.title}
-              style={{ width: "100%", height: "100%", maxHeight: 500, objectFit: "cover", display: "block" }}
+              style={{ width: "100%", height: "100%", maxHeight: 500, objectFit: "cover", display: "block", transition: "transform 0.3s ease-in-out, opacity 0.3s ease-in-out", transform: slideDir === "left" ? "translateX(-100%)" : slideDir === "right" ? "translateX(100%)" : "translateX(0)", opacity: slideDir ? 0 : 1 }}
             />
             {images.length > 1 && (
               <>
@@ -646,7 +674,7 @@ export default function ListingPage() {
 
       {/* Desktop Lightbox */}
       {lightboxOpen && (
-        <div onClick={() => setLightboxOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)" }}>
+        <div onClick={() => setLightboxOpen(false)} onTouchStart={handleTouchStart} onTouchEnd={e => { handleTouchEnd(e); }} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", touchAction: "pan-y" }}>
           <button onClick={() => setLightboxOpen(false)} style={{ position: "absolute", top: 20, right: 24, background: "none", border: "none", color: "#fff", fontSize: 32, cursor: "pointer", zIndex: 201 }}>✕</button>
           {images.length > 1 && (
             <>
@@ -654,7 +682,7 @@ export default function ListingPage() {
               <button onClick={e => { e.stopPropagation(); goNext(); }} style={{ position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)", width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 201 }}>›</button>
             </>
           )}
-          <img onClick={e => e.stopPropagation()} src={currentImg} alt={listing.title} style={{ maxWidth: "90vw", maxHeight: "85vh", objectFit: "contain", borderRadius: 12 }} />
+          <img onClick={e => e.stopPropagation()} src={currentImg} alt={listing.title} style={{ maxWidth: "90vw", maxHeight: "85vh", objectFit: "contain", borderRadius: 12, transition: "transform 0.3s ease-in-out, opacity 0.3s ease-in-out", transform: slideDir === "left" ? "translateX(-100%)" : slideDir === "right" ? "translateX(100%)" : "translateX(0)", opacity: slideDir ? 0 : 1 }} />
           {images.length > 1 && (
             <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 600 }}>{currentIdx + 1} / {images.length}</div>
           )}
