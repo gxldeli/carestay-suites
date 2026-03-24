@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getListings } from "@/app/lib/hostaway";
+import { getListings, extractAmenityNames } from "@/app/lib/hostaway";
 import { redis } from "@/app/lib/redis";
 
 // Upstash Redis overrides store
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
           images: (l.pictures?.map((p) => p.originalUrl || p.url) || l.images?.map((p) => p.url) || l.listingImages?.map((p) => p.url) || (l.thumbnailUrl ? [l.thumbnailUrl] : [])),
           description: ov.descriptionOverride || l.description || "",
           available: true,
-          amenities: l.amenities || [],
+          amenities: extractAmenityNames(l),
           address: l.address || "",
           latitude: l.latitude,
           longitude: l.longitude,

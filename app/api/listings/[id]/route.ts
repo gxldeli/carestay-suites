@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getListing } from "@/app/lib/hostaway";
+import { getListing, extractAmenityNames } from "@/app/lib/hostaway";
 
 export async function GET(
   _request: Request,
@@ -30,11 +30,11 @@ export async function GET(
       baths: listing.bathrooms || 1,
       price: listing.price ? Math.round(listing.price * 30) : 0,
       sqft: listing.squareFeet || 0,
-      img: listing.thumbnailUrl || listing.pictures?.[0]?.url || "",
-      images: listing.pictures?.map((p) => p.url) || [],
+      img: listing.pictures?.[0]?.originalUrl || listing.pictures?.[0]?.url || listing.images?.[0]?.url || listing.listingImages?.[0]?.url || listing.thumbnailUrl || "",
+      images: (listing.pictures?.map((p) => p.originalUrl || p.url) || listing.images?.map((p) => p.url) || listing.listingImages?.map((p) => p.url) || (listing.thumbnailUrl ? [listing.thumbnailUrl] : [])),
       description: listing.description || "",
       available: true,
-      amenities: listing.amenities || [],
+      amenities: extractAmenityNames(listing),
       address: listing.address || "",
       latitude: listing.latitude,
       longitude: listing.longitude,
@@ -43,9 +43,10 @@ export async function GET(
 
     return NextResponse.json({ status: "success", listing: transformed });
   } catch (error) {
-    console.error("Error fetching listing:", error);
+    console.error("[API /listings/id] Error:", error instanceof Error ? error.message : error);
+    console.error("[API /listings/id] Stack:", error instanceof Error ? error.stack : "N/A");
     return NextResponse.json(
-      { status: "error", message: "Failed to fetch listing" },
+      { status: "error", message: error instanceof Error ? error.message : "Failed to fetch listing" },
       { status: 500 }
     );
   }
