@@ -46,7 +46,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
   );
 }
 
-interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[] }
+interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string }
 
 export default function ListingPage() {
   const params = useParams();
@@ -79,6 +79,7 @@ export default function ListingPage() {
               id: match.id, title: match.title, location: match.location, beds: match.beds, baths: match.baths,
               price: match.price, sqft: match.sqft, img: match.images?.[0] || match.img, tag: match.location || "GTA",
               available: true, desc: match.description || "", description: match.description, images: match.images,
+              nearbyHospital: match.nearbyHospital || "",
             });
           }
         }
@@ -86,6 +87,13 @@ export default function ListingPage() {
       })
       .catch(() => setLoading(false));
   }, [rawId]);
+  useEffect(() => {
+    if (!listing) return;
+    document.title = `${listing.title} | CareStay Suites - Furnished Housing GTA`;
+    let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+    if (!meta) { meta = document.createElement("meta"); meta.name = "description"; document.head.appendChild(meta); }
+    meta.content = `${listing.title} - ${listing.beds} bed/${listing.baths} bath furnished apartment in ${listing.location}. Month-to-month. All-in pricing. Near ${listing.nearbyHospital || "major GTA hospitals"}.`;
+  }, [listing]);
   const handleSubmit = async () => {
     await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, moveIn, duration, listing: listing?.title }) });
     setSubmitted(true);
