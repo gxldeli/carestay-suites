@@ -120,69 +120,79 @@ export default function ListingPage() {
         .nav-link{color:rgba(255,255,255,0.7);text-decoration:none;font-size:14px;font-weight:500}
         .nav-link:hover{color:#fff}
         .nav-cta{background:linear-gradient(135deg,#0fa,#0af);color:#0a0c0f;padding:10px 22px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none}
+        .detail-grid{display:grid;grid-template-columns:1fr 380px;gap:40px;align-items:start}
         @media(max-width:768px){
           .nav-links{display:none!important}
           .nav-mobile{display:block!important}
+          .detail-grid{grid-template-columns:1fr!important}
+          .gallery-thumbs{justify-content:flex-start}
+          .cs-standard-grid{grid-template-columns:1fr!important}
+          .footer-cols{grid-template-columns:1fr!important}
         }
       `}</style>
 
       <Nav scrolled={scrolled} />
 
       <main style={{ paddingTop: 72 }}>
-        {/* Hero Image */}
-        <div style={{ position: "relative", width: "100%", height: "clamp(300px, 50vh, 520px)", overflow: "hidden" }}>
-          <img
-            src={selectedImg || listing.img}
-            alt={listing.title}
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, #0a0c0f 0%, transparent 50%)" }} />
-        </div>
+        {/* Gallery */}
+        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px 0" }}>
+          <div style={{ borderRadius: 16, overflow: "hidden", maxHeight: 500 }}>
+            <img
+              src={selectedImg || listing.img}
+              alt={listing.title}
+              style={{ width: "100%", height: "100%", maxHeight: 500, objectFit: "cover", display: "block" }}
+            />
+          </div>
 
-        {/* Image Gallery Strip */}
-        {listing.images && listing.images.length > 1 && (
-          <div className="wrap" style={{ marginTop: -40, position: "relative", zIndex: 3, marginBottom: -40 }}>
-            <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
+          {/* Thumbnail Strip */}
+          {listing.images && listing.images.length > 1 && (
+            <div className="gallery-thumbs" style={{ display: "flex", gap: 8, overflowX: "auto", paddingTop: 12, paddingBottom: 4 }}>
               {listing.images.slice(0, 30).map((imgUrl, i) => (
                 <button
                   key={i}
                   onClick={() => setSelectedImg(imgUrl)}
-                  style={{ flexShrink: 0, width: 80, height: 56, borderRadius: 8, overflow: "hidden", border: (selectedImg || listing.img) === imgUrl ? "2px solid #0fa" : "2px solid transparent", cursor: "pointer", padding: 0, background: "none" }}
+                  style={{ flexShrink: 0, width: 72, height: 48, borderRadius: 8, overflow: "hidden", border: (selectedImg || listing.img) === imgUrl ? "2px solid #0fa" : "2px solid rgba(255,255,255,0.1)", cursor: "pointer", padding: 0, background: "none" }}
                 >
                   <img src={imgUrl} alt={`${listing.title} ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 </button>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Content */}
-        <div className="wrap" style={{ marginTop: -80, position: "relative", zIndex: 2 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 40, alignItems: "start" }}>
+        <div className="wrap" style={{ paddingTop: 32 }}>
+          <div className="detail-grid">
             {/* Left — Details */}
             <div>
-              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                <span style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(10px)", color: "#0fa", padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{listing.tag}</span>
-                <span style={{ background: listing.available ? "rgba(0,255,170,0.15)" : "rgba(255,77,77,0.15)", color: listing.available ? "#0fa" : "#f66", padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>
+              {/* Badges */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                <span style={{ background: "rgba(0,255,170,0.08)", color: "#0fa", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{listing.tag}</span>
+                <span style={{ background: listing.available ? "rgba(0,255,170,0.15)" : "rgba(255,77,77,0.15)", color: listing.available ? "#0fa" : "#f66", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>
                   {listing.available ? "Available" : "Waitlist"}
                 </span>
               </div>
 
+              {/* Title */}
               <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 42, fontWeight: 700, lineHeight: 1.1, marginBottom: 8 }}>{listing.title}</h1>
-              <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", marginBottom: 32 }}>{listing.location}</p>
 
-              <div style={{ display: "flex", gap: 24, marginBottom: 32, fontSize: 14, color: "rgba(255,255,255,0.6)" }}>
+              {/* Location */}
+              <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", marginBottom: 20 }}>{listing.location}</p>
+
+              {/* Specs */}
+              <div style={{ display: "flex", gap: 24, marginBottom: 28, fontSize: 14, color: "rgba(255,255,255,0.6)" }}>
                 <span>{listing.beds} Bed{listing.beds > 1 ? "s" : ""}</span>
                 <span>{listing.baths} Bath{listing.baths > 1 ? "s" : ""}</span>
                 <span>{listing.sqft} sqft</span>
               </div>
 
+              {/* Description */}
               <p style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(255,255,255,0.7)", marginBottom: 48 }}>{listing.desc || listing.description || ""}</p>
 
               {/* CareStay Standard */}
               <div style={{ marginBottom: 48 }}>
                 <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>The CareStay Standard</h2>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div className="cs-standard-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   {CARESTAY_STANDARD.map((item) => (
                     <div key={item.name} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "16px 18px", display: "flex", gap: 14, alignItems: "center" }}>
                       <span style={{ fontSize: 24 }}>{item.icon}</span>
@@ -267,7 +277,7 @@ export default function ListingPage() {
       {/* Footer */}
       <footer style={{ background: "#0a0c0f", borderTop: "1px solid rgba(255,255,255,0.05)", padding: "48px 24px 32px" }}>
         <div className="wrap">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 32 }}>
+          <div className="footer-cols" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 32 }}>
             <div style={{ maxWidth: 280 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#0fa,#0af)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: "#0a0c0f" }}>CS</div>
