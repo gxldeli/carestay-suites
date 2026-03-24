@@ -318,20 +318,14 @@ export default function ListingPage() {
               </a>
 
               {/* Specs */}
-              <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
+              <p style={{ fontSize: 15, color: "rgba(255,255,255,0.5)", marginBottom: 24, lineHeight: 1.6 }}>
                 {[
-                  listing.maxGuests ? { icon: "👥", val: listing.maxGuests, label: `Guest${listing.maxGuests > 1 ? "s" : ""}` } : null,
-                  listing.bedrooms ? { icon: "🛏️", val: listing.bedrooms, label: `Bedroom${listing.bedrooms > 1 ? "s" : ""}` } : null,
-                  { icon: "🛋️", val: listing.beds, label: `Bed${listing.beds > 1 ? "s" : ""}` },
-                  { icon: "🚿", val: listing.baths, label: `Bath${listing.baths > 1 ? "s" : ""}` },
-                ].filter(Boolean).map(s => (
-                  <div key={s!.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px 16px", textAlign: "center", minWidth: 64 }}>
-                    <div style={{ fontSize: 16, marginBottom: 2 }}>{s!.icon}</div>
-                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: "#fff", lineHeight: 1 }}>{s!.val}</div>
-                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 3, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{s!.label}</div>
-                  </div>
-                ))}
-              </div>
+                  listing.maxGuests ? `${listing.maxGuests} guest${listing.maxGuests !== 1 ? "s" : ""}` : null,
+                  listing.bedrooms ? `${listing.bedrooms} bedroom${listing.bedrooms !== 1 ? "s" : ""}` : null,
+                  listing.beds ? `${listing.beds} bed${listing.beds !== 1 ? "s" : ""}` : null,
+                  listing.baths ? `${listing.baths} bath${listing.baths !== 1 ? "s" : ""}` : null,
+                ].filter(Boolean).join(" · ")}
+              </p>
 
               {/* Video Walkthrough */}
               {listing.videoUrl && (() => {
