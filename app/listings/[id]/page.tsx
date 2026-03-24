@@ -396,7 +396,7 @@ export default function ListingPage() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
                   <span style={{ color: "#f0c040", fontSize: 14 }}>{"★".repeat(Math.round(avgStars))}</span>
-                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>{avgStars.toFixed(1)} · {displayTotalCount} reviews</span>
+                  <span style={{ fontSize: 13, color: "#f0c040" }}>{avgStars.toFixed(1)} · {displayTotalCount} reviews</span>
                 </div>
 
                 <div style={{ marginBottom: 14 }}>
@@ -535,7 +535,7 @@ export default function ListingPage() {
             <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "#fff" }}>${listing.price.toLocaleString()}</span>
             <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>/mo</span>
           </div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>★ {avgStars.toFixed(1)} · {displayTotalCount} reviews</div>
+          <div style={{ fontSize: 11, color: "#f0c040", marginTop: 2 }}>★ {avgStars.toFixed(1)} · {displayTotalCount} reviews</div>
         </div>
         <a href="#inquiry" style={{ background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: "12px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: "none", whiteSpace: "nowrap" }}>Inquire Now</a>
       </div>
