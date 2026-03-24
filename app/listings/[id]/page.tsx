@@ -54,7 +54,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
   );
 }
 
-interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; featured?: boolean; videoUrl?: string }
+interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; featured?: boolean; videoUrl?: string; amenities?: string[] }
 
 export default function ListingPage() {
   const params = useParams();
@@ -78,6 +78,8 @@ export default function ListingPage() {
   const [reviews, setReviews] = useState<ReviewItem[]>(DEFAULT_REVIEWS);
   const [reviewTotalCount, setReviewTotalCount] = useState(0);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [showFullDesc, setShowFullDesc] = useState(false);
+  const [showAllAmenities, setShowAllAmenities] = useState(false);
   useEffect(() => {
     if (!lightboxOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLightboxOpen(false); if (e.key === "ArrowRight") goNext(); if (e.key === "ArrowLeft") goPrev(); };
@@ -111,7 +113,7 @@ export default function ListingPage() {
               id: match.id, title: match.title, location: match.location, beds: match.beds, baths: match.baths,
               price: match.price, sqft: match.sqft, img: match.images?.[0] || match.img, tag: match.location || "GTA",
               available: true, desc: match.description || "", description: match.description, images: match.images,
-              nearbyHospital: match.nearbyHospital || "", featured: match.featured || false, videoUrl: match.videoUrl || "",
+              nearbyHospital: match.nearbyHospital || "", featured: match.featured || false, videoUrl: match.videoUrl || "", amenities: match.amenities || [],
             });
           }
         }
@@ -305,7 +307,25 @@ export default function ListingPage() {
 
               {/* Description */}
               <div style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(255,255,255,0.7)", marginBottom: 48 }}>
-                {(listing.desc || listing.description || "").split("\n").map((line, i) => <p key={i} style={{ marginBottom: line.trim() ? 12 : 0 }}>{line}</p>)}
+                {(() => {
+                  const fullText = listing.desc || listing.description || "";
+                  const lines = fullText.split("\n");
+                  const truncated = !showFullDesc && fullText.length > 400;
+                  const displayLines = truncated ? fullText.substring(0, 400).split("\n") : lines;
+                  return (
+                    <>
+                      <div style={{ position: "relative" }}>
+                        {displayLines.map((line, i) => <p key={i} style={{ marginBottom: line.trim() ? 12 : 0 }}>{line}{truncated && i === displayLines.length - 1 ? "..." : ""}</p>)}
+                        {truncated && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 48, background: "linear-gradient(transparent, #0a0c10)" }} />}
+                      </div>
+                      {fullText.length > 400 && (
+                        <button onClick={() => setShowFullDesc(!showFullDesc)} style={{ background: "none", border: "none", color: "#0fa", fontSize: 14, fontWeight: 600, cursor: "pointer", padding: "8px 0 0", fontFamily: "inherit" }}>
+                          {showFullDesc ? "Show Less" : "See More"}
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Hospital Badge */}
@@ -323,18 +343,60 @@ export default function ListingPage() {
               <div style={{ marginBottom: 48 }}>
                 <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Amenities</h2>
                 <div className="amenity-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                  {[
-                    { emoji: "📶", label: "WiFi" }, { emoji: "🅿️", label: "Parking" }, { emoji: "🧺", label: "Laundry" },
-                    { emoji: "💪", label: "Gym" }, { emoji: "🍳", label: "Kitchen" }, { emoji: "📺", label: "Smart TV" },
-                    { emoji: "🔒", label: "Smart Lock" }, { emoji: "🚇", label: "Subway" }, { emoji: "🛁", label: "Soaking Tub" },
-                    { emoji: "🌇", label: "Balcony" }, { emoji: "🛎️", label: "Concierge" }, { emoji: "🐾", label: "Pet Friendly" },
-                  ].map(a => (
-                    <div key={a.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10 }}>
-                      <span style={{ fontSize: 20 }}>{a.emoji}</span>
-                      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{a.label}</span>
-                    </div>
-                  ))}
+                  {(() => {
+                    const iconMap: Record<string, string> = {
+                      "wifi": "📶", "wireless internet": "📶", "internet": "📶",
+                      "kitchen": "🍳", "cooking basics": "🍳",
+                      "parking": "🅿️", "free parking": "🅿️", "garage": "🅿️", "street parking": "🅿️",
+                      "washer": "🧺", "laundry": "🧺", "washing machine": "🧺",
+                      "dryer": "👕",
+                      "air conditioning": "❄️", "ac": "❄️", "a/c": "❄️", "central air": "❄️",
+                      "heating": "🔥", "heat": "🔥", "central heating": "🔥",
+                      "tv": "📺", "cable tv": "📺", "smart tv": "📺", "television": "📺",
+                      "gym": "💪", "fitness": "💪", "fitness center": "💪", "exercise equipment": "💪",
+                      "pool": "🏊", "swimming pool": "🏊",
+                      "elevator": "🛗", "lift": "🛗",
+                      "balcony": "🌇", "patio": "🌇", "deck": "🌇", "terrace": "🌇",
+                      "dishwasher": "🍽️",
+                      "coffee maker": "☕", "coffee": "☕", "espresso machine": "☕",
+                      "iron": "👔",
+                      "hair dryer": "💇", "hairdryer": "💇",
+                      "workspace": "💻", "dedicated workspace": "💻", "laptop friendly workspace": "💻",
+                      "smart lock": "🔒", "lockbox": "🔒", "keypad": "🔒", "self check-in": "🔒",
+                      "subway": "🚇", "transit": "🚇",
+                      "soaking tub": "🛁", "bathtub": "🛁", "hot tub": "🛁",
+                      "concierge": "🛎️", "doorman": "🛎️", "front desk": "🛎️",
+                      "pet friendly": "🐾", "pets allowed": "🐾",
+                      "microwave": "🍽️", "oven": "🍳", "stove": "🍳", "refrigerator": "🍳", "fridge": "🍳",
+                      "smoke detector": "🔔", "carbon monoxide detector": "🔔", "fire extinguisher": "🔔",
+                      "first aid kit": "🩹",
+                      "hangers": "👔", "closet": "👔",
+                      "bed linens": "🛏️", "linens": "🛏️", "towels": "🛏️", "extra pillows": "🛏️",
+                      "shampoo": "🧴", "essentials": "🧴", "toiletries": "🧴",
+                    };
+                    const getIcon = (name: string) => {
+                      const lower = name.toLowerCase().trim();
+                      if (iconMap[lower]) return iconMap[lower];
+                      for (const [key, emoji] of Object.entries(iconMap)) {
+                        if (lower.includes(key) || key.includes(lower)) return emoji;
+                      }
+                      return "✓";
+                    };
+                    const amenities = listing.amenities && listing.amenities.length > 0 ? listing.amenities : [];
+                    const visible = showAllAmenities ? amenities : amenities.slice(0, 9);
+                    return visible.map((a: string, i: number) => (
+                      <div key={`${a}-${i}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10 }}>
+                        <span style={{ fontSize: 20 }}>{getIcon(a)}</span>
+                        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{a}</span>
+                      </div>
+                    ));
+                  })()}
                 </div>
+                {(listing.amenities?.length || 0) > 9 && (
+                  <button onClick={() => setShowAllAmenities(!showAllAmenities)} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "12px 24px", color: "#0fa", fontSize: 14, fontWeight: 600, cursor: "pointer", width: "100%", fontFamily: "inherit", marginTop: 12 }}>
+                    {showAllAmenities ? "Show Less" : `See More (${listing.amenities!.length - 9} more)`}
+                  </button>
+                )}
               </div>
 
               {/* CareStay Standard */}
@@ -385,7 +447,7 @@ export default function ListingPage() {
                 ))}
                 {reviews.length > 3 && !showAllReviews && (
                   <button onClick={() => setShowAllReviews(true)} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "12px 24px", color: "#0fa", fontSize: 14, fontWeight: 600, cursor: "pointer", width: "100%", fontFamily: "inherit", marginTop: 4 }}>
-                    See all {reviews.length} reviews
+                    See More Reviews
                   </button>
                 )}
               </div>
