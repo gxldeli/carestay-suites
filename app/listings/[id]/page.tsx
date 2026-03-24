@@ -1,8 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+
+const DEFAULT_REVIEWS = [
+  { name: "Sarah M.", role: "Travel Nurse", text: "Best housing I\u2019ve found in 4 years of travel nursing. The scrubs and foot massager were such thoughtful touches. Finally felt like someone actually thought about what we need." },
+  { name: "Dr. James K.", role: "Medical Resident", text: "Clean, quiet, and exactly what was advertised. The video walkthrough gave me total confidence before committing. Would recommend to any colleague." },
+  { name: "Maria L.", role: "ICU Nurse", text: "Finally a place that understands shift work. Blackout curtains and white noise machine saved my sleep between night shifts. The soaking tub is a lifesaver." },
+];
 
 const FALLBACK_LISTINGS = [
   { id: 1, title: "The Pinnacle Suite", location: "Downtown Toronto", beds: 1, baths: 1, price: 2800, sqft: 580, img: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80", tag: "Near UHN", available: true, desc: "A sleek studio in the heart of downtown Toronto, steps from University Health Network. Fully furnished with blackout blinds, high-speed Wi-Fi, and everything a healthcare professional needs." },
@@ -46,7 +52,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
   );
 }
 
-interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string }
+interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; featured?: boolean }
 
 export default function ListingPage() {
   const params = useParams();
@@ -63,8 +69,18 @@ export default function ListingPage() {
   const [phone, setPhone] = useState("");
   const [moveIn, setMoveIn] = useState("");
   const [duration, setDuration] = useState("");
+  const [showMobileBar, setShowMobileBar] = useState(true);
+  const inquiryRef = useRef<HTMLDivElement>(null);
+  // Reviews state — admin API can feed custom reviews here in the future
+  const [reviews] = useState(DEFAULT_REVIEWS);
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onScroll = () => {
+      setScrolled(window.scrollY > 20);
+      if (inquiryRef.current) {
+        const rect = inquiryRef.current.getBoundingClientRect();
+        setShowMobileBar(rect.top > window.innerHeight);
+      }
+    };
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -79,7 +95,7 @@ export default function ListingPage() {
               id: match.id, title: match.title, location: match.location, beds: match.beds, baths: match.baths,
               price: match.price, sqft: match.sqft, img: match.images?.[0] || match.img, tag: match.location || "GTA",
               available: true, desc: match.description || "", description: match.description, images: match.images,
-              nearbyHospital: match.nearbyHospital || "",
+              nearbyHospital: match.nearbyHospital || "", featured: match.featured || false,
             });
           }
         }
@@ -137,7 +153,11 @@ export default function ListingPage() {
           .cs-standard-grid{grid-template-columns:1fr!important}
           .footer-cols{grid-template-columns:1fr!important}
           .amenity-grid{grid-template-columns:1fr 1fr!important}
+          .detail-sidebar{display:none!important}
+          .mobile-sticky-bar{display:flex!important}
         }
+        .detail-sidebar{display:block}
+        .mobile-sticky-bar{display:none}
         .gallery-thumbs::-webkit-scrollbar{height:6px}
         .gallery-thumbs::-webkit-scrollbar-track{background:#12151a;border-radius:3px}
         .gallery-thumbs::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
@@ -184,10 +204,16 @@ export default function ListingPage() {
                 <span style={{ background: listing.available ? "rgba(0,255,170,0.15)" : "rgba(255,77,77,0.15)", color: listing.available ? "#0fa" : "#f66", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>
                   {listing.available ? "Available" : "Waitlist"}
                 </span>
+                {listing.featured && (
+                  <span style={{ background: "rgba(240,192,64,0.15)", color: "#f0c040", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>★ Featured</span>
+                )}
               </div>
 
               {/* Title */}
-              <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 42, fontWeight: 700, lineHeight: 1.1, marginBottom: 8 }}>{listing.title}</h1>
+              <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 42, fontWeight: 700, lineHeight: 1.1, marginBottom: 6 }}>{listing.title}</h1>
+
+              {/* Mini Review Link */}
+              <a href="#reviews" style={{ display: "inline-block", color: "#f0c040", fontSize: 13, fontWeight: 600, textDecoration: "none", marginBottom: 8 }}>★ 4.9 · {reviews.length} reviews</a>
 
               {/* Location */}
               <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", marginBottom: 20 }}>{listing.location}</p>
@@ -199,10 +225,32 @@ export default function ListingPage() {
                 <span>{listing.sqft} sqft</span>
               </div>
 
+              {/* Video Walkthrough */}
+              <div style={{ marginBottom: 48 }}>
+                <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Take a Virtual Tour</h2>
+                <div style={{ background: "#12151a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, height: 280, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative", overflow: "hidden" }}>
+                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(0,255,170,0.15)", border: "2px solid rgba(0,255,170,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 0, height: 0, borderTop: "12px solid transparent", borderBottom: "12px solid transparent", borderLeft: "20px solid #0fa", marginLeft: 4 }} />
+                  </div>
+                </div>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 12, lineHeight: 1.6 }}>Every CareStay suite includes a video walkthrough so you know exactly what you&apos;re getting. No surprises.</p>
+              </div>
+
               {/* Description */}
               <div style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(255,255,255,0.7)", marginBottom: 48 }}>
                 {(listing.desc || listing.description || "").split("\n").map((line, i) => <p key={i} style={{ marginBottom: line.trim() ? 12 : 0 }}>{line}</p>)}
               </div>
+
+              {/* Hospital Badge */}
+              {listing.nearbyHospital && (
+                <div style={{ marginBottom: 48, padding: "16px 20px", background: "rgba(0,170,255,0.06)", border: "1px solid rgba(0,170,255,0.15)", borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ fontSize: 22 }}>🏥</span>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "#0af" }}>Near {listing.nearbyHospital}</div>
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>Convenient commute for healthcare professionals</div>
+                  </div>
+                </div>
+              )}
 
               {/* Amenities */}
               <div style={{ marginBottom: 48 }}>
@@ -238,19 +286,8 @@ export default function ListingPage() {
                 </div>
               </div>
 
-              {/* Video Walkthrough */}
-              <div style={{ marginBottom: 48 }}>
-                <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Take a Virtual Tour</h2>
-                <div style={{ background: "#12151a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, height: 280, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative", overflow: "hidden" }}>
-                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(0,255,170,0.15)", border: "2px solid rgba(0,255,170,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ width: 0, height: 0, borderTop: "12px solid transparent", borderBottom: "12px solid transparent", borderLeft: "20px solid #0fa", marginLeft: 4 }} />
-                  </div>
-                </div>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 12, lineHeight: 1.6 }}>Every CareStay suite includes a video walkthrough so you know exactly what you&apos;re getting. No surprises.</p>
-              </div>
-
               {/* Guest Reviews */}
-              <div style={{ marginBottom: 48 }}>
+              <div id="reviews" style={{ marginBottom: 48 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
                   <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700 }}>Guest Reviews</h2>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -258,11 +295,8 @@ export default function ListingPage() {
                     <span style={{ color: "#f0c040", fontSize: 16 }}>★★★★★</span>
                   </div>
                 </div>
-                {[
-                  { name: "Sarah M.", role: "Travel Nurse", text: "Best housing I've found in 4 years of travel nursing. The scrubs and foot massager were such thoughtful touches. Finally felt like someone actually thought about what we need." },
-                  { name: "Dr. James K.", role: "Medical Resident", text: "Clean, quiet, and exactly what was advertised. The video walkthrough gave me total confidence before committing. Would recommend to any colleague." },
-                  { name: "Maria L.", role: "ICU Nurse", text: "Finally a place that understands shift work. Blackout curtains and white noise machine saved my sleep between night shifts. The soaking tub is a lifesaver." },
-                ].map(r => (
+                {/* TODO: Replace with admin API reviews when available */}
+                {reviews.map(r => (
                   <div key={r.name} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "20px 22px", marginBottom: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                       <div>
@@ -278,8 +312,8 @@ export default function ListingPage() {
             </div>
 
             {/* Right — Booking Card */}
-            <div style={{ position: "sticky", top: 88 }}>
-              <div style={{ background: "#12151a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 28 }}>
+            <div className="detail-sidebar" style={{ position: "sticky", top: 88 }}>
+              <div ref={inquiryRef} style={{ background: "#12151a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 28 }}>
                 <div style={{ marginBottom: 20 }}>
                   <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 36, color: "#fff" }}>${listing.price.toLocaleString()}</span>
                   <span style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", marginLeft: 6 }}>/mo</span>
@@ -328,6 +362,9 @@ export default function ListingPage() {
           </div>
         </div>
 
+        {/* Inquiry anchor for mobile */}
+        <div id="inquiry-section" />
+
         {/* Back link */}
         <div className="wrap" style={{ padding: "60px 24px 40px" }}>
           <Link href="/#listings" style={{ color: "#0fa", fontSize: 14, fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(0,255,170,0.3)", paddingBottom: 2 }}>
@@ -375,6 +412,17 @@ export default function ListingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Mobile Sticky Price Bar */}
+      {showMobileBar && (
+        <div className="mobile-sticky-bar" style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 99, background: "rgba(10,12,15,0.97)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(255,255,255,0.08)", padding: "12px 24px", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "#fff" }}>${listing.price.toLocaleString()}</span>
+            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>/mo</span>
+          </div>
+          <a href="#inquiry-section" style={{ background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: "12px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: "none" }}>Inquire Now</a>
+        </div>
+      )}
     </>
   );
 }
