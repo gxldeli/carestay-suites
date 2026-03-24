@@ -104,6 +104,15 @@ export default function AdminPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
+  // Site settings
+  const [siteEmail, setSiteEmail] = useState("info@carestaysuites.com");
+  const [siteHeroTagline, setSiteHeroTagline] = useState("");
+  const [siteStatProps, setSiteStatProps] = useState("60+");
+  const [siteStatPros, setSiteStatPros] = useState("150+");
+  const [siteStatHospitals, setSiteStatHospitals] = useState("30+");
+  const [siteStatRating, setSiteStatRating] = useState("4.9");
+  const [settingsSaved, setSettingsSaved] = useState(false);
+
   // Custom listing form
   const [newTitle, setNewTitle] = useState("");
   const [newLocation, setNewLocation] = useState("");
@@ -126,15 +135,26 @@ export default function AdminPage() {
   }, [storedPw]);
 
   const loadData = useCallback(async () => {
-    const [listRes, adminRes] = await Promise.all([
+    const [listRes, adminRes, settingsRes] = await Promise.all([
       fetch("/api/listings?includeHidden=true"),
       fetch("/api/admin"),
+      fetch("/api/settings"),
     ]);
     const listData = await listRes.json();
     const adminData = await adminRes.json();
+    const settingsData = await settingsRes.json();
     console.log("[Admin] Loaded listings:", listData.count, "overrides:", Object.keys(adminData.data?.listings || {}).length);
     if (listData.status === "success") setListings(listData.listings || []);
     if (adminData.status === "success") setOverrides(adminData.data);
+    if (settingsData.status === "success" && settingsData.settings) {
+      const s = settingsData.settings;
+      setSiteEmail(s.contactEmail || "info@carestaysuites.com");
+      setSiteHeroTagline(s.heroTagline || "");
+      setSiteStatProps(s.statProperties || "60+");
+      setSiteStatPros(s.statHealthcarePros || "150+");
+      setSiteStatHospitals(s.statHospitalPartnerships || "30+");
+      setSiteStatRating(s.statAverageRating || "4.9");
+    }
   }, []);
 
   useEffect(() => {
@@ -242,6 +262,52 @@ export default function AdminPage() {
           <button onClick={() => { sessionStorage.removeItem(PW_KEY); setAuthed(false); }} style={{ padding: "8px 16px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
             Log Out
           </button>
+        </div>
+
+        {/* Site Settings */}
+        <div style={cardStyle}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Site Settings</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Contact Email</div>
+              <input value={siteEmail} onChange={e => setSiteEmail(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Average Rating</div>
+              <input value={siteStatRating} onChange={e => setSiteStatRating(e.target.value)} style={inputStyle} />
+            </div>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Hero Tagline (homepage subtitle)</div>
+            <textarea value={siteHeroTagline} onChange={e => setSiteHeroTagline(e.target.value)} rows={2} placeholder="Leave empty for default" style={{ ...inputStyle, resize: "vertical" }} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 16 }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Properties Managed</div>
+              <input value={siteStatProps} onChange={e => setSiteStatProps(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Healthcare Pros Housed</div>
+              <input value={siteStatPros} onChange={e => setSiteStatPros(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Hospital Partnerships</div>
+              <input value={siteStatHospitals} onChange={e => setSiteStatHospitals(e.target.value)} style={inputStyle} />
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={async () => {
+              setSaving("settings");
+              const pw = sessionStorage.getItem(PW_KEY) || password;
+              await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw, settings: { contactEmail: siteEmail, heroTagline: siteHeroTagline, statProperties: siteStatProps, statHealthcarePros: siteStatPros, statHospitalPartnerships: siteStatHospitals, statAverageRating: siteStatRating } }) });
+              setSaving(null);
+              setSettingsSaved(true);
+              setTimeout(() => setSettingsSaved(false), 2000);
+            }} style={btnStyle} disabled={saving === "settings"}>
+              {saving === "settings" ? "Saving..." : "Save Settings"}
+            </button>
+            {settingsSaved && <span style={{ fontSize: 13, color: "#0fa" }}>Saved!</span>}
+          </div>
         </div>
 
         {/* HostAway Listings Table */}

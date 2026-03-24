@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, ReactNode } from "react";
 import Link from "next/link";
+import { ShieldCheck, MapPin, ClipboardList, CalendarDays, Glasses, Shirt, Footprints, Moon, HandMetal } from "lucide-react";
 
 /* ─── DATA ─── */
 const SHOWCASE_LISTINGS = [
@@ -15,12 +16,12 @@ const SHOWCASE_LISTINGS = [
 
 const HOSPITALS = ["Toronto General", "SickKids", "Mount Sinai", "Sunnybrook", "St. Michael's", "Princess Margaret", "Humber River", "Scarborough Health", "North York General", "Credit Valley", "Trillium Health"];
 
-const CARESTAY_STANDARD = [
-  { icon: "🕶", name: "Blue Light Glasses", desc: "3 pairs in different strengths" },
-  { icon: "👕", name: "Spare Scrubs", desc: "S, M, L — always a backup ready" },
-  { icon: "🦶", name: "Foot Massager", desc: "Shiatsu relief after 12hr shifts" },
-  { icon: "🌙", name: "Blackout + White Noise", desc: "Day-sleep setup for nights" },
-  { icon: "💆", name: "Massage Gun", desc: "Full body recovery tool" },
+const CARESTAY_STANDARD: { icon: ReactNode; name: string; desc: string }[] = [
+  { icon: <Glasses size={22} strokeWidth={1.5} />, name: "Blue Light Glasses", desc: "3 pairs in different strengths" },
+  { icon: <Shirt size={22} strokeWidth={1.5} />, name: "Spare Scrubs", desc: "S, M, L — always a backup ready" },
+  { icon: <Footprints size={22} strokeWidth={1.5} />, name: "Foot Massager", desc: "Shiatsu relief after 12hr shifts" },
+  { icon: <Moon size={22} strokeWidth={1.5} />, name: "Blackout + White Noise", desc: "Day-sleep setup for nights" },
+  { icon: <HandMetal size={22} strokeWidth={1.5} />, name: "Massage Gun", desc: "Full body recovery tool" },
 ];
 
 /* ─── HOOKS ─── */
@@ -182,7 +183,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
 }
 
 /* ─── HERO ─── */
-function Hero() {
+function Hero({ tagline }: { tagline?: string }) {
   return (
     <section style={{ minHeight: "100vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden", background: "linear-gradient(165deg,#0a0c0f 0%,#0d1117 40%,#0a1628 100%)" }}>
       <div style={{ position: "absolute", inset: 0, opacity: 0.04, backgroundImage: "radial-gradient(circle at 1px 1px,rgba(255,255,255,0.3) 1px,transparent 0)", backgroundSize: "40px 40px" }} />
@@ -204,7 +205,7 @@ function Hero() {
             </FadeIn>
             <FadeIn delay={0.2}>
               <p style={{ fontSize: 17, lineHeight: 1.7, color: "rgba(255,255,255,0.55)", maxWidth: 500, margin: "24px 0 36px" }}>
-                Move-in ready suites primarily across the Greater Toronto Area and beyond. Verified properties. No scams, no deposits lost, no bait-and-switch. Trusted by nurses, physicians, and medical staff.
+                {tagline || "Move-in ready suites primarily across the Greater Toronto Area and beyond. Verified properties. No scams, no deposits lost, no bait-and-switch. Trusted by nurses, physicians, and medical staff."}
               </p>
             </FadeIn>
             <FadeIn delay={0.3}>
@@ -235,13 +236,13 @@ function Hero() {
 }
 
 /* ─── STATS ─── */
-function Stats() {
+function Stats({ stats }: { stats?: { properties?: string; pros?: string; hospitals?: string; rating?: string } }) {
   const [ref, inView] = useInView();
   return (
     <section ref={ref} style={{ background: "#0d1117", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
       <div className="pad" style={{ maxWidth: 1200, margin: "0 auto", paddingTop: 40, paddingBottom: 40 }}>
         <div className="stats-grid">
-          {[{ n: "60+", l: "Properties Managed" }, { n: "150+", l: "Healthcare Pros Housed" }, { n: "30+", l: "Hospital Partnerships" }, { n: "4.9", l: "Average Rating" }].map((s, i) => (
+          {[{ n: stats?.properties || "60+", l: "Properties Managed" }, { n: stats?.pros || "150+", l: "Healthcare Pros Housed" }, { n: stats?.hospitals || "30+", l: "Hospital Partnerships" }, { n: stats?.rating || "4.9", l: "Average Rating" }].map((s, i) => (
             <div key={i} className="stat-card" style={{ opacity: inView ? 1 : 0, transform: inView ? "translateY(0)" : "translateY(20px)", transition: `all 0.6s ease ${i * 0.1}s` }}>
               <div className="stat-num">{s.n}</div>
               <div className="stat-label">{s.l}</div>
@@ -426,11 +427,11 @@ function Standard() {
 
 /* ─── HEALTHCARE ─── */
 function Healthcare() {
-  const points = [
-    { icon: "🛡️", title: "Verified & Scam-Free", desc: "Every property personally inspected. No fake listings." },
-    { icon: "📍", title: "Hospital-Adjacent", desc: "All suites within 20 min of your assignment hospital." },
-    { icon: "📋", title: "Move-In Ready", desc: "Fully furnished with everything from day one." },
-    { icon: "📅", title: "Flexible Terms", desc: "Month-to-month. No 12-month lease lock-in." },
+  const points: { icon: ReactNode; title: string; desc: string }[] = [
+    { icon: <ShieldCheck size={28} strokeWidth={1.5} style={{ color: "#0fa" }} />, title: "Verified & Scam-Free", desc: "Every property personally inspected. No fake listings." },
+    { icon: <MapPin size={28} strokeWidth={1.5} style={{ color: "#0fa" }} />, title: "Hospital-Adjacent", desc: "All suites within 20 min of your assignment hospital." },
+    { icon: <ClipboardList size={28} strokeWidth={1.5} style={{ color: "#0fa" }} />, title: "Move-In Ready", desc: "Fully furnished with everything from day one." },
+    { icon: <CalendarDays size={28} strokeWidth={1.5} style={{ color: "#0fa" }} />, title: "Flexible Terms", desc: "Month-to-month. No 12-month lease lock-in." },
   ];
   return (
     <section id="healthcare" className="pad" style={{ background: "#0d1117" }}>
@@ -583,17 +584,23 @@ function Footer() {
 /* ─── PAGE ─── */
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
+  const [siteSettings, setSiteSettings] = useState<{ heroTagline?: string; statProperties?: string; statHealthcarePros?: string; statHospitalPartnerships?: string; statAverageRating?: string } | null>(null);
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", h);
     return () => window.removeEventListener("scroll", h);
   }, []);
+  useEffect(() => {
+    fetch("/api/settings").then(r => r.json()).then(d => {
+      if (d.status === "success") setSiteSettings(d.settings);
+    }).catch(() => {});
+  }, []);
   return (
     <>
       <Styles />
       <Nav scrolled={scrolled} />
-      <Hero />
-      <Stats />
+      <Hero tagline={siteSettings?.heroTagline} />
+      <Stats stats={{ properties: siteSettings?.statProperties, pros: siteSettings?.statHealthcarePros, hospitals: siteSettings?.statHospitalPartnerships, rating: siteSettings?.statAverageRating }} />
       <ListingsSection />
       <HospitalBanner />
       <Standard />
