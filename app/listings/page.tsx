@@ -93,6 +93,16 @@ export default function AllListingsPage() {
               <option value="Etobicoke">Etobicoke</option>
             </select>
           </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
+            {["All GTA", "Toronto", "North York", "Scarborough", "Mississauga", "Brampton", "Etobicoke", "Vaughan"].map(city => {
+              const isActive = city === "All GTA" ? areaFilter === "all" : areaFilter === city;
+              return (
+                <button key={city} onClick={() => setAreaFilter(city === "All GTA" ? "all" : city)} style={{ padding: "8px 18px", borderRadius: 20, border: isActive ? "1px solid #0fa" : "1px solid rgba(255,255,255,0.12)", background: isActive ? "rgba(0,255,170,0.15)" : "rgba(255,255,255,0.04)", color: isActive ? "#0fa" : "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}>
+                  {city}
+                </button>
+              );
+            })}
+          </div>
 
           {loading ? (
             <div style={{ textAlign: "center", padding: 60, color: "rgba(255,255,255,0.4)" }}>Loading listings...</div>

@@ -254,7 +254,7 @@ function Stats() {
 }
 
 /* ─── LISTINGS ─── */
-interface ListingCard { id: number; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean }
+interface ListingCard { id: number; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; featured?: boolean }
 
 function ListingsSection() {
   const [apiListings, setApiListings] = useState<ListingCard[]>([]);
@@ -263,15 +263,16 @@ function ListingsSection() {
       .then(r => r.json())
       .then(data => {
         if (data.status === "success" && data.listings) {
-          setApiListings(data.listings.map((l: { id: number; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string }) => ({
+          setApiListings(data.listings.map((l: { id: number; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; featured?: boolean }) => ({
             id: l.id, title: l.title, location: l.location, beds: l.beds, baths: l.baths,
-            price: l.price, sqft: l.sqft, img: l.img, tag: l.location || "GTA", available: true,
+            price: l.price, sqft: l.sqft, img: l.img, tag: l.location || "GTA", available: true, featured: l.featured || false,
           })));
         }
       })
       .catch(err => console.error("Failed to fetch API listings:", err));
   }, []);
 
+  const featuredListings = apiListings.filter(l => l.featured);
   const allListings: (ListingCard & { source: "api" | "showcase" })[] = [
     ...apiListings.map(l => ({ ...l, source: "api" as const })),
     ...SHOWCASE_LISTINGS.map(l => ({ ...l, source: "showcase" as const, available: false })),
@@ -282,9 +283,50 @@ function ListingsSection() {
   return (
     <section id="listings" className="pad" style={{ background: "#0a0c0f" }}>
       <div className="wrap">
+        {featuredListings.length > 0 && (
+          <>
+            <FadeIn>
+              <div className="sh-center" style={{ marginBottom: 32 }}>
+                <div className="sh-label" style={{ color: "#f0c040" }}>★ Featured Suites</div>
+                <h2 className="sh-title">Hand-Picked by CareStay</h2>
+              </div>
+            </FadeIn>
+            <div className="listings-grid" style={{ marginBottom: 64 }}>
+              {featuredListings.map((l, i) => (
+                <FadeIn key={`featured-${l.id}`} delay={i * 0.06}>
+                  <Link href={`/listings/${l.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                    <div className="listing-card" style={{ border: "1px solid rgba(240,192,64,0.3)", boxShadow: "0 0 20px rgba(240,192,64,0.08)" }}>
+                      <div style={{ position: "relative", overflow: "hidden" }}>
+                        <img src={l.img} alt={l.title} className="listing-img" />
+                        <div className="listing-tags">
+                          <span style={{ background: "rgba(240,192,64,0.9)", color: "#000", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>★ FEATURED</span>
+                          <span className="listing-tag">{l.tag}</span>
+                        </div>
+                      </div>
+                      <div className="listing-body">
+                        <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 4 }}>{l.title}</h3>
+                        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>{l.location}</p>
+                        <div style={{ display: "flex", gap: 14, marginBottom: 14, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+                          <span>{l.beds} Bed</span><span>{l.baths} Bath</span><span>{l.sqft} sqft</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(240,192,64,0.15)", paddingTop: 14 }}>
+                          <div>
+                            <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "#fff" }}>${l.price.toLocaleString()}</span>
+                            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>/mo</span>
+                          </div>
+                          <span style={{ background: "rgba(240,192,64,0.15)", color: "#f0c040", padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>View Suite →</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </FadeIn>
+              ))}
+            </div>
+          </>
+        )}
         <FadeIn>
           <div className="sh-center" style={{ marginBottom: 48 }}>
-            <div className="sh-label">Featured Suites</div>
+            <div className="sh-label">All Suites</div>
             <h2 className="sh-title">Curated Properties Near You</h2>
             <p className="sh-sub">Every suite is verified, professionally furnished, and located near major GTA hospitals.</p>
           </div>

@@ -11,6 +11,8 @@ interface ListingOverride {
   descriptionOverride?: string;
   nearbyHospital?: string;
   hospitalDistance?: string;
+  sortOrder?: number;
+  featured?: boolean;
 }
 
 interface ApiListing {
@@ -22,6 +24,7 @@ interface ApiListing {
   price: number;
   sqft: number;
   img: string;
+  description?: string;
 }
 
 interface CustomListing {
@@ -39,6 +42,8 @@ interface CustomListing {
   hospitalDistance: string;
   soakingTub: boolean;
   carestayStandard: boolean;
+  sortOrder?: number;
+  featured?: boolean;
 }
 
 interface OverridesData {
@@ -87,6 +92,7 @@ export default function AdminPage() {
   const [newDesc, setNewDesc] = useState("");
   const [newTub, setNewTub] = useState(false);
   const [newStandard, setNewStandard] = useState(false);
+  const [newFeatured, setNewFeatured] = useState(false);
 
   const storedPw = typeof window !== "undefined" ? sessionStorage.getItem(PW_KEY) : null;
 
@@ -168,10 +174,10 @@ export default function AdminPage() {
     await adminPost("addCustomListing", {
       title: newTitle, location: newLocation, beds: Number(newBeds), baths: Number(newBaths),
       price: Number(newPrice), sqft: Number(newSqft), img: imgLines[0] || "", images: imgLines, description: newDesc,
-      nearbyHospital: newHospital, hospitalDistance: newDistance, soakingTub: newTub, carestayStandard: newStandard,
+      nearbyHospital: newHospital, hospitalDistance: newDistance, soakingTub: newTub, carestayStandard: newStandard, featured: newFeatured,
     });
     setNewTitle(""); setNewLocation(""); setNewBeds("1"); setNewBaths("1"); setNewPrice(""); setNewSqft("");
-    setNewImg(""); setNewHospital(""); setNewDistance(""); setNewDesc(""); setNewTub(false); setNewStandard(false);
+    setNewImg(""); setNewHospital(""); setNewDistance(""); setNewDesc(""); setNewTub(false); setNewStandard(false); setNewFeatured(false);
   };
 
   const deleteCustom = async (id: string) => {
@@ -224,6 +230,8 @@ export default function AdminPage() {
                   <th style={thStyle}>Location</th>
                   <th style={thStyle}>API Price</th>
                   <th style={thStyle}>Override $/mo</th>
+                  <th style={thStyle}>Sort</th>
+                  <th style={thStyle}>Featured</th>
                   <th style={thStyle}>Visible</th>
                   <th style={thStyle}>Soaking Tub</th>
                   <th style={thStyle}>CareStay Std</th>
@@ -255,6 +263,10 @@ export default function AdminPage() {
                         />
                         {saving === `${l.id}-priceOverride` && <span style={{ fontSize: 10, color: "#0fa", marginLeft: 4 }}>saving...</span>}
                       </td>
+                      <td style={tdStyle} onClick={e => e.stopPropagation()}>
+                        <input type="number" min="1" max="99" value={ov.sortOrder ?? 50} onChange={(e) => updateOverride(l.id, "sortOrder", e.target.value ? Number(e.target.value) : 50)} style={{ ...inputStyle, width: 56, padding: "4px 6px", textAlign: "center" }} />
+                      </td>
+                      <td style={tdStyle} onClick={e => e.stopPropagation()}><Toggle checked={!!ov.featured} onChange={(v) => updateOverride(l.id, "featured", v)} /></td>
                       <td style={tdStyle} onClick={e => e.stopPropagation()}><Toggle checked={!ov.hidden} onChange={(v) => updateOverride(l.id, "hidden", !v)} /></td>
                       <td style={tdStyle} onClick={e => e.stopPropagation()}><Toggle checked={!!ov.soakingTub} onChange={(v) => updateOverride(l.id, "soakingTub", v)} /></td>
                       <td style={tdStyle} onClick={e => e.stopPropagation()}><Toggle checked={!!ov.carestayStandard} onChange={(v) => updateOverride(l.id, "carestayStandard", v)} /></td>
@@ -295,7 +307,7 @@ export default function AdminPage() {
                 </div>
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Description Override</label>
-                  <textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} defaultValue={ov.descriptionOverride || ""} placeholder="Override the API description..." onBlur={e => { if (e.target.value !== (ov.descriptionOverride || "")) saveExpandedOverrides(l.id, { descriptionOverride: e.target.value || undefined }); }} />
+                  <textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} defaultValue={ov.descriptionOverride || l.description || ""} placeholder="Override the API description..." onBlur={e => { const currentDefault = ov.descriptionOverride || l.description || ""; if (e.target.value !== currentDefault) saveExpandedOverrides(l.id, { descriptionOverride: e.target.value || undefined }); }} />
                 </div>
                 <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
@@ -306,6 +318,9 @@ export default function AdminPage() {
                   </label>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
                     <Toggle checked={!!ov.carestayStandard} onChange={(v) => saveExpandedOverrides(l.id, { carestayStandard: v })} /> CareStay Standard
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                    <Toggle checked={!!ov.featured} onChange={(v) => saveExpandedOverrides(l.id, { featured: v })} /> <span style={{ color: "#f0c040" }}>Featured</span>
                   </label>
                   {saving === `${expandedId}-expanded` && <span style={{ fontSize: 12, color: "#0fa" }}>Saving...</span>}
                 </div>
@@ -398,6 +413,9 @@ export default function AdminPage() {
             </label>
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
               <Toggle checked={newStandard} onChange={setNewStandard} /> CareStay Standard
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+              <Toggle checked={newFeatured} onChange={setNewFeatured} /> <span style={{ color: "#f0c040" }}>Featured</span>
             </label>
           </div>
           <button onClick={addCustomListing} style={btnStyle}>Add Listing</button>
