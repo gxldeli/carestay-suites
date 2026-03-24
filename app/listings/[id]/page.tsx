@@ -54,7 +54,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
   );
 }
 
-interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; featured?: boolean; videoUrl?: string }
+interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; featured?: boolean; videoUrl?: string; amenities?: string[] }
 
 export default function ListingPage() {
   const params = useParams();
@@ -111,7 +111,7 @@ export default function ListingPage() {
               id: match.id, title: match.title, location: match.location, beds: match.beds, baths: match.baths,
               price: match.price, sqft: match.sqft, img: match.images?.[0] || match.img, tag: match.location || "GTA",
               available: true, desc: match.description || "", description: match.description, images: match.images,
-              nearbyHospital: match.nearbyHospital || "", featured: match.featured || false, videoUrl: match.videoUrl || "",
+              nearbyHospital: match.nearbyHospital || "", featured: match.featured || false, videoUrl: match.videoUrl || "", amenities: match.amenities || [],
             });
           }
         }
@@ -323,17 +323,53 @@ export default function ListingPage() {
               <div style={{ marginBottom: 48 }}>
                 <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Amenities</h2>
                 <div className="amenity-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                  {[
-                    { emoji: "📶", label: "WiFi" }, { emoji: "🅿️", label: "Parking" }, { emoji: "🧺", label: "Laundry" },
-                    { emoji: "💪", label: "Gym" }, { emoji: "🍳", label: "Kitchen" }, { emoji: "📺", label: "Smart TV" },
-                    { emoji: "🔒", label: "Smart Lock" }, { emoji: "🚇", label: "Subway" }, { emoji: "🛁", label: "Soaking Tub" },
-                    { emoji: "🌇", label: "Balcony" }, { emoji: "🛎️", label: "Concierge" }, { emoji: "🐾", label: "Pet Friendly" },
-                  ].map(a => (
-                    <div key={a.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10 }}>
-                      <span style={{ fontSize: 20 }}>{a.emoji}</span>
-                      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{a.label}</span>
-                    </div>
-                  ))}
+                  {(() => {
+                    const iconMap: Record<string, string> = {
+                      "wifi": "📶", "wireless internet": "📶", "internet": "📶",
+                      "kitchen": "🍳", "cooking basics": "🍳",
+                      "parking": "🅿️", "free parking": "🅿️", "garage": "🅿️", "street parking": "🅿️",
+                      "washer": "🧺", "laundry": "🧺", "washing machine": "🧺",
+                      "dryer": "👕",
+                      "air conditioning": "❄️", "ac": "❄️", "a/c": "❄️", "central air": "❄️",
+                      "heating": "🔥", "heat": "🔥", "central heating": "🔥",
+                      "tv": "📺", "cable tv": "📺", "smart tv": "📺", "television": "📺",
+                      "gym": "💪", "fitness": "💪", "fitness center": "💪", "exercise equipment": "💪",
+                      "pool": "🏊", "swimming pool": "🏊",
+                      "elevator": "🛗", "lift": "🛗",
+                      "balcony": "🌇", "patio": "🌇", "deck": "🌇", "terrace": "🌇",
+                      "dishwasher": "🍽️",
+                      "coffee maker": "☕", "coffee": "☕", "espresso machine": "☕",
+                      "iron": "👔",
+                      "hair dryer": "💇", "hairdryer": "💇",
+                      "workspace": "💻", "dedicated workspace": "💻", "laptop friendly workspace": "💻",
+                      "smart lock": "🔒", "lockbox": "🔒", "keypad": "🔒", "self check-in": "🔒",
+                      "subway": "🚇", "transit": "🚇",
+                      "soaking tub": "🛁", "bathtub": "🛁", "hot tub": "🛁",
+                      "concierge": "🛎️", "doorman": "🛎️", "front desk": "🛎️",
+                      "pet friendly": "🐾", "pets allowed": "🐾",
+                      "microwave": "🍽️", "oven": "🍳", "stove": "🍳", "refrigerator": "🍳", "fridge": "🍳",
+                      "smoke detector": "🔔", "carbon monoxide detector": "🔔", "fire extinguisher": "🔔",
+                      "first aid kit": "🩹",
+                      "hangers": "👔", "closet": "👔",
+                      "bed linens": "🛏️", "linens": "🛏️", "towels": "🛏️", "extra pillows": "🛏️",
+                      "shampoo": "🧴", "essentials": "🧴", "toiletries": "🧴",
+                    };
+                    const getIcon = (name: string) => {
+                      const lower = name.toLowerCase().trim();
+                      if (iconMap[lower]) return iconMap[lower];
+                      for (const [key, emoji] of Object.entries(iconMap)) {
+                        if (lower.includes(key) || key.includes(lower)) return emoji;
+                      }
+                      return "✓";
+                    };
+                    const amenities = listing.amenities && listing.amenities.length > 0 ? listing.amenities : [];
+                    return amenities.map((a: string, i: number) => (
+                      <div key={`${a}-${i}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10 }}>
+                        <span style={{ fontSize: 20 }}>{getIcon(a)}</span>
+                        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{a}</span>
+                      </div>
+                    ));
+                  })()}
                 </div>
               </div>
 

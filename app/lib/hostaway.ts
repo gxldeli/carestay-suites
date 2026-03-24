@@ -119,6 +119,7 @@ export async function getListings(): Promise<HostAwayListing[]> {
     if (first.pictures?.[0]) console.log("[HostAway] First picture object:", JSON.stringify(first.pictures[0]).substring(0, 300));
     if (first.images?.[0]) console.log("[HostAway] First image object:", JSON.stringify(first.images[0]).substring(0, 300));
     if (first.listingImages?.[0]) console.log("[HostAway] First listingImage object:", JSON.stringify(first.listingImages[0]).substring(0, 300));
+    console.log("[HostAway] First listing raw amenities:", JSON.stringify(first.amenities)?.substring(0, 500));
   }
   const listings = data.result || [];
 
@@ -147,6 +148,7 @@ export async function getListing(id: number): Promise<HostAwayListing | null> {
     console.error(`[HostAway] Listing ${id} API error:`, data);
     return null;
   }
+  console.log(`[HostAway] Listing ${id} raw amenities:`, JSON.stringify(data.result?.amenities)?.substring(0, 500));
   return data.result;
 }
 
