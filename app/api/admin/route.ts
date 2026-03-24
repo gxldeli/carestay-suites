@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { redis } from "@/app/lib/redis";
 
-/* ─── In-memory overrides store (will upgrade to Vercel KV later) ─── */
+/* ─── Upstash Redis overrides store ─── */
 
 export interface ListingOverride {
   priceOverride?: number;
@@ -39,22 +40,20 @@ interface OverridesData {
   customListings: CustomListing[];
 }
 
-// Global in-memory store — persists across requests within the same serverless instance
-const globalStore = globalThis as unknown as { __adminOverrides?: OverridesData };
-if (!globalStore.__adminOverrides) {
-  globalStore.__adminOverrides = { listings: {}, customListings: [] };
+const REDIS_KEY = "admin:overrides";
+
+async function getOverrides(): Promise<OverridesData> {
+  const data = await redis.get<OverridesData>(REDIS_KEY);
+  return data || { listings: {}, customListings: [] };
 }
 
-function getOverrides(): OverridesData {
-  return globalStore.__adminOverrides!;
-}
-
-function setOverrides(data: OverridesData) {
-  globalStore.__adminOverrides = data;
+async function setOverrides(data: OverridesData) {
+  await redis.set(REDIS_KEY, data);
 }
 
 export async function GET() {
-  return NextResponse.json({ status: "success", data: getOverrides() });
+  const overrides = await getOverrides();
+  return NextResponse.json({ status: "success", data: overrides });
 }
 
 export async function POST(request: Request) {
@@ -66,7 +65,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
-    const overrides = getOverrides();
+    const overrides = await getOverrides();
 
     if (action === "updateListing") {
       const { id, ...fields } = payload as { id: string } & ListingOverride;
@@ -87,7 +86,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: "error", message: "Unknown action" }, { status: 400 });
     }
 
-    setOverrides(overrides);
+    await setOverrides(overrides);
     return NextResponse.json({ status: "success", data: overrides });
   } catch (error) {
     console.error("[Admin API] Error:", error);
