@@ -61,6 +61,9 @@ export interface HostAwayListing {
   bedrooms: number;
   bathrooms: number;
   maxGuests: number;
+  beds: number;
+  personCapacity: number;
+  guestsIncluded: number;
   squareFeet: number;
   propertyTypeId: number;
   roomTypeId: number;
@@ -163,6 +166,7 @@ export async function getListings(): Promise<HostAwayListing[]> {
     if (first.images?.[0]) console.log("[HostAway] First image object:", JSON.stringify(first.images[0]).substring(0, 300));
     if (first.listingImages?.[0]) console.log("[HostAway] First listingImage object:", JSON.stringify(first.listingImages[0]).substring(0, 300));
     console.log("[HostAway] First listing raw amenities:", JSON.stringify(first.amenities)?.substring(0, 500));
+    console.log("[HostAway] First listing specs:", { maxGuests: first.maxGuests, personCapacity: first.personCapacity, guestsIncluded: first.guestsIncluded, bedrooms: first.bedrooms, beds: first.beds, bathrooms: first.bathrooms });
   }
   const listings = data.result || [];
 
