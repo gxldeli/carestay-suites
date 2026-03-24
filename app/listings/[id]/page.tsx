@@ -40,14 +40,14 @@ function Nav({ scrolled }: { scrolled: boolean }) {
         </Link>
         <div className="nav-links">
           {[{ l: "Listings", h: "/listings" }, { l: "Healthcare", h: "/healthcare" }, { l: "Corporate", h: "/corporate" }, { l: "About", h: "/about" }, { l: "Contact", h: "/#contact" }].map(i => <a key={i.l} href={i.h} className="nav-link">{i.l}</a>)}
-          <a href="/#contact" className="nav-cta">Inquire Now</a>
+          <a href="#inquiry" className="nav-cta">Inquire Now</a>
         </div>
         <button className="nav-mobile" onClick={() => setOpen(!open)} style={{ background: "none", border: "none", fontSize: 28, color: "#fff", cursor: "pointer" }}>{open ? "\u2715" : "\u2630"}</button>
       </div>
       {open && (
         <div style={{ background: "rgba(10,12,15,0.98)", padding: "16px 24px 24px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          {[{ l: "Listings", h: "/listings" }, { l: "Healthcare", h: "/healthcare" }, { l: "Corporate", h: "/corporate" }, { l: "About", h: "/about" }, { l: "Contact", h: "/#contact" }].map(i => <a key={i.l} href={i.h} onClick={() => setOpen(false)} style={{ display: "block", color: "rgba(255,255,255,0.8)", textDecoration: "none", fontSize: 17, padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{i.l}</a>)}
-          <a href="/#contact" onClick={() => setOpen(false)} style={{ display: "block", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", textAlign: "center", padding: 16, borderRadius: 10, fontWeight: 700, fontSize: 16, marginTop: 16, textDecoration: "none" }}>Inquire Now</a>
+          {[{ l: "Listings", h: "/listings" }, { l: "Healthcare", h: "/healthcare" }, { l: "Corporate", h: "/corporate" }, { l: "About", h: "/about" }, { l: "Contact", h: "#inquiry" }].map(i => <a key={i.l} href={i.h} onClick={() => setOpen(false)} style={{ display: "block", color: "rgba(255,255,255,0.8)", textDecoration: "none", fontSize: 17, padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{i.l}</a>)}
+          <a href="#inquiry" onClick={() => setOpen(false)} style={{ display: "block", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", textAlign: "center", padding: 16, borderRadius: 10, fontWeight: 700, fontSize: 16, marginTop: 16, textDecoration: "none" }}>Inquire Now</a>
         </div>
       )}
     </nav>
@@ -188,6 +188,7 @@ export default function ListingPage() {
           .amenity-grid{grid-template-columns:1fr 1fr!important}
           .detail-sidebar{display:none!important}
           .mobile-sticky-bar{display:flex!important}
+          .inquiry-form-grid{grid-template-columns:1fr!important}
         }
         .detail-sidebar{display:block}
         .mobile-sticky-bar{display:none}
@@ -388,45 +389,24 @@ export default function ListingPage() {
 
             {/* Right — Booking Card */}
             <div className="detail-sidebar" style={{ position: "sticky", top: 88 }}>
-              <div ref={inquiryRef} style={{ background: "#12151a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 28 }}>
-                <div style={{ marginBottom: 20 }}>
+              <div style={{ background: "#12151a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 28 }}>
+                <div style={{ marginBottom: 8 }}>
                   <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 36, color: "#fff" }}>${listing.price.toLocaleString()}</span>
                   <span style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", marginLeft: 6 }}>/mo</span>
                 </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
+                  <span style={{ color: "#f0c040", fontSize: 14 }}>{"★".repeat(Math.round(avgStars))}</span>
+                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>{avgStars.toFixed(1)} · {displayTotalCount} reviews</span>
+                </div>
 
-                {!submitted ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Full Name</div>
-                      <input type="text" placeholder="Jane Smith" value={name} onChange={e => setName(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Email</div>
-                      <input type="email" placeholder="jane@hospital.ca" value={email} onChange={e => setEmail(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Phone</div>
-                      <input type="tel" placeholder="(647) 000-0000" value={phone} onChange={e => setPhone(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Move-in Date</div>
-                      <input type="text" placeholder="e.g., April 15" value={moveIn} onChange={e => setMoveIn(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Duration</div>
-                      <input type="text" placeholder="e.g., 3 months" value={duration} onChange={e => setDuration(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
-                    </div>
-                    <button onClick={handleSubmit} style={{ width: "100%", padding: "16px 0", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", borderRadius: 10, fontWeight: 700, fontSize: 15, textAlign: "center", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
-                      Submit Inquiry
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ textAlign: "center", padding: "24px 0", marginBottom: 20 }}>
-                    <div style={{ fontSize: 36, marginBottom: 8 }}>✓</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 4 }}>Inquiry Sent</div>
-                    <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>We&apos;ll be in touch within 24 hours.</div>
-                  </div>
-                )}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Preferred Move-in</div>
+                  <input type="text" placeholder="e.g., April 15" value={moveIn} onChange={e => setMoveIn(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                </div>
+
+                <a href="#inquiry" style={{ display: "block", width: "100%", padding: "16px 0", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", borderRadius: 10, fontWeight: 700, fontSize: 15, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
+                  Inquire Now
+                </a>
 
                 <div style={{ marginTop: 20, padding: "14px 16px", background: "rgba(0,255,170,0.05)", borderRadius: 10, border: "1px solid rgba(0,255,170,0.1)" }}>
                   <div style={{ fontSize: 13, color: "#0fa", fontWeight: 600, marginBottom: 4 }}>Healthcare Rate</div>
@@ -437,8 +417,51 @@ export default function ListingPage() {
           </div>
         </div>
 
-        {/* Inquiry anchor for mobile */}
-        <div id="inquiry-section" />
+        {/* Inquiry Form */}
+        <div id="inquiry" ref={inquiryRef} className="wrap" style={{ paddingTop: 60, paddingBottom: 20 }}>
+          <div style={{ maxWidth: 680, margin: "0 auto", background: "#12151a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 20, padding: "36px 32px" }}>
+            <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: "#fff", marginBottom: 6, textAlign: "center" }}>Inquire About This Suite</h2>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", textAlign: "center", marginBottom: 28 }}>Fill out the form below and we&apos;ll get back to you within 24 hours.</p>
+
+            {!submitted ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div className="inquiry-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Full Name</div>
+                    <input type="text" placeholder="Jane Smith" value={name} onChange={e => setName(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Email</div>
+                    <input type="email" placeholder="jane@hospital.ca" value={email} onChange={e => setEmail(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                  </div>
+                </div>
+                <div className="inquiry-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Phone</div>
+                    <input type="tel" placeholder="(647) 000-0000" value={phone} onChange={e => setPhone(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Move-in Date</div>
+                    <input type="text" placeholder="e.g., April 15" value={moveIn} onChange={e => setMoveIn(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Duration / Message</div>
+                  <textarea placeholder="e.g., 3 months, any special requests..." value={duration} onChange={e => setDuration(e.target.value)} rows={3} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "13px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit", resize: "vertical" }} />
+                </div>
+                <button onClick={handleSubmit} style={{ width: "100%", padding: "16px 0", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", borderRadius: 10, fontWeight: 700, fontSize: 15, textAlign: "center", border: "none", cursor: "pointer", fontFamily: "inherit", marginTop: 4 }}>
+                  Submit Inquiry
+                </button>
+              </div>
+            ) : (
+              <div style={{ textAlign: "center", padding: "32px 0" }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>✓</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Inquiry Sent!</div>
+                <div style={{ fontSize: 14, color: "rgba(255,255,255,0.5)" }}>We&apos;ll be in touch within 24 hours.</div>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Back link */}
         <div className="wrap" style={{ padding: "60px 24px 40px" }}>
@@ -506,12 +529,15 @@ export default function ListingPage() {
       )}
 
       {/* Mobile Sticky Price Bar */}
-      <div className="mobile-sticky-bar" style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 99, background: "rgba(10,12,15,0.97)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(255,255,255,0.08)", padding: "12px 24px", alignItems: "center", justifyContent: "space-between", transform: showMobileBar ? "translateY(0)" : "translateY(100%)", transition: "transform 0.3s ease" }}>
+      <div className="mobile-sticky-bar" style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50, background: "rgba(10,12,15,0.97)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(255,255,255,0.08)", padding: "12px 24px", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "#fff" }}>${listing.price.toLocaleString()}</span>
-          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>/mo</span>
+          <div>
+            <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "#fff" }}>${listing.price.toLocaleString()}</span>
+            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>/mo</span>
+          </div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>★ {avgStars.toFixed(1)} · {displayTotalCount} reviews</div>
         </div>
-        <a href="#inquiry-section" style={{ background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: "12px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: "none" }}>Inquire Now</a>
+        <a href="#inquiry" style={{ background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: "12px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: "none", whiteSpace: "nowrap" }}>Inquire Now</a>
       </div>
     </>
   );
