@@ -3,7 +3,7 @@ import { getListings } from "@/app/lib/hostaway";
 import { redis } from "@/app/lib/redis";
 
 // Upstash Redis overrides store
-interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string; sortOrder?: number; featured?: boolean }
+interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string; sortOrder?: number; featured?: boolean; videoUrl?: string }
 interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean; sortOrder?: number; featured?: boolean }
 interface OverridesData { listings: Record<string, ListingOverride>; customListings: CustomListing[] }
 
@@ -42,6 +42,7 @@ export async function GET(request: Request) {
           hospitalDistance: ov.hospitalDistance || "",
           sortOrder: ov.sortOrder ?? 50,
           featured: ov.featured || false,
+          videoUrl: ov.videoUrl || "",
         };
       })
       .filter((l) => includeHidden || !l.hidden);

@@ -13,6 +13,7 @@ interface ListingOverride {
   hospitalDistance?: string;
   sortOrder?: number;
   featured?: boolean;
+  videoUrl?: string;
 }
 
 interface ApiListing {
@@ -332,6 +333,10 @@ export default function AdminPage() {
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Description Override</label>
                   <textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} defaultValue={ov.descriptionOverride || l.description || ""} placeholder="Override the API description..." onBlur={e => { const currentDefault = ov.descriptionOverride || l.description || ""; if (e.target.value !== currentDefault) saveExpandedOverrides(l.id, { descriptionOverride: e.target.value || undefined }); }} />
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Video Walkthrough URL</label>
+                  <input style={inputStyle} defaultValue={ov.videoUrl || ""} placeholder="e.g., https://www.youtube.com/watch?v=ABC123" onBlur={e => { if (e.target.value !== (ov.videoUrl || "")) saveExpandedOverrides(l.id, { videoUrl: e.target.value || undefined }); }} />
                 </div>
                 <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>

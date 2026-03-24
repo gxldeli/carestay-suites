@@ -54,7 +54,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
   );
 }
 
-interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; featured?: boolean }
+interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; featured?: boolean; videoUrl?: string }
 
 export default function ListingPage() {
   const params = useParams();
@@ -111,7 +111,7 @@ export default function ListingPage() {
               id: match.id, title: match.title, location: match.location, beds: match.beds, baths: match.baths,
               price: match.price, sqft: match.sqft, img: match.images?.[0] || match.img, tag: match.location || "GTA",
               available: true, desc: match.description || "", description: match.description, images: match.images,
-              nearbyHospital: match.nearbyHospital || "", featured: match.featured || false,
+              nearbyHospital: match.nearbyHospital || "", featured: match.featured || false, videoUrl: match.videoUrl || "",
             });
           }
         }
@@ -289,15 +289,19 @@ export default function ListingPage() {
               </div>
 
               {/* Video Walkthrough */}
-              <div style={{ marginBottom: 48 }}>
-                <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Take a Virtual Tour</h2>
-                <div style={{ background: "#12151a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, height: 280, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative", overflow: "hidden" }}>
-                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(0,255,170,0.15)", border: "2px solid rgba(0,255,170,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ width: 0, height: 0, borderTop: "12px solid transparent", borderBottom: "12px solid transparent", borderLeft: "20px solid #0fa", marginLeft: 4 }} />
+              {listing.videoUrl && (() => {
+                const m = listing.videoUrl!.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+                const vid = m ? m[1] : null;
+                return vid ? (
+                  <div style={{ marginBottom: 48 }}>
+                    <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Take a Virtual Tour</h2>
+                    <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, borderRadius: 16, overflow: "hidden", background: "#12151a", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <iframe src={`https://www.youtube.com/embed/${vid}`} title="Video Walkthrough" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }} />
+                    </div>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 12, lineHeight: 1.6 }}>Every CareStay suite includes a video walkthrough so you know exactly what you&apos;re getting. No surprises.</p>
                   </div>
-                </div>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 12, lineHeight: 1.6 }}>Every CareStay suite includes a video walkthrough so you know exactly what you&apos;re getting. No surprises.</p>
-              </div>
+                ) : null;
+              })()}
 
               {/* Description */}
               <div style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(255,255,255,0.7)", marginBottom: 48 }}>
