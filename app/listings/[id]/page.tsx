@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { Wifi, Coffee, UtensilsCrossed, Snowflake, Flame, WashingMachine, Wind, Tv, Car, Dumbbell, Waves, ArrowUpDown, Sun, GlassWater, Shirt, Laptop, Bell, ShieldCheck, Droplets, Bed, Sandwich, Microwave, ShowerHead, PawPrint, Lock, Zap, Accessibility, Check, Fan, Bath, DoorOpen, ArmchairIcon, SprayCan, Refrigerator, Baby, Sofa, Wine, Cookie, Thermometer, Glasses, Footprints, Moon, HandMetal, type LucideIcon, FireExtinguisher } from "lucide-react";
+import type { ReactNode } from "react";
 
 interface ReviewItem { id: string; name: string; stars: number; text: string; date: string; verified: boolean; stayInfo?: string }
 interface ReviewData { totalCount: number; items: ReviewItem[] }
@@ -21,12 +23,12 @@ const FALLBACK_LISTINGS = [
   { id: 6, title: "North York Terrace", location: "North York", beds: 1, baths: 1, price: 2500, sqft: 520, img: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800&q=80", tag: "Near North York General", available: true, desc: "Affordable one-bedroom near North York General Hospital. Direct subway access, on-site laundry, and a peaceful terrace." },
 ];
 
-const CARESTAY_STANDARD = [
-  { icon: "🕶", name: "Blue Light Glasses", desc: "3 pairs in different strengths" },
-  { icon: "👕", name: "Spare Scrubs", desc: "S, M, L — always a backup ready" },
-  { icon: "🦶", name: "Foot Massager", desc: "Shiatsu relief after 12hr shifts" },
-  { icon: "🌙", name: "Blackout + White Noise", desc: "Day-sleep setup for nights" },
-  { icon: "💆", name: "Massage Gun", desc: "Full body recovery tool" },
+const CARESTAY_STANDARD: { icon: ReactNode; name: string; desc: string }[] = [
+  { icon: <Glasses size={22} strokeWidth={1.5} />, name: "Blue Light Glasses", desc: "3 pairs in different strengths" },
+  { icon: <Shirt size={22} strokeWidth={1.5} />, name: "Spare Scrubs", desc: "S, M, L — always a backup ready" },
+  { icon: <Footprints size={22} strokeWidth={1.5} />, name: "Foot Massager", desc: "Shiatsu relief after 12hr shifts" },
+  { icon: <Moon size={22} strokeWidth={1.5} />, name: "Blackout + White Noise", desc: "Day-sleep setup for nights" },
+  { icon: <HandMetal size={22} strokeWidth={1.5} />, name: "Massage Gun", desc: "Full body recovery tool" },
 ];
 
 function Nav({ scrolled }: { scrolled: boolean }) {
@@ -79,6 +81,9 @@ export default function ListingPage() {
   const touchStartY = useRef(0);
   const [slideDir, setSlideDir] = useState<"left" | "right" | null>(null);
   const slideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [dragX, setDragX] = useState(0);
+  const isDragging = useRef(false);
+  const galleryWidthRef = useRef(0);
   const [reviews, setReviews] = useState<ReviewItem[]>(DEFAULT_REVIEWS);
   const [reviewTotalCount, setReviewTotalCount] = useState(0);
   const [showAllReviews, setShowAllReviews] = useState(false);
@@ -97,6 +102,8 @@ export default function ListingPage() {
     if (images.length <= 1) return;
     if (slideTimeoutRef.current) clearTimeout(slideTimeoutRef.current);
     setSlideDir("left");
+    setDragX(0);
+    isDragging.current = false;
     slideTimeoutRef.current = setTimeout(() => {
       setSelectedImg(images[(currentIdx + 1) % images.length]);
       setSlideDir(null);
@@ -106,6 +113,8 @@ export default function ListingPage() {
     if (images.length <= 1) return;
     if (slideTimeoutRef.current) clearTimeout(slideTimeoutRef.current);
     setSlideDir("right");
+    setDragX(0);
+    isDragging.current = false;
     slideTimeoutRef.current = setTimeout(() => {
       setSelectedImg(images[(currentIdx - 1 + images.length) % images.length]);
       setSlideDir(null);
@@ -114,11 +123,30 @@ export default function ListingPage() {
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
+    isDragging.current = false;
+    setDragX(0);
+    const el = e.currentTarget as HTMLElement;
+    galleryWidthRef.current = el.offsetWidth || 400;
   };
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const dx = touchStartX.current - e.changedTouches[0].clientX;
-    const dy = touchStartY.current - e.changedTouches[0].clientY;
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) { dx > 0 ? goNext() : goPrev(); }
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (images.length <= 1) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+    if (!isDragging.current && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+      isDragging.current = true;
+    }
+    if (isDragging.current) {
+      setDragX(dx);
+    }
+  };
+  const handleTouchEnd = () => {
+    if (isDragging.current && images.length > 1) {
+      const threshold = galleryWidthRef.current * 0.3;
+      if (dragX < -threshold) { goNext(); return; }
+      if (dragX > threshold) { goPrev(); return; }
+    }
+    setDragX(0);
+    isDragging.current = false;
   };
   useEffect(() => {
     const onScroll = () => {
@@ -240,13 +268,27 @@ export default function ListingPage() {
           <div
             style={{ borderRadius: 16, overflow: "hidden", maxHeight: 500, position: "relative", cursor: "pointer" }}
             onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            onClick={() => setLightboxOpen(true)}
+            onClick={() => { if (!isDragging.current) setLightboxOpen(true); }}
           >
+            {/* Peek image (next or prev) */}
+            {images.length > 1 && dragX !== 0 && !slideDir && (
+              <img
+                src={dragX < 0 ? images[(currentIdx + 1) % images.length] : images[(currentIdx - 1 + images.length) % images.length]}
+                alt=""
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", maxHeight: 500, objectFit: "cover", display: "block", zIndex: 0 }}
+              />
+            )}
             <img
               src={currentImg}
               alt={listing.title}
-              style={{ width: "100%", height: "100%", maxHeight: 500, objectFit: "cover", display: "block", transition: "transform 0.3s ease-in-out, opacity 0.3s ease-in-out", transform: slideDir === "left" ? "translateX(-100%)" : slideDir === "right" ? "translateX(100%)" : "translateX(0)", opacity: slideDir ? 0 : 1 }}
+              style={{
+                width: "100%", height: "100%", maxHeight: 500, objectFit: "cover", display: "block", position: "relative", zIndex: 1,
+                transition: isDragging.current ? "none" : "transform 0.3s ease-in-out, opacity 0.3s ease-in-out",
+                transform: slideDir === "left" ? "translateX(-100%)" : slideDir === "right" ? "translateX(100%)" : dragX !== 0 ? `translateX(${dragX}px)` : "translateX(0)",
+                opacity: slideDir ? 0 : 1,
+              }}
             />
             {/* Gallery Badges */}
             <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 8, zIndex: 2 }}>
@@ -380,65 +422,65 @@ export default function ListingPage() {
               <div style={{ marginBottom: 48 }}>
                 <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Amenities</h2>
                 {(() => {
-                    const iconMap: Record<string, string> = {
-                      "wifi": "📶", "wireless internet": "📶", "wireless": "📶", "internet": "📶",
-                      "kitchen": "🍳",
-                      "cooking basics": "🥘",
-                      "parking": "🅿️", "free parking": "🅿️", "garage": "🅿️", "street parking": "🅿️",
-                      "washer": "🧺", "laundry": "🧺", "washing machine": "🧺",
-                      "dryer": "👕",
-                      "air conditioning": "❄️", "ac": "❄️", "a/c": "❄️", "central air": "❄️",
-                      "heating": "🔥", "heat": "🔥", "central heating": "🔥",
-                      "indoor fireplace": "🪵", "fireplace": "🪵",
-                      "tv": "📺", "cable tv": "📺", "smart tv": "📺", "television": "📺",
-                      "gym": "💪", "fitness": "💪", "fitness center": "💪", "exercise equipment": "💪",
-                      "pool": "🏊", "swimming pool": "🏊",
-                      "elevator": "🛗", "lift": "🛗",
-                      "balcony": "🌇", "patio": "🌇", "deck": "🌇", "terrace": "🌇", "patio or balcony": "🌇",
-                      "dishwasher": "🍽️",
-                      "coffee maker": "☕", "coffee": "☕", "espresso machine": "☕",
-                      "iron": "🫠",
-                      "hair dryer": "💇", "hairdryer": "💇",
-                      "workspace": "💻", "dedicated workspace": "💻", "laptop friendly workspace": "💻",
-                      "smart lock": "🔐", "lockbox": "🔐", "keypad": "🔐", "self check-in": "🔐",
-                      "subway": "🚇", "transit": "🚇",
-                      "soaking tub": "🛁", "bathtub": "🛁", "hot tub": "🛁",
-                      "concierge": "🛎️", "doorman": "🛎️", "front desk": "🛎️",
-                      "pet friendly": "🐾", "pets allowed": "🐾",
-                      "microwave": "📡", "oven": "🫕", "stove": "🫕", "refrigerator": "🧊", "fridge": "🧊", "freezer": "🧊",
-                      "smoke detector": "🔔",
-                      "carbon monoxide detector": "🛡️",
-                      "fire extinguisher": "🧯",
-                      "first aid kit": "🩹",
-                      "hangers": "👔", "closet": "👔", "clothing storage": "🗄️",
-                      "bed linens": "🛏️", "linens": "🛏️", "towels": "🛏️", "extra pillows": "🛏️", "extra pillows and blankets": "🛏️",
-                      "shampoo": "🧴",
-                      "essentials": "🧹",
-                      "toiletries": "🧴",
-                      "toaster": "🍞",
-                      "outdoor furniture": "🪑",
-                      "cleaning products": "🧽", "cleaning before checkout": "🧽",
-                      "bbq grill": "🔥", "bbq": "🔥", "barbecue": "🔥",
-                      "rain shower": "🚿", "shower": "🚿",
-                      "shower gel": "🧼", "body soap": "🧼",
-                      "suitable for children": "👶", "family friendly": "👶",
-                      "suitable for infants": "🍼",
-                      "bathrobe": "👘",
-                      "wine glasses": "🍷",
-                      "baking sheet": "🍪",
-                      "hot water": "🚰",
-                      "private entrance": "🚪",
-                      "ev charger": "⚡",
-                      "wheelchair accessible": "♿",
-                      "dishes and silverware": "🍽️",
+                    const iconMap: Record<string, LucideIcon> = {
+                      "wifi": Wifi, "wireless internet": Wifi, "wireless": Wifi, "internet": Wifi,
+                      "kitchen": UtensilsCrossed,
+                      "cooking basics": UtensilsCrossed,
+                      "parking": Car, "free parking": Car, "garage": Car, "street parking": Car,
+                      "washer": WashingMachine, "laundry": WashingMachine, "washing machine": WashingMachine,
+                      "dryer": Wind,
+                      "air conditioning": Snowflake, "ac": Snowflake, "a/c": Snowflake, "central air": Snowflake,
+                      "heating": Flame, "heat": Flame, "central heating": Flame,
+                      "indoor fireplace": Flame, "fireplace": Flame,
+                      "tv": Tv, "cable tv": Tv, "smart tv": Tv, "television": Tv,
+                      "gym": Dumbbell, "fitness": Dumbbell, "fitness center": Dumbbell, "exercise equipment": Dumbbell,
+                      "pool": Waves, "swimming pool": Waves,
+                      "elevator": ArrowUpDown, "lift": ArrowUpDown,
+                      "balcony": Sun, "patio": Sun, "deck": Sun, "terrace": Sun, "patio or balcony": Sun,
+                      "dishwasher": GlassWater,
+                      "coffee maker": Coffee, "coffee": Coffee, "espresso machine": Coffee,
+                      "iron": Shirt,
+                      "hair dryer": Fan, "hairdryer": Fan,
+                      "workspace": Laptop, "dedicated workspace": Laptop, "laptop friendly workspace": Laptop,
+                      "smart lock": Lock, "lockbox": Lock, "keypad": Lock, "self check-in": Lock,
+                      "subway": Car, "transit": Car,
+                      "soaking tub": Bath, "bathtub": Bath, "hot tub": Bath,
+                      "concierge": Bell, "doorman": Bell, "front desk": Bell,
+                      "pet friendly": PawPrint, "pets allowed": PawPrint,
+                      "microwave": Microwave, "oven": Flame, "stove": Flame, "refrigerator": Refrigerator, "fridge": Refrigerator, "freezer": Refrigerator,
+                      "smoke detector": Bell,
+                      "carbon monoxide detector": ShieldCheck,
+                      "fire extinguisher": FireExtinguisher,
+                      "first aid kit": ShieldCheck,
+                      "hangers": Shirt, "closet": Sofa, "clothing storage": Sofa,
+                      "bed linens": Bed, "linens": Bed, "towels": Bed, "extra pillows": Bed, "extra pillows and blankets": Bed,
+                      "shampoo": Droplets,
+                      "essentials": SprayCan,
+                      "toiletries": Droplets,
+                      "toaster": Sandwich,
+                      "outdoor furniture": ArmchairIcon,
+                      "cleaning products": SprayCan, "cleaning before checkout": SprayCan,
+                      "bbq grill": Flame, "bbq": Flame, "barbecue": Flame,
+                      "rain shower": ShowerHead, "shower": ShowerHead,
+                      "shower gel": Droplets, "body soap": Droplets,
+                      "suitable for children": Baby, "family friendly": Baby,
+                      "suitable for infants": Baby,
+                      "bathrobe": Shirt,
+                      "wine glasses": Wine,
+                      "baking sheet": Cookie,
+                      "hot water": Thermometer,
+                      "private entrance": DoorOpen,
+                      "ev charger": Zap,
+                      "wheelchair accessible": Accessibility,
+                      "dishes and silverware": GlassWater,
                     };
-                    const getIcon = (name: string) => {
+                    const getIcon = (name: string): LucideIcon => {
                       const lower = name.toLowerCase().trim();
                       if (iconMap[lower]) return iconMap[lower];
-                      for (const [key, emoji] of Object.entries(iconMap)) {
-                        if (lower.includes(key) || key.includes(lower)) return emoji;
+                      for (const [key, icon] of Object.entries(iconMap)) {
+                        if (lower.includes(key) || key.includes(lower)) return icon;
                       }
-                      return "✓";
+                      return Check;
                     };
 
                     // Deduplicate: merge "Internet"/"Wireless Internet"/"Wireless" into "WiFi"
@@ -481,12 +523,15 @@ export default function ListingPage() {
                     return (
                       <>
                         <div className="amenity-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                          {visible.map((a: string, i: number) => (
-                            <div key={`${a}-${i}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10 }}>
-                              <span style={{ fontSize: 20 }}>{getIcon(a)}</span>
-                              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{a}</span>
-                            </div>
-                          ))}
+                          {visible.map((a: string, i: number) => {
+                            const IconComp = getIcon(a);
+                            return (
+                              <div key={`${a}-${i}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10 }}>
+                                <IconComp size={18} strokeWidth={1.5} style={{ color: "rgba(255,255,255,0.6)", flexShrink: 0 }} />
+                                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{a}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                         {sorted.length > 9 && (
                           <button onClick={() => setShowAllAmenities(!showAllAmenities)} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "12px 24px", color: "#0fa", fontSize: 14, fontWeight: 600, cursor: "pointer", width: "100%", fontFamily: "inherit", marginTop: 12 }}>
@@ -702,7 +747,7 @@ export default function ListingPage() {
 
       {/* Desktop Lightbox */}
       {lightboxOpen && (
-        <div onClick={() => setLightboxOpen(false)} onTouchStart={handleTouchStart} onTouchEnd={e => { handleTouchEnd(e); }} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", touchAction: "pan-y" }}>
+        <div onClick={() => { if (!isDragging.current) setLightboxOpen(false); }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", touchAction: "pan-y" }}>
           <button onClick={() => setLightboxOpen(false)} style={{ position: "absolute", top: 20, right: 24, background: "none", border: "none", color: "#fff", fontSize: 32, cursor: "pointer", zIndex: 201 }}>✕</button>
           {images.length > 1 && (
             <>
@@ -710,7 +755,12 @@ export default function ListingPage() {
               <button onClick={e => { e.stopPropagation(); goNext(); }} style={{ position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)", width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 201 }}>›</button>
             </>
           )}
-          <img onClick={e => e.stopPropagation()} src={currentImg} alt={listing.title} style={{ maxWidth: "90vw", maxHeight: "85vh", objectFit: "contain", borderRadius: 12, transition: "transform 0.3s ease-in-out, opacity 0.3s ease-in-out", transform: slideDir === "left" ? "translateX(-100%)" : slideDir === "right" ? "translateX(100%)" : "translateX(0)", opacity: slideDir ? 0 : 1 }} />
+          <img onClick={e => e.stopPropagation()} src={currentImg} alt={listing.title} style={{
+            maxWidth: "90vw", maxHeight: "85vh", objectFit: "contain", borderRadius: 12,
+            transition: isDragging.current ? "none" : "transform 0.3s ease-in-out, opacity 0.3s ease-in-out",
+            transform: slideDir === "left" ? "translateX(-100%)" : slideDir === "right" ? "translateX(100%)" : dragX !== 0 ? `translateX(${dragX}px)` : "translateX(0)",
+            opacity: slideDir ? 0 : 1,
+          }} />
           {images.length > 1 && (
             <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 600 }}>{currentIdx + 1} / {images.length}</div>
           )}
