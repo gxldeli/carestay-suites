@@ -56,7 +56,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
   );
 }
 
-interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; featured?: boolean; videoUrl?: string; amenities?: string[]; latitude?: number; longitude?: number; maxGuests?: number; bedrooms?: number }
+interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; featured?: boolean; videoUrl?: string; amenities?: string[]; latitude?: number; longitude?: number; maxGuests?: number; bedrooms?: number; address?: string }
 
 export default function ListingPage() {
   const params = useParams();
@@ -115,7 +115,7 @@ export default function ListingPage() {
               price: match.price, sqft: match.sqft, img: match.images?.[0] || match.img, tag: match.location || "GTA",
               available: true, desc: match.description || "", description: match.description, images: match.images,
               nearbyHospital: match.nearbyHospital || "", featured: match.featured || false, videoUrl: match.videoUrl || "", amenities: match.amenities || [],
-              latitude: match.latitude ?? undefined, longitude: match.longitude ?? undefined,
+              address: match.address || "", latitude: match.latitude ?? undefined, longitude: match.longitude ?? undefined,
               maxGuests: match.maxGuests || undefined, bedrooms: match.bedrooms || undefined,
             });
           }
@@ -473,31 +473,6 @@ export default function ListingPage() {
                   })()}
               </div>
 
-              {/* Where You'll Be — Map */}
-              {(() => {
-                const hasCoords = listing.latitude != null && listing.longitude != null && (listing.latitude !== 0 || listing.longitude !== 0);
-                const mapQuery = hasCoords ? `${listing.latitude},${listing.longitude}` : encodeURIComponent(listing.location + ", Ontario, Canada");
-                return (
-                <div style={{ marginBottom: 48 }}>
-                  <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Where You&apos;ll Be</h2>
-                  <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <iframe
-                      className="map-iframe"
-                      src={`https://maps.google.com/maps?q=${mapQuery}&z=14&output=embed`}
-                      style={{ width: "100%", height: 400, border: "none", display: "block", filter: "invert(0.9) hue-rotate(180deg) brightness(1.1) contrast(1.1)" }}
-                      allowFullScreen
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                      title="Map location"
-                    />
-                  </div>
-                  <div style={{ marginTop: 12, fontSize: 15, color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>
-                    📍 {listing.location}
-                  </div>
-                </div>
-                );
-              })()}
-
               {/* CareStay Standard */}
               <div style={{ marginBottom: 48 }}>
                 <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>The CareStay Standard</h2>
@@ -513,6 +488,34 @@ export default function ListingPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Where You'll Be — Map */}
+              {(() => {
+                const mapQuery = listing.address
+                  ? encodeURIComponent(listing.address)
+                  : listing.latitude != null && listing.longitude != null && (listing.latitude !== 0 || listing.longitude !== 0)
+                    ? `${listing.latitude},${listing.longitude}`
+                    : encodeURIComponent(listing.location + ", Ontario, Canada");
+                return (
+                <div style={{ marginBottom: 48 }}>
+                  <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Where You&apos;ll Be</h2>
+                  <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <iframe
+                      className="map-iframe"
+                      src={`https://maps.google.com/maps?q=${mapQuery}&z=14&output=embed`}
+                      style={{ width: "100%", height: 400, border: "none", display: "block", filter: "invert(0.9) hue-rotate(180deg) brightness(1.1) contrast(1.1)" }}
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      title="Map location"
+                    />
+                  </div>
+                  <div style={{ marginTop: 12, fontSize: 15, color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>
+                    📍 {listing.address || listing.location}
+                  </div>
+                </div>
+                );
+              })()}
 
               {/* Guest Reviews */}
               <div id="reviews" style={{ marginBottom: 48 }}>
