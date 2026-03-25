@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, ReactNode } from "react";
 import Link from "next/link";
-import { ShieldCheck, MapPin, ClipboardList, CalendarDays, Glasses, Shirt, Footprints, Moon, HandMetal } from "lucide-react";
+import { ShieldCheck, MapPin, ClipboardList, CalendarDays } from "lucide-react";
 
 /* ─── DATA ─── */
 const SHOWCASE_LISTINGS = [
@@ -17,11 +17,11 @@ const SHOWCASE_LISTINGS = [
 const HOSPITALS = ["Toronto General", "SickKids", "Mount Sinai", "Sunnybrook", "St. Michael's", "Princess Margaret", "Humber River", "Scarborough Health", "North York General", "Credit Valley", "Trillium Health"];
 
 const CARESTAY_STANDARD: { icon: ReactNode; name: string; desc: string }[] = [
-  { icon: <Glasses size={22} strokeWidth={1.5} />, name: "Blue Light Glasses", desc: "3 pairs in different strengths" },
-  { icon: <Shirt size={22} strokeWidth={1.5} />, name: "Spare Scrubs", desc: "S, M, L — always a backup ready" },
-  { icon: <Footprints size={22} strokeWidth={1.5} />, name: "Foot Massager", desc: "Shiatsu relief after 12hr shifts" },
-  { icon: <Moon size={22} strokeWidth={1.5} />, name: "Blackout + White Noise", desc: "Day-sleep setup for nights" },
-  { icon: <HandMetal size={22} strokeWidth={1.5} />, name: "Massage Gun", desc: "Full body recovery tool" },
+  { icon: "🕶", name: "Blue Light Glasses", desc: "3 pairs in different strengths" },
+  { icon: "👕", name: "Spare Scrubs", desc: "S, M, L — always a backup ready" },
+  { icon: "🦶", name: "Foot Massager", desc: "Shiatsu relief after 12hr shifts" },
+  { icon: "🌙", name: "Blackout + White Noise", desc: "Day-sleep setup for nights" },
+  { icon: "💆", name: "Massage Gun", desc: "Full body recovery tool" },
 ];
 
 /* ─── HOOKS ─── */
