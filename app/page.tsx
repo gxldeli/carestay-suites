@@ -559,7 +559,7 @@ function Contact() {
 }
 
 /* ─── FOOTER ─── */
-function Footer() {
+function Footer({ address }: { address?: string }) {
   return (
     <footer style={{ background: "#0a0c0f", borderTop: "1px solid rgba(255,255,255,0.05)", padding: "48px 24px 32px" }}>
       <div className="wrap">
@@ -579,6 +579,7 @@ function Footer() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Contact</div>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>info@carestaysuites.com</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>{address || "35 Mariner Terrace, Toronto, ON M5V 3V9"}</p>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Toronto, Ontario</p>
             </div>
           </div>
@@ -595,7 +596,7 @@ function Footer() {
 /* ─── PAGE ─── */
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
-  const [siteSettings, setSiteSettings] = useState<{ heroTagline?: string; statProperties?: string; statHealthcarePros?: string; statHospitalPartnerships?: string; statAverageRating?: string } | null>(null);
+  const [siteSettings, setSiteSettings] = useState<{ heroTagline?: string; companyAddress?: string; statProperties?: string; statHealthcarePros?: string; statHospitalPartnerships?: string; statAverageRating?: string } | null>(null);
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", h);
@@ -618,7 +619,7 @@ export default function Home() {
       <Healthcare />
       <HowItWorks />
       <Contact />
-      <Footer />
+      <Footer address={siteSettings?.companyAddress} />
     </>
   );
 }
