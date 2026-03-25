@@ -255,7 +255,7 @@ function Stats({ stats }: { stats?: { properties?: string; pros?: string; hospit
 }
 
 /* ─── LISTINGS ─── */
-interface ListingCard { id: number; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; featured?: boolean }
+interface ListingCard { id: number; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; featured?: boolean; maxGuests?: number; bedrooms?: number }
 
 function ListingsSection() {
   const [apiListings, setApiListings] = useState<ListingCard[]>([]);
@@ -264,9 +264,10 @@ function ListingsSection() {
       .then(r => r.json())
       .then(data => {
         if (data.status === "success" && data.listings) {
-          setApiListings(data.listings.map((l: { id: number; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; featured?: boolean }) => ({
+          setApiListings(data.listings.map((l: { id: number; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; featured?: boolean; maxGuests?: number; bedrooms?: number }) => ({
             id: l.id, title: l.title, location: l.location, beds: l.beds, baths: l.baths,
             price: l.price, sqft: l.sqft, img: l.img, tag: l.location || "GTA", available: true, featured: l.featured || false,
+            maxGuests: l.maxGuests || 0, bedrooms: l.bedrooms || 0,
           })));
         }
       })
@@ -307,9 +308,14 @@ function ListingsSection() {
                       <div className="listing-body">
                         <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 4 }}>{l.title}</h3>
                         <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>{l.location}</p>
-                        <div style={{ display: "flex", gap: 14, marginBottom: 14, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
-                          <span>{l.beds} Bed</span><span>{l.baths} Bath</span><span>{l.sqft} sqft</span>
-                        </div>
+                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 14 }}>
+                          {[
+                            l.maxGuests ? `${l.maxGuests} guest${l.maxGuests !== 1 ? "s" : ""}` : null,
+                            l.bedrooms ? `${l.bedrooms} bedroom${l.bedrooms !== 1 ? "s" : ""}` : null,
+                            l.beds ? `${l.beds} bed${l.beds !== 1 ? "s" : ""}` : null,
+                            l.baths ? `${l.baths} bath${l.baths !== 1 ? "s" : ""}` : null,
+                          ].filter(Boolean).join(" · ")}
+                        </p>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(240,192,64,0.15)", paddingTop: 14 }}>
                           <div>
                             <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "#fff" }}>${l.price.toLocaleString()}</span>
@@ -347,9 +353,14 @@ function ListingsSection() {
                   <div className="listing-body">
                     <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 4 }}>{l.title}</h3>
                     <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>{l.location}</p>
-                    <div style={{ display: "flex", gap: 14, marginBottom: 14, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
-                      <span>{l.beds} Bed</span><span>{l.baths} Bath</span><span>{l.sqft} sqft</span>
-                    </div>
+                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 14 }}>
+                      {[
+                        l.maxGuests ? `${l.maxGuests} guest${l.maxGuests !== 1 ? "s" : ""}` : null,
+                        l.bedrooms ? `${l.bedrooms} bedroom${l.bedrooms !== 1 ? "s" : ""}` : null,
+                        l.beds ? `${l.beds} bed${l.beds !== 1 ? "s" : ""}` : null,
+                        l.baths ? `${l.baths} bath${l.baths !== 1 ? "s" : ""}` : null,
+                      ].filter(Boolean).join(" · ")}
+                    </p>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14 }}>
                       <div>
                         <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "#fff" }}>${l.price.toLocaleString()}</span>
