@@ -143,7 +143,6 @@ export default function AdminPage() {
     const listData = await listRes.json();
     const adminData = await adminRes.json();
     const settingsData = await settingsRes.json();
-    console.log("[Admin] Loaded listings:", listData.count, "overrides:", Object.keys(adminData.data?.listings || {}).length);
     if (listData.status === "success") setListings(listData.listings || []);
     if (adminData.status === "success") setOverrides(adminData.data);
     if (settingsData.status === "success" && settingsData.settings) {
@@ -185,15 +184,12 @@ export default function AdminPage() {
   const updateOverride = async (id: string | number, field: string, value: unknown) => {
     const key = `${id}-${field}`;
     setSaving(key);
-    console.log("[Admin] Updating override:", { id: String(id), field, value });
-    const result = await adminPost("updateListing", { id: String(id), [field]: value });
-    console.log("[Admin] Update result:", result.status, "overrides for", id, ":", result.data?.listings?.[String(id)]);
+    await adminPost("updateListing", { id: String(id), [field]: value });
     setSaving(null);
   };
 
   const saveExpandedOverrides = async (id: number, fields: Partial<ListingOverride>) => {
     setSaving(`${id}-expanded`);
-    console.log("[Admin] Saving expanded overrides for", id, fields);
     await adminPost("updateListing", { id: String(id), ...fields });
     setSaving(null);
   };

@@ -74,7 +74,6 @@ export default function ListingPage() {
   const [moveIn, setMoveIn] = useState("");
   const [moveOut, setMoveOut] = useState("");
   const [message, setMessage] = useState("");
-  const [showMobileBar, setShowMobileBar] = useState(true);
   const inquiryRef = useRef<HTMLDivElement>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const touchStartX = useRef(0);
@@ -100,13 +99,7 @@ export default function ListingPage() {
     if (Math.abs(dx) > 50) { dx < 0 ? goNext() : goPrev(); }
   };
   useEffect(() => {
-    const onScroll = () => {
-      setScrolled(window.scrollY > 20);
-      if (inquiryRef.current) {
-        const rect = inquiryRef.current.getBoundingClientRect();
-        setShowMobileBar(rect.top > window.innerHeight);
-      }
-    };
+    const onScroll = () => { setScrolled(window.scrollY > 20); };
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
