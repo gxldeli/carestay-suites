@@ -115,7 +115,7 @@ export default function ListingPage() {
               price: match.price, sqft: match.sqft, img: match.images?.[0] || match.img, tag: match.location || "GTA",
               available: true, desc: match.description || "", description: match.description, images: match.images,
               nearbyHospital: match.nearbyHospital || "", featured: match.featured || false, videoUrl: match.videoUrl || "", amenities: match.amenities || [],
-              latitude: match.latitude || undefined, longitude: match.longitude || undefined,
+              latitude: match.latitude ?? undefined, longitude: match.longitude ?? undefined,
               maxGuests: match.maxGuests || undefined, bedrooms: match.bedrooms || undefined,
             });
           }
@@ -474,7 +474,7 @@ export default function ListingPage() {
               </div>
 
               {/* Where You'll Be — Map */}
-              {listing.latitude && listing.longitude && (
+              {listing.latitude != null && listing.longitude != null && (listing.latitude !== 0 || listing.longitude !== 0) && (
                 <div style={{ marginBottom: 48 }}>
                   <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Where You&apos;ll Be</h2>
                   <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -665,6 +665,7 @@ export default function ListingPage() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Contact</div>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>info@carestaysuites.com</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>35 Mariner Terrace, Toronto, ON M5V 3V9</p>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Toronto, Ontario</p>
             </div>
           </div>

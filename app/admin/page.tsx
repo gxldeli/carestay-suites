@@ -106,6 +106,7 @@ export default function AdminPage() {
 
   // Site settings
   const [siteEmail, setSiteEmail] = useState("info@carestaysuites.com");
+  const [siteAddress, setSiteAddress] = useState("35 Mariner Terrace, Toronto, ON M5V 3V9");
   const [siteHeroTagline, setSiteHeroTagline] = useState("");
   const [siteStatProps, setSiteStatProps] = useState("60+");
   const [siteStatPros, setSiteStatPros] = useState("150+");
@@ -148,6 +149,7 @@ export default function AdminPage() {
     if (settingsData.status === "success" && settingsData.settings) {
       const s = settingsData.settings;
       setSiteEmail(s.contactEmail || "info@carestaysuites.com");
+      setSiteAddress(s.companyAddress || "35 Mariner Terrace, Toronto, ON M5V 3V9");
       setSiteHeroTagline(s.heroTagline || "");
       setSiteStatProps(s.statProperties || "60+");
       setSiteStatPros(s.statHealthcarePros || "150+");
@@ -269,6 +271,12 @@ export default function AdminPage() {
               <input value={siteEmail} onChange={e => setSiteEmail(e.target.value)} style={inputStyle} />
             </div>
             <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Company Address</div>
+              <input value={siteAddress} onChange={e => setSiteAddress(e.target.value)} style={inputStyle} />
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+            <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Average Rating</div>
               <input value={siteStatRating} onChange={e => setSiteStatRating(e.target.value)} style={inputStyle} />
             </div>
@@ -295,7 +303,7 @@ export default function AdminPage() {
             <button onClick={async () => {
               setSaving("settings");
               const pw = sessionStorage.getItem(PW_KEY) || password;
-              await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw, settings: { contactEmail: siteEmail, heroTagline: siteHeroTagline, statProperties: siteStatProps, statHealthcarePros: siteStatPros, statHospitalPartnerships: siteStatHospitals, statAverageRating: siteStatRating } }) });
+              await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw, settings: { contactEmail: siteEmail, companyAddress: siteAddress, heroTagline: siteHeroTagline, statProperties: siteStatProps, statHealthcarePros: siteStatPros, statHospitalPartnerships: siteStatHospitals, statAverageRating: siteStatRating } }) });
               setSaving(null);
               setSettingsSaved(true);
               setTimeout(() => setSettingsSaved(false), 2000);

@@ -3,6 +3,7 @@ import { redis } from "@/app/lib/redis";
 
 export interface SiteSettings {
   contactEmail: string;
+  companyAddress: string;
   heroTagline: string;
   statProperties: string;
   statHealthcarePros: string;
@@ -12,6 +13,7 @@ export interface SiteSettings {
 
 const DEFAULTS: SiteSettings = {
   contactEmail: "info@carestaysuites.com",
+  companyAddress: "35 Mariner Terrace, Toronto, ON M5V 3V9",
   heroTagline: "Move-in ready suites primarily across the Greater Toronto Area and beyond. Verified properties. No scams, no deposits lost, no bait-and-switch. Trusted by nurses, physicians, and medical staff.",
   statProperties: "60+",
   statHealthcarePros: "150+",
