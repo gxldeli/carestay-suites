@@ -1,6 +1,3 @@
-// HostAway API Client
-// Credentials are stored in Vercel environment variables
-
 const HOSTAWAY_CLIENT_ID = process.env.HOSTAWAY_CLIENT_ID || "";
 const HOSTAWAY_CLIENT_SECRET = process.env.HOSTAWAY_CLIENT_SECRET || "";
 const HOSTAWAY_API_BASE = "https://api.hostaway.com/v1";
@@ -14,11 +11,8 @@ async function getAccessToken(): Promise<string> {
   }
 
   if (!HOSTAWAY_CLIENT_ID || !HOSTAWAY_CLIENT_SECRET) {
-    console.error("[HostAway] Missing credentials — HOSTAWAY_CLIENT_ID:", HOSTAWAY_CLIENT_ID ? "set" : "MISSING", "HOSTAWAY_CLIENT_SECRET:", HOSTAWAY_CLIENT_SECRET ? "set" : "MISSING");
     throw new Error("HostAway credentials not configured");
   }
-
-  console.log("[HostAway] Requesting access token for client_id:", HOSTAWAY_CLIENT_ID);
 
   const res = await fetch(`${HOSTAWAY_API_BASE}/accessTokens`, {
     method: "POST",
@@ -32,7 +26,6 @@ async function getAccessToken(): Promise<string> {
 
   if (!res.ok) {
     const body = await res.text();
-    console.error(`[HostAway] Auth failed: ${res.status} ${res.statusText}`, body);
     throw new Error(`HostAway auth failed: ${res.status} — ${body}`);
   }
 
@@ -43,7 +36,6 @@ async function getAccessToken(): Promise<string> {
     expires: Date.now() + 23 * 60 * 60 * 1000,
   };
 
-  console.log("[HostAway] Access token obtained successfully");
   return cachedToken.token;
 }
 
@@ -148,7 +140,6 @@ export function extractAmenityNames(listing: HostAwayListing): string[] {
 export async function getListings(): Promise<HostAwayListing[]> {
   const token = await getAccessToken();
 
-  console.log("[HostAway] Fetching listings...");
   const res = await fetch(`${HOSTAWAY_API_BASE}/listings?limit=100&includeResources=1`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -159,53 +150,20 @@ export async function getListings(): Promise<HostAwayListing[]> {
   });
 
   if (!res.ok) {
-    const body = await res.text();
-    console.error(`[HostAway] Listings fetch failed: ${res.status} ${res.statusText}`, body);
     return [];
   }
 
   const data = await res.json();
-  
   if (data.status !== "success") {
-    console.error("HostAway API error:", data.result);
     return [];
   }
 
-  // Filter to only listings tagged with "carestay"
-  // If no tag filter needed, remove this filter
-  console.log("[HostAway] Raw listings count:", (data.result || []).length);
-  if (data.result?.[0]) {
-    const first = data.result[0];
-    console.log("[HostAway] First listing keys:", Object.keys(first));
-    console.log("[HostAway] First listing image fields:", {
-      thumbnailUrl: first.thumbnailUrl,
-      hasPictures: !!first.pictures, picturesCount: first.pictures?.length,
-      hasImages: !!first.images, imagesCount: first.images?.length,
-      hasPhotos: !!first.photos, photosCount: first.photos?.length,
-      hasListingImages: !!first.listingImages, listingImagesCount: first.listingImages?.length,
-    });
-    if (first.pictures?.[0]) console.log("[HostAway] First picture object:", JSON.stringify(first.pictures[0]).substring(0, 300));
-    if (first.images?.[0]) console.log("[HostAway] First image object:", JSON.stringify(first.images[0]).substring(0, 300));
-    if (first.listingImages?.[0]) console.log("[HostAway] First listingImage object:", JSON.stringify(first.listingImages[0]).substring(0, 300));
-    console.log("[HostAway] First listing raw amenities:", JSON.stringify(first.amenities)?.substring(0, 500));
-    console.log("[HostAway] First listing specs:", {
-      maxGuests: first.maxGuests, personCapacity: first.personCapacity, guestsIncluded: first.guestsIncluded,
-      bedrooms: first.bedrooms, bedroomsNumber: first.bedroomsNumber, roomsNumber: first.roomsNumber,
-      beds: first.beds, bedsNumber: first.bedsNumber, bathrooms: first.bathrooms,
-      extractedBedrooms: extractBedroomCount(first),
-      listingRooms: JSON.stringify(first.listingRooms)?.substring(0, 500),
-      listingBedTypes: JSON.stringify(first.listingBedTypes)?.substring(0, 300),
-    });
-  }
-  const listings = data.result || [];
-
-  return listings;
+  return data.result || [];
 }
 
 export async function getListing(id: number): Promise<HostAwayListing | null> {
   const token = await getAccessToken();
 
-  console.log(`[HostAway] Fetching listing ${id}...`);
   const res = await fetch(`${HOSTAWAY_API_BASE}/listings/${id}`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -215,67 +173,11 @@ export async function getListing(id: number): Promise<HostAwayListing | null> {
   });
 
   if (!res.ok) {
-    const body = await res.text();
-    console.error(`[HostAway] Listing ${id} fetch failed: ${res.status} ${res.statusText}`, body);
     return null;
   }
   const data = await res.json();
   if (data.status !== "success") {
-    console.error(`[HostAway] Listing ${id} API error:`, data);
     return null;
   }
-  const result = data.result;
-  console.log(`[HostAway] Listing ${id} raw amenities:`, JSON.stringify(result?.amenities)?.substring(0, 500));
-  console.log(`[HostAway] Listing ${id} specs:`, {
-    bedrooms: result?.bedrooms, bedroomsNumber: result?.bedroomsNumber, roomsNumber: result?.roomsNumber,
-    beds: result?.beds, bedsNumber: result?.bedsNumber, bathrooms: result?.bathrooms,
-    maxGuests: result?.maxGuests, personCapacity: result?.personCapacity,
-    extractedBedrooms: result ? extractBedroomCount(result) : 0,
-    listingRooms: JSON.stringify(result?.listingRooms)?.substring(0, 500),
-  });
-  return result;
-}
-
-export async function getListingCalendar(
-  listingId: number,
-  startDate: string,
-  endDate: string
-) {
-  const token = await getAccessToken();
-
-  const res = await fetch(
-    `${HOSTAWAY_API_BASE}/listings/${listingId}/calendar?startDate=${startDate}&endDate=${endDate}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      next: { revalidate: 300 },
-    }
-  );
-
-  if (!res.ok) return [];
-  const data = await res.json();
-  if (data.status !== "success") return [];
-  return data.result || [];
-}
-
-export async function getListingPricing(listingId: number) {
-  const token = await getAccessToken();
-
-  const res = await fetch(
-    `${HOSTAWAY_API_BASE}/listings/${listingId}/pricingPeriods`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      next: { revalidate: 300 },
-    }
-  );
-
-  if (!res.ok) return null;
-  const data = await res.json();
-  if (data.status !== "success") return null;
   return data.result;
 }

@@ -271,7 +271,7 @@ function ListingsSection() {
           })));
         }
       })
-      .catch(err => console.error("Failed to fetch API listings:", err));
+      .catch(() => {});
   }, []);
 
   const featuredListings = apiListings.filter(l => l.featured);
