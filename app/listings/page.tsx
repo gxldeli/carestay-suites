@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 
 interface Listing { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; available: boolean }
@@ -22,6 +22,13 @@ export default function AllListingsPage() {
       .catch(() => setLoading(false));
   }, []);
 
+  // Dynamic cities from actual listing data
+  const cities = useMemo(() => {
+    const unique = Array.from(new Set(listings.map(l => l.location).filter(Boolean)));
+    unique.sort((a, b) => a.localeCompare(b));
+    return unique;
+  }, [listings]);
+
   return (
     <>
       <style>{`
@@ -41,13 +48,16 @@ export default function AllListingsPage() {
         .listing-body{padding:16px 18px}
         .listing-tag{background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);color:#0fa;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
         .listing-avail{background:rgba(0,255,170,0.15);color:#0fa;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
-        .filter-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px}
-        .filter-input{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px;color:#fff;font-size:14px;outline:none;font-family:inherit}
+        .filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+        .filter-input{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 16px;color:#fff;font-size:14px;outline:none;font-family:inherit;height:42px;line-height:1}
         .filter-input:focus{border-color:rgba(0,255,170,0.4)}
-        .filter-select{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px;color:#fff;font-size:13px;outline:none;font-family:inherit;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(255,255,255,0.4)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+        .filter-select{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px;color:#fff;font-size:13px;outline:none;font-family:inherit;cursor:pointer;appearance:none;-webkit-appearance:none;height:42px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(255,255,255,0.4)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
         .filter-select option{background:#12151a;color:#fff}
+        .filter-dropdowns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%}
+        .city-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;-ms-overflow-style:none;scrollbar-width:none}
+        .city-scroll::-webkit-scrollbar{display:none}
         @media(max-width:900px){.listings-grid{grid-template-columns:repeat(2,1fr)}}
-        @media(max-width:600px){.listings-grid{grid-template-columns:1fr}.nav-links{display:none!important}.nav-mobile{display:block!important}.filter-bar{flex-direction:column}}
+        @media(max-width:600px){.listings-grid{grid-template-columns:1fr}.nav-links{display:none!important}.nav-mobile{display:block!important}.filter-dropdowns{grid-template-columns:1fr}}
       `}</style>
 
       <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(10,12,15,0.95)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -66,38 +76,39 @@ export default function AllListingsPage() {
       <main style={{ paddingTop: 72 }}>
         <div className="wrap" style={{ padding: "60px 24px 80px" }}>
           <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, marginBottom: 8 }}>All Suites</h1>
-          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", marginBottom: 24 }}>{listings.length} properties available across the GTA</p>
+          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", marginBottom: 20 }}>{listings.length} properties available across Ontario</p>
 
-          {/* Filter Bar */}
-          <div className="filter-bar">
-            <input type="text" placeholder="Search by name or location..." className="filter-input" style={{ flex: "1 1 200px", minWidth: 200 }} value={search} onChange={e => setSearch(e.target.value)} />
-            <select className="filter-select" value={bedFilter} onChange={e => setBedFilter(e.target.value)}>
+          {/* Search */}
+          <div style={{ marginBottom: 12 }}>
+            <input type="text" placeholder="Search by name or location..." className="filter-input" style={{ width: "100%" }} value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+
+          {/* Filter Dropdowns */}
+          <div className="filter-dropdowns" style={{ marginBottom: 14 }}>
+            <select className="filter-select" style={{ width: "100%" }} value={bedFilter} onChange={e => setBedFilter(e.target.value)}>
               <option value="all">All Beds</option>
               <option value="1">1 Bedroom</option>
               <option value="2">2 Bedrooms</option>
               <option value="3">3+ Bedrooms</option>
             </select>
-            <select className="filter-select" value={priceFilter} onChange={e => setPriceFilter(e.target.value)}>
+            <select className="filter-select" style={{ width: "100%" }} value={priceFilter} onChange={e => setPriceFilter(e.target.value)}>
               <option value="all">Any Price</option>
               <option value="under2500">Under $2,500/mo</option>
               <option value="2500-3500">$2,500 - $3,500/mo</option>
               <option value="over3500">$3,500+/mo</option>
             </select>
-            <select className="filter-select" value={areaFilter} onChange={e => setAreaFilter(e.target.value)}>
+            <select className="filter-select" style={{ width: "100%" }} value={areaFilter} onChange={e => setAreaFilter(e.target.value)}>
               <option value="all">All Areas</option>
-              <option value="Downtown Toronto">Downtown Toronto</option>
-              <option value="North York">North York</option>
-              <option value="Scarborough">Scarborough</option>
-              <option value="Mississauga">Mississauga</option>
-              <option value="Brampton">Brampton</option>
-              <option value="Etobicoke">Etobicoke</option>
+              {cities.map(city => <option key={city} value={city}>{city}</option>)}
             </select>
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
-            {["All GTA", "Toronto", "North York", "Scarborough", "Mississauga", "Brampton", "Etobicoke", "Vaughan"].map(city => {
-              const isActive = city === "All GTA" ? areaFilter === "all" : areaFilter === city;
+
+          {/* City Buttons — horizontal scroll */}
+          <div className="city-scroll">
+            {["All", ...cities].map(city => {
+              const isActive = city === "All" ? areaFilter === "all" : areaFilter === city;
               return (
-                <button key={city} onClick={() => setAreaFilter(city === "All GTA" ? "all" : city)} style={{ padding: "8px 18px", borderRadius: 20, border: isActive ? "1px solid #0fa" : "1px solid rgba(255,255,255,0.12)", background: isActive ? "rgba(0,255,170,0.15)" : "rgba(255,255,255,0.04)", color: isActive ? "#0fa" : "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}>
+                <button key={city} onClick={() => setAreaFilter(city === "All" ? "all" : city)} style={{ padding: "7px 16px", borderRadius: 20, border: isActive ? "1px solid #0fa" : "1px solid rgba(255,255,255,0.12)", background: isActive ? "rgba(0,255,170,0.15)" : "rgba(255,255,255,0.04)", color: isActive ? "#0fa" : "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s", whiteSpace: "nowrap", flexShrink: 0 }}>
                   {city}
                 </button>
               );
