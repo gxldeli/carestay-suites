@@ -474,13 +474,16 @@ export default function ListingPage() {
               </div>
 
               {/* Where You'll Be — Map */}
-              {listing.latitude != null && listing.longitude != null && (listing.latitude !== 0 || listing.longitude !== 0) && (
+              {(() => {
+                const hasCoords = listing.latitude != null && listing.longitude != null && (listing.latitude !== 0 || listing.longitude !== 0);
+                const mapQuery = hasCoords ? `${listing.latitude},${listing.longitude}` : encodeURIComponent(listing.location + ", Ontario, Canada");
+                return (
                 <div style={{ marginBottom: 48 }}>
                   <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Where You&apos;ll Be</h2>
                   <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)" }}>
                     <iframe
                       className="map-iframe"
-                      src={`https://maps.google.com/maps?q=${listing.latitude},${listing.longitude}&z=14&output=embed`}
+                      src={`https://maps.google.com/maps?q=${mapQuery}&z=14&output=embed`}
                       style={{ width: "100%", height: 400, border: "none", display: "block", filter: "invert(0.9) hue-rotate(180deg) brightness(1.1) contrast(1.1)" }}
                       allowFullScreen
                       loading="lazy"
@@ -492,7 +495,8 @@ export default function ListingPage() {
                     📍 {listing.location}
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               {/* CareStay Standard */}
               <div style={{ marginBottom: 48 }}>
