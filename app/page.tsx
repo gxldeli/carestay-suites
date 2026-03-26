@@ -255,7 +255,7 @@ function Stats({ stats }: { stats?: { properties?: string; pros?: string; hospit
 }
 
 /* ─── LISTINGS ─── */
-interface ListingCard { id: number; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; featured?: boolean; maxGuests?: number; bedrooms?: number }
+interface ListingCard { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; featured?: boolean; maxGuests?: number; bedrooms?: number }
 
 function ListingsSection() {
   const [apiListings, setApiListings] = useState<ListingCard[]>([]);
@@ -264,7 +264,7 @@ function ListingsSection() {
       .then(r => r.json())
       .then(data => {
         if (data.status === "success" && data.listings) {
-          setApiListings(data.listings.map((l: { id: number; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; featured?: boolean; maxGuests?: number; bedrooms?: number }) => ({
+          setApiListings(data.listings.map((l: { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; featured?: boolean; maxGuests?: number; bedrooms?: number }) => ({
             id: l.id, title: l.title, location: l.location, beds: l.beds, baths: l.baths,
             price: l.price, sqft: l.sqft, img: l.img, tag: l.location || "GTA", available: true, featured: l.featured || false,
             maxGuests: l.maxGuests || 0, bedrooms: l.bedrooms || 0,
