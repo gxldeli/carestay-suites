@@ -300,15 +300,10 @@ export default function ListingPage() {
                   listing.baths ? `${listing.baths} bath${listing.baths !== 1 ? "s" : ""}` : null,
                 ].filter(Boolean).join(" · ")}
               </p>
-
-              {/* Hospital Badge */}
               {listing.nearbyHospital && (
-                <div style={{ marginBottom: 24, display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "rgba(0,170,255,0.05)", border: "1px solid rgba(0,170,255,0.12)", borderRadius: 8 }}>
-                  <span style={{ fontSize: 15 }}>🏥</span>
-                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.55)" }}>
-                    Near {listing.nearbyHospital}{listing.hospitalDistance ? ` · ${listing.hospitalDistance}` : ""}
-                  </span>
-                </div>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginTop: -16, marginBottom: 24 }}>
+                  🏥 Near {listing.nearbyHospital}{listing.hospitalDistance ? ` · ${listing.hospitalDistance}` : ""}
+                </p>
               )}
 
               {/* Video Walkthrough */}
