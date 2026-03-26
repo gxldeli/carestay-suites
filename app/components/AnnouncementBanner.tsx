@@ -30,13 +30,13 @@ export default function AnnouncementBanner() {
     sessionStorage.setItem(STORAGE_KEY, "1");
   };
 
-  if (!visible) return null;
-
   useEffect(() => {
     if (visible) document.body.classList.add("has-banner");
     else document.body.classList.remove("has-banner");
     return () => document.body.classList.remove("has-banner");
   }, [visible]);
+
+  if (!visible) return null;
 
   return (
     <>
