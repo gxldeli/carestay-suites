@@ -9,6 +9,11 @@ export interface SiteSettings {
   statHealthcarePros: string;
   statHospitalPartnerships: string;
   statAverageRating: string;
+  emailPopupEnabled: boolean;
+  emailPopupDelay: number;
+  emailPopupScrollTrigger: number;
+  emailPopupHeading: string;
+  emailPopupSubtext: string;
 }
 
 const DEFAULTS: SiteSettings = {
@@ -19,6 +24,11 @@ const DEFAULTS: SiteSettings = {
   statHealthcarePros: "150+",
   statHospitalPartnerships: "30+",
   statAverageRating: "4.9",
+  emailPopupEnabled: true,
+  emailPopupDelay: 5,
+  emailPopupScrollTrigger: 50,
+  emailPopupHeading: "Be First to Know",
+  emailPopupSubtext: "New suites drop regularly. Join healthcare professionals across Canada already on our list.",
 };
 
 export async function GET() {

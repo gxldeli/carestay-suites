@@ -148,8 +148,10 @@ export default function ListingPage() {
   const avgStars = reviews.length > 0 ? reviews.reduce((a, r) => a + r.stars, 0) / reviews.length : 4.9;
   const ratingLabel = avgStars >= 4.5 ? "Exceptional" : avgStars >= 4.0 ? "Excellent" : avgStars >= 3.5 ? "Very Good" : "Good";
   const displayTotalCount = reviewTotalCount || reviews.length;
+  const isComingSoon = listing ? !listing.available : false;
   const handleSubmit = async () => {
-    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, moveIn, moveOut, message, listing: listing?.title }) });
+    const tags = isComingSoon ? ["carestay-waitlist", "listing-waitlist"] : [];
+    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, moveIn, moveOut, message, listing: listing?.title, tags }) });
     setSubmitted(true);
   };
 
@@ -573,7 +575,7 @@ export default function ListingPage() {
                 </div>
 
                 <a href="#inquiry" style={{ display: "block", width: "100%", padding: "16px 0", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", borderRadius: 10, fontWeight: 700, fontSize: 15, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
-                  Inquire Now
+                  {isComingSoon ? "Join Waitlist" : "Inquire Now"}
                 </a>
 
                 <div style={{ marginTop: 20, padding: "14px 16px", background: "rgba(0,255,170,0.05)", borderRadius: 10, border: "1px solid rgba(0,255,170,0.1)" }}>
@@ -588,8 +590,8 @@ export default function ListingPage() {
         {/* Inquiry Form */}
         <div id="inquiry" ref={inquiryRef} className="wrap" style={{ paddingTop: 60, paddingBottom: 20 }}>
           <div style={{ maxWidth: 680, margin: "0 auto", background: "#12151a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 20, padding: "36px 32px" }}>
-            <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: "#fff", marginBottom: 6, textAlign: "center" }}>Inquire About This Suite</h2>
-            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", textAlign: "center", marginBottom: 28 }}>Fill out the form below and we&apos;ll get back to you within 24 hours.</p>
+            <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: "#fff", marginBottom: 6, textAlign: "center" }}>{isComingSoon ? "Join the Waitlist for This Suite" : "Inquire About This Suite"}</h2>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", textAlign: "center", marginBottom: 28 }}>{isComingSoon ? "Be first to know when this suite becomes available." : "Fill out the form below and we\u0027ll get back to you within 24 hours."}</p>
 
             {!submitted ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -709,7 +711,7 @@ export default function ListingPage() {
           </div>
           <div style={{ fontSize: 11, color: "#f0c040", marginTop: 2 }}>★ {avgStars.toFixed(1)} · {displayTotalCount} reviews</div>
         </div>
-        <a href="#inquiry" style={{ background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: "12px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: "none", whiteSpace: "nowrap" }}>Inquire Now</a>
+        <a href="#inquiry" style={{ background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: "12px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: "none", whiteSpace: "nowrap" }}>{isComingSoon ? "Join Waitlist" : "Inquire Now"}</a>
       </div>
     </>
   );
