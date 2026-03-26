@@ -56,7 +56,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
   );
 }
 
-interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; featured?: boolean; videoUrl?: string; amenities?: string[]; latitude?: number; longitude?: number; maxGuests?: number; bedrooms?: number; address?: string }
+interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; hospitalDistance?: string; featured?: boolean; videoUrl?: string; amenities?: string[]; latitude?: number; longitude?: number; maxGuests?: number; bedrooms?: number; address?: string }
 
 export default function ListingPage() {
   const params = useParams();
@@ -114,7 +114,7 @@ export default function ListingPage() {
               id: match.id, title: match.title, location: match.location, beds: match.beds, baths: match.baths,
               price: match.price, sqft: match.sqft, img: match.images?.[0] || match.img, tag: match.location || "GTA",
               available: true, desc: match.description || "", description: match.description, images: match.images,
-              nearbyHospital: match.nearbyHospital || "", featured: match.featured || false, videoUrl: match.videoUrl || "", amenities: match.amenities || [],
+              nearbyHospital: match.nearbyHospital || "", hospitalDistance: match.hospitalDistance || "", featured: match.featured || false, videoUrl: match.videoUrl || "", amenities: match.amenities || [],
               address: match.address || "", latitude: match.latitude ?? undefined, longitude: match.longitude ?? undefined,
               maxGuests: match.maxGuests || undefined, bedrooms: match.bedrooms || undefined,
             });
@@ -301,6 +301,16 @@ export default function ListingPage() {
                 ].filter(Boolean).join(" · ")}
               </p>
 
+              {/* Hospital Badge */}
+              {listing.nearbyHospital && (
+                <div style={{ marginBottom: 24, display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "rgba(0,170,255,0.05)", border: "1px solid rgba(0,170,255,0.12)", borderRadius: 8 }}>
+                  <span style={{ fontSize: 15 }}>🏥</span>
+                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.55)" }}>
+                    Near {listing.nearbyHospital}{listing.hospitalDistance ? ` · ${listing.hospitalDistance}` : ""}
+                  </span>
+                </div>
+              )}
+
               {/* Video Walkthrough */}
               {listing.videoUrl && (() => {
                 const m = listing.videoUrl!.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
@@ -339,16 +349,6 @@ export default function ListingPage() {
                 })()}
               </div>
 
-              {/* Hospital Badge */}
-              {listing.nearbyHospital && (
-                <div style={{ marginBottom: 48, padding: "16px 20px", background: "rgba(0,170,255,0.06)", border: "1px solid rgba(0,170,255,0.15)", borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: 22 }}>🏥</span>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: "#0af" }}>Near {listing.nearbyHospital}</div>
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>Convenient commute for healthcare professionals</div>
-                  </div>
-                </div>
-              )}
 
               {/* Amenities */}
               <div style={{ marginBottom: 48 }}>

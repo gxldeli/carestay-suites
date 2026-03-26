@@ -591,15 +591,26 @@ export default function AdminPage() {
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Hospital Distance</label><input style={inputStyle} value={editDistance} onChange={e => setEditDistance(e.target.value)} /></div>
                 </div>
                 <div style={{ marginBottom: 12 }}>
-                  <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Image URLs (one per line)</label>
-                  <textarea style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} value={editImg} onChange={e => setEditImg(e.target.value)} />
+                  <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Photos ({editImg.split("\n").filter(s => s.trim()).length}) — first image is cover</label>
                   {editImg.trim() && (
-                    <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                      {editImg.split("\n").filter(s => s.trim()).map((url, i) => (
-                        <img key={i} src={url.trim()} alt={`Preview ${i + 1}`} style={{ width: 60, height: 42, objectFit: "cover", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }} />
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
+                      {editImg.split("\n").filter(s => s.trim()).map((url, i, arr) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", background: i === 0 ? "rgba(0,255,170,0.06)" : "rgba(255,255,255,0.02)", border: i === 0 ? "1px solid rgba(0,255,170,0.15)" : "1px solid rgba(255,255,255,0.06)", borderRadius: 8 }}>
+                          <img src={url.trim()} alt={`Photo ${i + 1}`} style={{ width: 64, height: 44, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} />
+                          <span style={{ fontSize: 11, color: i === 0 ? "#0fa" : "rgba(255,255,255,0.4)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{i === 0 ? "Cover · " : ""}{url.trim().split("/").pop()}</span>
+                          <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+                            <button disabled={i === 0} onClick={() => { const lines = editImg.split("\n").filter(s => s.trim()); [lines[i - 1], lines[i]] = [lines[i], lines[i - 1]]; setEditImg(lines.join("\n")); }} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: i === 0 ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 11, padding: "2px 6px", cursor: i === 0 ? "default" : "pointer", fontFamily: "inherit" }}>▲</button>
+                            <button disabled={i === arr.length - 1} onClick={() => { const lines = editImg.split("\n").filter(s => s.trim()); [lines[i], lines[i + 1]] = [lines[i + 1], lines[i]]; setEditImg(lines.join("\n")); }} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: i === arr.length - 1 ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 11, padding: "2px 6px", cursor: i === arr.length - 1 ? "default" : "pointer", fontFamily: "inherit" }}>▼</button>
+                            <button onClick={() => { const lines = editImg.split("\n").filter(s => s.trim()); lines.splice(i, 1); setEditImg(lines.join("\n")); }} style={{ background: "rgba(255,77,77,0.12)", border: "none", borderRadius: 4, color: "#f66", fontSize: 11, padding: "2px 6px", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>✕</button>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input id="addPhotoUrl" style={{ ...inputStyle, flex: 1 }} placeholder="Paste new image URL..." onKeyDown={e => { if (e.key === "Enter") { const inp = e.target as HTMLInputElement; if (inp.value.trim()) { setEditImg(prev => (prev.trim() ? prev.trim() + "\n" : "") + inp.value.trim()); inp.value = ""; } } }} />
+                    <button onClick={() => { const inp = document.getElementById("addPhotoUrl") as HTMLInputElement; if (inp?.value.trim()) { setEditImg(prev => (prev.trim() ? prev.trim() + "\n" : "") + inp.value.trim()); inp.value = ""; } }} style={{ ...btnStyle, padding: "8px 16px", fontSize: 12 }}>Add</button>
+                  </div>
                 </div>
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Description</label>
