@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/react";
+import EmailPopup from "@/app/components/EmailPopup";
 import "./globals.css";
 export const metadata: Metadata = {
   title: "CareStay Suites | Premium Furnished Housing for Healthcare Professionals | GTA",
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <style dangerouslySetInnerHTML={{ __html: `@keyframes splashPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.85;transform:scale(1.04)}}` }} />
         <script dangerouslySetInnerHTML={{ __html: `window.addEventListener('load',function(){var s=document.getElementById('splash');if(s){s.style.opacity='0';setTimeout(function(){s.style.display='none'},400)}})` }} />
         {children}
+        <EmailPopup />
         <Analytics />
       </body>
     </html>

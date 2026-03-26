@@ -508,48 +508,53 @@ function HowItWorks() {
   );
 }
 
-/* ─── CONTACT ─── */
+/* ─── CONTACT / WAITLIST ─── */
+const HOSPITAL_OPTIONS = ["Toronto General / UHN", "Sunnybrook", "SickKids", "Mount Sinai", "St. Michael's", "Humber River", "Scarborough Health", "North York General", "Credit Valley", "Trillium Health", "Other", "Not Sure Yet"];
+
 function Contact() {
   const [done, setDone] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [hospital, setHospital] = useState("");
-  const [moveIn, setMoveIn] = useState("");
   const handleSubmit = async () => {
-    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, hospital, moveIn }) });
+    if (!email) return;
+    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, hospital, tags: ["carestay-waitlist", "homepage-signup"] }) });
     setDone(true);
   };
   return (
     <section id="contact" className="pad" style={{ background: "#0d1117" }}>
-      <div style={{ maxWidth: 680, margin: "0 auto" }}>
+      <div style={{ maxWidth: 560, margin: "0 auto" }}>
         <FadeIn>
           <div className="sh-center" style={{ marginBottom: 36 }}>
-            <div className="sh-label">Get Started</div>
-            <h2 className="sh-title">Find Your Suite</h2>
-            <p className="sh-sub" style={{ marginLeft: "auto", marginRight: "auto" }}>Tell us about your assignment and we&apos;ll match you within 24 hours.</p>
+            <div className="sh-label">Stay Updated</div>
+            <h2 className="sh-title">Be the First to Know When New Suites Drop</h2>
+            <p className="sh-sub" style={{ marginLeft: "auto", marginRight: "auto" }}>Join healthcare professionals across Canada on our waitlist.</p>
           </div>
         </FadeIn>
         {!done ? (
           <FadeIn delay={0.1}>
             <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: "28px 22px" }}>
-              <div className="form-grid" style={{ marginBottom: 14 }}>
-                <div><label className="form-label">Full Name</label><input type="text" placeholder="Jane Smith" className="form-input" value={name} onChange={e => setName(e.target.value)} /></div>
-                <div><label className="form-label">Email</label><input type="email" placeholder="jane@hospital.ca" className="form-input" value={email} onChange={e => setEmail(e.target.value)} /></div>
-                <div><label className="form-label">Phone</label><input type="tel" placeholder="(647) 000-0000" className="form-input" value={phone} onChange={e => setPhone(e.target.value)} /></div>
-                <div><label className="form-label">Hospital / Facility</label><input type="text" placeholder="Toronto General" className="form-input" value={hospital} onChange={e => setHospital(e.target.value)} /></div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div><label className="form-label">Name (optional)</label><input type="text" placeholder="Jane Smith" className="form-input" value={name} onChange={e => setName(e.target.value)} /></div>
+                <div><label className="form-label">Email *</label><input type="email" placeholder="jane@hospital.ca" className="form-input" value={email} onChange={e => setEmail(e.target.value)} /></div>
+                <div>
+                  <label className="form-label">Hospital / Facility</label>
+                  <select className="form-input" value={hospital} onChange={e => setHospital(e.target.value)} style={{ appearance: "none", WebkitAppearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(255,255,255,0.4)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 32, cursor: "pointer" }}>
+                    <option value="">Select hospital...</option>
+                    {HOSPITAL_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
               </div>
-              <div style={{ marginBottom: 14 }}><label className="form-label">Move-in Date &amp; Duration</label><input type="text" placeholder="e.g., April 15 — 3 months" className="form-input" value={moveIn} onChange={e => setMoveIn(e.target.value)} /></div>
-              <button onClick={handleSubmit} style={{ width: "100%", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: 16, borderRadius: 10, fontWeight: 800, fontSize: 16, border: "none", cursor: "pointer", fontFamily: "inherit" }}>Submit Inquiry</button>
-              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", textAlign: "center", marginTop: 12 }}>We respond within 24 hours. No spam, ever.</p>
+              <button onClick={handleSubmit} style={{ width: "100%", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: 16, borderRadius: 10, fontWeight: 800, fontSize: 16, border: "none", cursor: "pointer", fontFamily: "inherit", marginTop: 16 }}>Join the Waitlist</button>
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", textAlign: "center", marginTop: 12 }}>No spam, ever. Just new suite alerts.</p>
             </div>
           </FadeIn>
         ) : (
           <FadeIn>
             <div style={{ textAlign: "center", padding: 60, background: "rgba(0,255,170,0.04)", border: "1px solid rgba(0,255,170,0.15)", borderRadius: 20 }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
-              <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 28, color: "#fff", marginBottom: 8 }}>Application Received</h3>
-              <p style={{ fontSize: 15, color: "rgba(255,255,255,0.5)" }}>We&apos;ll match you with available suites within 24 hours.</p>
+              <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 28, color: "#fff", marginBottom: 8 }}>You&apos;re on the list!</h3>
+              <p style={{ fontSize: 15, color: "rgba(255,255,255,0.5)" }}>We&apos;ll notify you when new suites drop.</p>
             </div>
           </FadeIn>
         )}
