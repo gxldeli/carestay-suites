@@ -112,11 +112,10 @@ export default function AdminPage() {
   const [siteStatPros, setSiteStatPros] = useState("150+");
   const [siteStatHospitals, setSiteStatHospitals] = useState("30+");
   const [siteStatRating, setSiteStatRating] = useState("4.9");
-  const [popupEnabled, setPopupEnabled] = useState(true);
-  const [popupDelay, setPopupDelay] = useState("5");
-  const [popupScroll, setPopupScroll] = useState("50");
-  const [popupHeading, setPopupHeading] = useState("Be First to Know");
-  const [popupSubtext, setPopupSubtext] = useState("New suites drop regularly. Join healthcare professionals across Canada already on our list.");
+  const [bannerEnabled, setBannerEnabled] = useState(true);
+  const [bannerText, setBannerText] = useState("🏥 New suites dropping soon — join the waitlist");
+  const [bannerButtonText, setBannerButtonText] = useState("Join");
+  const [bannerLinkUrl, setBannerLinkUrl] = useState("/#contact");
   const [settingsSaved, setSettingsSaved] = useState(false);
 
   // Custom listing form
@@ -160,11 +159,10 @@ export default function AdminPage() {
       setSiteStatPros(s.statHealthcarePros || "150+");
       setSiteStatHospitals(s.statHospitalPartnerships || "30+");
       setSiteStatRating(s.statAverageRating || "4.9");
-      setPopupEnabled(s.emailPopupEnabled !== false);
-      setPopupDelay(String(s.emailPopupDelay ?? 5));
-      setPopupScroll(String(s.emailPopupScrollTrigger ?? 50));
-      setPopupHeading(s.emailPopupHeading || "Be First to Know");
-      setPopupSubtext(s.emailPopupSubtext || "New suites drop regularly. Join healthcare professionals across Canada already on our list.");
+      setBannerEnabled(s.bannerEnabled !== false);
+      setBannerText(s.bannerText || "🏥 New suites dropping soon — join the waitlist");
+      setBannerButtonText(s.bannerButtonText || "Join");
+      setBannerLinkUrl(s.bannerLinkUrl || "/#contact");
     }
   }, []);
 
@@ -310,35 +308,31 @@ export default function AdminPage() {
             </div>
           </div>
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginBottom: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: 12 }}>Email Popup Settings</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: 12 }}>Announcement Banner</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 14 }}>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Popup Enabled</div>
-                <button onClick={() => setPopupEnabled(!popupEnabled)} style={{ ...inputStyle, cursor: "pointer", textAlign: "left", color: popupEnabled ? "#0fa" : "rgba(255,255,255,0.4)" }}>{popupEnabled ? "ON" : "OFF"}</button>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Banner Enabled</div>
+                <button onClick={() => setBannerEnabled(!bannerEnabled)} style={{ ...inputStyle, cursor: "pointer", textAlign: "left", color: bannerEnabled ? "#0fa" : "rgba(255,255,255,0.4)" }}>{bannerEnabled ? "ON" : "OFF"}</button>
               </div>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Popup Delay (seconds)</div>
-                <input type="number" value={popupDelay} onChange={e => setPopupDelay(e.target.value)} style={inputStyle} />
+                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Button Text</div>
+                <input value={bannerButtonText} onChange={e => setBannerButtonText(e.target.value)} style={inputStyle} />
               </div>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Scroll Trigger (%)</div>
-                <input type="number" value={popupScroll} onChange={e => setPopupScroll(e.target.value)} style={inputStyle} />
+                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Link URL</div>
+                <input value={bannerLinkUrl} onChange={e => setBannerLinkUrl(e.target.value)} placeholder="/#contact" style={inputStyle} />
               </div>
             </div>
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Popup Heading</div>
-              <input value={popupHeading} onChange={e => setPopupHeading(e.target.value)} style={inputStyle} />
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Popup Subtext</div>
-              <textarea value={popupSubtext} onChange={e => setPopupSubtext(e.target.value)} rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Banner Text</div>
+              <input value={bannerText} onChange={e => setBannerText(e.target.value)} style={inputStyle} />
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button onClick={async () => {
               setSaving("settings");
               const pw = sessionStorage.getItem(PW_KEY) || password;
-              await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw, settings: { contactEmail: siteEmail, companyAddress: siteAddress, heroTagline: siteHeroTagline, statProperties: siteStatProps, statHealthcarePros: siteStatPros, statHospitalPartnerships: siteStatHospitals, statAverageRating: siteStatRating, emailPopupEnabled: popupEnabled, emailPopupDelay: Number(popupDelay) || 5, emailPopupScrollTrigger: Number(popupScroll) || 50, emailPopupHeading: popupHeading, emailPopupSubtext: popupSubtext } }) });
+              await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw, settings: { contactEmail: siteEmail, companyAddress: siteAddress, heroTagline: siteHeroTagline, statProperties: siteStatProps, statHealthcarePros: siteStatPros, statHospitalPartnerships: siteStatHospitals, statAverageRating: siteStatRating, bannerEnabled: bannerEnabled, bannerText: bannerText, bannerButtonText: bannerButtonText, bannerLinkUrl: bannerLinkUrl } }) });
               setSaving(null);
               setSettingsSaved(true);
               setTimeout(() => setSettingsSaved(false), 2000);
