@@ -42,21 +42,20 @@ function generateDescription(cl: CustomListing): string {
   lines.push("The space");
   lines.push(`${bedDetails(cl.beds)}. Clean, well-maintained, and professionally managed between every guest.`);
   lines.push("");
-  lines.push("Full kitchen for meal prep between shifts — no more $30/day Uber Eats.");
-  lines.push("In-unit washer and dryer — your scrubs are clean without a midnight laundromat run.");
-  lines.push("Dedicated workspace for charting and documentation.");
+  lines.push("Full kitchen for meal prep.");
+  lines.push("In-unit washer and dryer.");
+  lines.push("Dedicated workspace.");
   lines.push("High-speed WiFi throughout.");
-  lines.push("Smart TV with streaming for your days off.");
-  if (cl.soakingTub) lines.push("Deep soaking tub for post-shift recovery.");
-  if (cl.beds === 0) lines.push("Cozy studio layout perfect for solo assignments.");
+  lines.push("Smart TV with streaming.");
+  lines.push("Pet friendly.");
+  if (cl.soakingTub) lines.push("Deep soaking tub.");
   lines.push("");
   lines.push("The CareStay Standard");
-  lines.push("Every suite comes with: blue light blocking glasses, spare scrubs (S/M/L), shiatsu foot massager, blackout curtains, white noise machine, and a massage gun. Waiting for you on arrival.");
+  lines.push("Every suite comes with: blue light blocking glasses, spare scrubs (S/M/L), shiatsu foot massager, blackout curtains, white noise machine, and a massage gun.");
   lines.push("");
   lines.push("Things to know");
-  lines.push("- Month-to-month — no lease trap if your contract changes");
-  lines.push("- All-in pricing — the number you see is the number you pay");
-  lines.push("- Video walkthrough available before you commit");
+  lines.push("- Month-to-month, no long-term lease required");
+  lines.push("- All-in pricing");
   lines.push("- Non-smoking property");
   lines.push("- Quiet hours 10pm-8am");
 
@@ -66,6 +65,7 @@ function generateDescription(cl: CustomListing): string {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const password = searchParams.get("password");
+  const force = searchParams.get("force") !== "false";
 
   if (password !== "carestay2026") {
     return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
@@ -80,7 +80,7 @@ export async function GET(request: Request) {
     const updated: string[] = [];
 
     for (const cl of data.customListings) {
-      if (!cl.description || cl.description.length < 200) {
+      if (force || !cl.description || cl.description.length < 200) {
         cl.description = generateDescription(cl);
         updated.push(cl.title);
       }

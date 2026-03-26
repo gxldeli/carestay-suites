@@ -434,7 +434,7 @@ export default function AdminPage() {
                     <tr key={l.id} onClick={() => setExpandedId(isExpanded ? null : l.id)} style={{ cursor: "pointer" }}>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          {l.img && <img src={l.img} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} />}
+                          {l.img && <img src={l.img} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect fill='%23222' width='40' height='40'/%3E%3Ctext x='50%25' y='50%25' fill='%23555' font-size='14' text-anchor='middle' dy='.35em'%3E?%3C/text%3E%3C/svg%3E"; }} />}
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 14 }}>{ov.titleOverride || l.title}</div>
                             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>ID: {l.id} {isExpanded ? "▲" : "▼"}</div>
@@ -544,7 +544,7 @@ export default function AdminPage() {
                     <tr key={cl.id} onClick={() => editingCustomId === cl.id ? setEditingCustomId(null) : openEditCustom(cl)} style={{ cursor: "pointer" }}>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          {cl.images?.[0] && <img src={cl.images[0]} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} />}
+                          {cl.images?.[0] && <img src={cl.images[0]} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect fill='%23222' width='40' height='40'/%3E%3Ctext x='50%25' y='50%25' fill='%23555' font-size='14' text-anchor='middle' dy='.35em'%3E?%3C/text%3E%3C/svg%3E"; }} />}
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 14 }}>{cl.title}</div>
                             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{cl.beds}bd / {cl.baths}ba / {cl.sqft}sqft {editingCustomId === cl.id ? "▲" : "▼"}</div>
@@ -596,7 +596,7 @@ export default function AdminPage() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
                       {editImg.split("\n").filter(s => s.trim()).map((url, i, arr) => (
                         <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", background: i === 0 ? "rgba(0,255,170,0.06)" : "rgba(255,255,255,0.02)", border: i === 0 ? "1px solid rgba(0,255,170,0.15)" : "1px solid rgba(255,255,255,0.06)", borderRadius: 8 }}>
-                          <img src={url.trim()} alt={`Photo ${i + 1}`} style={{ width: 64, height: 44, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} />
+                          <img src={url.trim()} alt={`Photo ${i + 1}`} style={{ width: 64, height: 44, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='44'%3E%3Crect fill='%23222' width='64' height='44'/%3E%3Ctext x='50%25' y='50%25' fill='%23f66' font-size='10' text-anchor='middle' dy='.35em'%3EBroken%3C/text%3E%3C/svg%3E"; }} />
                           <span style={{ fontSize: 11, color: i === 0 ? "#0fa" : "rgba(255,255,255,0.4)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{i === 0 ? "Cover · " : ""}{url.trim().split("/").pop()}</span>
                           <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
                             <button disabled={i === 0} onClick={() => { const lines = editImg.split("\n").filter(s => s.trim()); [lines[i - 1], lines[i]] = [lines[i], lines[i - 1]]; setEditImg(lines.join("\n")); }} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: i === 0 ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 11, padding: "2px 6px", cursor: i === 0 ? "default" : "pointer", fontFamily: "inherit" }}>▲</button>
@@ -669,7 +669,7 @@ export default function AdminPage() {
             {newImg.trim() && (
               <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                 {newImg.split("\n").filter(s => s.trim()).map((url, i) => (
-                  <img key={i} src={url.trim()} alt={`Preview ${i + 1}`} style={{ width: 60, height: 42, objectFit: "cover", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }} />
+                  <img key={i} src={url.trim()} alt={`Preview ${i + 1}`} style={{ width: 60, height: 42, objectFit: "cover", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='42'%3E%3Crect fill='%23222' width='60' height='42'/%3E%3Ctext x='50%25' y='50%25' fill='%23f66' font-size='10' text-anchor='middle' dy='.35em'%3EBroken%3C/text%3E%3C/svg%3E"; }} />
                 ))}
               </div>
             )}
