@@ -1,25 +1,49 @@
 import { NextResponse } from "next/server";
 import { getListing, extractAmenityNames, extractBedroomCount } from "@/app/lib/hostaway";
+import { redis } from "@/app/lib/redis";
+
+interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean; sortOrder?: number; featured?: boolean }
+interface OverridesData { listings: Record<string, unknown>; customListings: CustomListing[] }
 
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
-  const id = parseInt(params.id, 10);
-  if (isNaN(id)) {
-    return NextResponse.json(
-      { status: "error", message: "Invalid listing ID" },
-      { status: 400 }
-    );
-  }
+  const rawId = params.id;
 
   try {
+    // Check if this is a custom listing (string ID like "custom-...")
+    if (rawId.startsWith("custom-")) {
+      const overrides = (await redis.get<OverridesData>("admin:overrides")) || { listings: {}, customListings: [] };
+      const cl = overrides.customListings.find(c => c.id === rawId);
+      if (!cl) {
+        return NextResponse.json({ status: "error", message: "Listing not found" }, { status: 404 });
+      }
+      return NextResponse.json({
+        status: "success",
+        listing: {
+          id: cl.id, title: cl.title, location: cl.location, beds: cl.beds, baths: cl.baths,
+          price: cl.price, sqft: cl.sqft, img: cl.images?.[0] || cl.img,
+          images: cl.images?.length ? cl.images : (cl.img ? [cl.img] : []),
+          description: cl.description, available: true, amenities: [],
+          address: "", latitude: 0, longitude: 0,
+          maxGuests: cl.beds * 2 || 2, bedrooms: cl.beds || 1,
+          soakingTub: cl.soakingTub, carestayStandard: cl.carestayStandard,
+          nearbyHospital: cl.nearbyHospital, hospitalDistance: cl.hospitalDistance,
+          sortOrder: cl.sortOrder ?? 50, featured: cl.featured || false, videoUrl: "", isCustom: true,
+        },
+      });
+    }
+
+    // HostAway listing (numeric ID)
+    const id = parseInt(rawId, 10);
+    if (isNaN(id)) {
+      return NextResponse.json({ status: "error", message: "Invalid listing ID" }, { status: 400 });
+    }
+
     const listing = await getListing(id);
     if (!listing) {
-      return NextResponse.json(
-        { status: "error", message: "Listing not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ status: "error", message: "Listing not found" }, { status: 404 });
     }
 
     const transformed = {

@@ -66,6 +66,8 @@ export async function GET(request: Request) {
       address: "",
       latitude: 0,
       longitude: 0,
+      maxGuests: cl.beds * 2 || 2,
+      bedrooms: cl.beds || 1,
       soakingTub: cl.soakingTub,
       carestayStandard: cl.carestayStandard,
       hidden: false,
@@ -73,6 +75,7 @@ export async function GET(request: Request) {
       hospitalDistance: cl.hospitalDistance,
       sortOrder: cl.sortOrder ?? 50,
       featured: cl.featured || false,
+      videoUrl: "",
       isCustom: true,
     }));
 
