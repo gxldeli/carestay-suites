@@ -133,6 +133,71 @@ export default function AdminPage() {
   const [newStandard, setNewStandard] = useState(false);
   const [newFeatured, setNewFeatured] = useState(false);
 
+  // Edit custom listing state
+  const [editingCustomId, setEditingCustomId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [editBeds, setEditBeds] = useState("1");
+  const [editBaths, setEditBaths] = useState("1");
+  const [editPrice, setEditPrice] = useState("");
+  const [editSqft, setEditSqft] = useState("");
+  const [editImg, setEditImg] = useState("");
+  const [editHospital, setEditHospital] = useState("");
+  const [editDistance, setEditDistance] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editTub, setEditTub] = useState(false);
+  const [editStandard, setEditStandard] = useState(false);
+  const [editFeatured, setEditFeatured] = useState(false);
+  const [editSortOrder, setEditSortOrder] = useState("50");
+
+  const openEditCustom = (cl: CustomListing) => {
+    setEditingCustomId(cl.id);
+    setEditTitle(cl.title);
+    setEditLocation(cl.location);
+    setEditBeds(String(cl.beds));
+    setEditBaths(String(cl.baths));
+    setEditPrice(String(cl.price));
+    setEditSqft(String(cl.sqft));
+    setEditImg((cl.images || []).join("\n"));
+    setEditHospital(cl.nearbyHospital || "");
+    setEditDistance(cl.hospitalDistance || "");
+    setEditDesc(cl.description || "");
+    setEditTub(!!cl.soakingTub);
+    setEditStandard(!!cl.carestayStandard);
+    setEditFeatured(!!cl.featured);
+    setEditSortOrder(String(cl.sortOrder ?? 50));
+  };
+
+  const saveEditCustom = async () => {
+    if (!editingCustomId || !editTitle || !editPrice) return alert("Title and price required");
+    const imgLines = editImg.split("\n").map(s => s.trim()).filter(Boolean);
+    setSaving("editCustom");
+    await adminPost("updateCustomListing", {
+      id: editingCustomId,
+      title: editTitle, location: editLocation, beds: Number(editBeds), baths: Number(editBaths),
+      price: Number(editPrice), sqft: Number(editSqft), img: imgLines[0] || "", images: imgLines,
+      description: editDesc, nearbyHospital: editHospital, hospitalDistance: editDistance,
+      soakingTub: editTub, carestayStandard: editStandard, featured: editFeatured, sortOrder: Number(editSortOrder),
+    });
+    setSaving(null);
+    setEditingCustomId(null);
+  };
+
+  const moveCustomListing = async (id: string, direction: "up" | "down") => {
+    const idx = overrides.customListings.findIndex(cl => cl.id === id);
+    if (idx === -1) return;
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= overrides.customListings.length) return;
+    const a = overrides.customListings[idx];
+    const b = overrides.customListings[swapIdx];
+    const aSort = a.sortOrder ?? 50;
+    const bSort = b.sortOrder ?? 50;
+    setSaving("moveCustom");
+    await adminPost("updateCustomListing", { id: a.id, sortOrder: bSort });
+    await adminPost("updateCustomListing", { id: b.id, sortOrder: aSort });
+    setSaving(null);
+  };
+
   const storedPw = typeof window !== "undefined" ? sessionStorage.getItem(PW_KEY) : null;
 
   useEffect(() => {
@@ -469,24 +534,34 @@ export default function AdminPage() {
                     <th style={thStyle}>Location</th>
                     <th style={thStyle}>Price</th>
                     <th style={thStyle}>Hospital</th>
-                    <th style={thStyle}>Tub</th>
-                    <th style={thStyle}>CS Std</th>
+                    <th style={thStyle}>Sort</th>
+                    <th style={thStyle}>Move</th>
                     <th style={thStyle}></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {overrides.customListings.map((cl) => (
-                    <tr key={cl.id}>
+                  {overrides.customListings.map((cl, idx) => (
+                    <tr key={cl.id} onClick={() => editingCustomId === cl.id ? setEditingCustomId(null) : openEditCustom(cl)} style={{ cursor: "pointer" }}>
                       <td style={tdStyle}>
-                        <div style={{ fontWeight: 600, fontSize: 14 }}>{cl.title}</div>
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{cl.beds}bd / {cl.baths}ba / {cl.sqft}sqft</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          {cl.images?.[0] && <img src={cl.images[0]} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} />}
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: 14 }}>{cl.title}</div>
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{cl.beds}bd / {cl.baths}ba / {cl.sqft}sqft {editingCustomId === cl.id ? "▲" : "▼"}</div>
+                          </div>
+                        </div>
                       </td>
                       <td style={tdStyle}>{cl.location}</td>
                       <td style={tdStyle}>${cl.price.toLocaleString()}/mo</td>
                       <td style={tdStyle}>{cl.nearbyHospital}{cl.hospitalDistance ? ` (${cl.hospitalDistance})` : ""}</td>
-                      <td style={tdStyle}>{cl.soakingTub ? "Yes" : "No"}</td>
-                      <td style={tdStyle}>{cl.carestayStandard ? "Yes" : "No"}</td>
-                      <td style={tdStyle}>
+                      <td style={tdStyle}>{cl.sortOrder ?? 50}</td>
+                      <td style={tdStyle} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button disabled={idx === 0} onClick={() => moveCustomListing(cl.id, "up")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: idx === 0 ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 12, padding: "2px 8px", cursor: idx === 0 ? "default" : "pointer", fontFamily: "inherit" }}>▲</button>
+                          <button disabled={idx === overrides.customListings.length - 1} onClick={() => moveCustomListing(cl.id, "down")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: idx === overrides.customListings.length - 1 ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 12, padding: "2px 8px", cursor: idx === overrides.customListings.length - 1 ? "default" : "pointer", fontFamily: "inherit" }}>▼</button>
+                        </div>
+                      </td>
+                      <td style={tdStyle} onClick={e => e.stopPropagation()}>
                         <button onClick={() => deleteCustom(cl.id)} style={{ background: "rgba(255,77,77,0.15)", color: "#f66", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>Delete</button>
                       </td>
                     </tr>
@@ -495,6 +570,63 @@ export default function AdminPage() {
               </table>
             </div>
           )}
+          {/* Expanded edit form for custom listing */}
+          {editingCustomId && (() => {
+            const cl = overrides.customListings.find(x => x.id === editingCustomId);
+            if (!cl) return null;
+            return (
+              <div style={{ background: "rgba(0,255,170,0.03)", border: "1px solid rgba(0,255,170,0.1)", borderRadius: 12, padding: 20, marginBottom: 24 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0fa" }}>Edit: {cl.title}</h3>
+                  <button onClick={() => setEditingCustomId(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 18, cursor: "pointer" }}>✕</button>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Title *</label><input style={inputStyle} value={editTitle} onChange={e => setEditTitle(e.target.value)} /></div>
+                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Location</label><input style={inputStyle} value={editLocation} onChange={e => setEditLocation(e.target.value)} /></div>
+                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Beds</label><input style={inputStyle} type="number" value={editBeds} onChange={e => setEditBeds(e.target.value)} /></div>
+                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Baths</label><input style={inputStyle} type="number" value={editBaths} onChange={e => setEditBaths(e.target.value)} /></div>
+                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Monthly Price * ($)</label><input style={inputStyle} type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} /></div>
+                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Sqft</label><input style={inputStyle} type="number" value={editSqft} onChange={e => setEditSqft(e.target.value)} /></div>
+                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Nearby Hospital</label><input style={inputStyle} value={editHospital} onChange={e => setEditHospital(e.target.value)} /></div>
+                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Hospital Distance</label><input style={inputStyle} value={editDistance} onChange={e => setEditDistance(e.target.value)} /></div>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Image URLs (one per line)</label>
+                  <textarea style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} value={editImg} onChange={e => setEditImg(e.target.value)} />
+                  {editImg.trim() && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                      {editImg.split("\n").filter(s => s.trim()).map((url, i) => (
+                        <img key={i} src={url.trim()} alt={`Preview ${i + 1}`} style={{ width: 60, height: 42, objectFit: "cover", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Description</label>
+                  <textarea style={{ ...inputStyle, minHeight: 100, resize: "vertical" }} value={editDesc} onChange={e => setEditDesc(e.target.value)} />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12, marginBottom: 12 }}>
+                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Sort Order</label><input style={{ ...inputStyle, width: 100 }} type="number" value={editSortOrder} onChange={e => setEditSortOrder(e.target.value)} /></div>
+                </div>
+                <div style={{ display: "flex", gap: 24, marginBottom: 16 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+                    <Toggle checked={editTub} onChange={setEditTub} /> Soaking Tub
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+                    <Toggle checked={editStandard} onChange={setEditStandard} /> CareStay Standard
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+                    <Toggle checked={editFeatured} onChange={setEditFeatured} /> <span style={{ color: "#f0c040" }}>Featured</span>
+                  </label>
+                </div>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <button onClick={saveEditCustom} style={btnStyle} disabled={saving === "editCustom"}>{saving === "editCustom" ? "Saving..." : "Save Changes"}</button>
+                  <button onClick={() => setEditingCustomId(null)} style={{ padding: "10px 20px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+                  {saving === "editCustom" && <span style={{ fontSize: 12, color: "#0fa" }}>Saving...</span>}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Quick Add Showcase */}
           <div style={{ marginBottom: 20, padding: "14px 16px", background: "rgba(0,170,255,0.04)", border: "1px solid rgba(0,170,255,0.12)", borderRadius: 10 }}>
