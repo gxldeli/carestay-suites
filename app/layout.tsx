@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div style={{ marginTop: 16, fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 22, color: "#fff", opacity: 0.9 }}>CareStay <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.5)" }}>Suites</span></div>
         </div>
         <style dangerouslySetInnerHTML={{ __html: `@keyframes splashPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.85;transform:scale(1.04)}}` }} />
-        <script dangerouslySetInnerHTML={{ __html: `window.addEventListener('load',function(){var s=document.getElementById('splash');if(s){s.style.opacity='0';setTimeout(function(){s.style.display='none'},400)}})` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var d=0;function h(){if(d)return;d=1;var s=document.getElementById('splash');if(!s)return;s.style.opacity='0';setTimeout(function(){if(s.parentNode)s.parentNode.removeChild(s)},500)}document.addEventListener('DOMContentLoaded',h);window.addEventListener('load',h);setTimeout(h,3000)})()` }} />
         {children}
         <EmailPopup />
         <Analytics />
