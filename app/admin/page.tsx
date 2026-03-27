@@ -45,6 +45,8 @@ interface CustomListing {
   carestayStandard: boolean;
   sortOrder?: number;
   featured?: boolean;
+  videoUrl?: string;
+  hidden?: boolean;
 }
 
 interface ReviewItem {
@@ -149,6 +151,8 @@ export default function AdminPage() {
   const [editStandard, setEditStandard] = useState(false);
   const [editFeatured, setEditFeatured] = useState(false);
   const [editSortOrder, setEditSortOrder] = useState("50");
+  const [editVideoUrl, setEditVideoUrl] = useState("");
+  const [editHidden, setEditHidden] = useState(false);
 
   const openEditCustom = (cl: CustomListing) => {
     setEditingCustomId(cl.id);
@@ -166,6 +170,8 @@ export default function AdminPage() {
     setEditStandard(!!cl.carestayStandard);
     setEditFeatured(!!cl.featured);
     setEditSortOrder(String(cl.sortOrder ?? 50));
+    setEditVideoUrl(cl.videoUrl || "");
+    setEditHidden(!!cl.hidden);
   };
 
   const saveEditCustom = async () => {
@@ -178,6 +184,7 @@ export default function AdminPage() {
       price: Number(editPrice), sqft: Number(editSqft), img: imgLines[0] || "", images: imgLines,
       description: editDesc, nearbyHospital: editHospital, hospitalDistance: editDistance,
       soakingTub: editTub, carestayStandard: editStandard, featured: editFeatured, sortOrder: Number(editSortOrder),
+      videoUrl: editVideoUrl, hidden: editHidden,
     });
     setSaving(null);
     setEditingCustomId(null);
@@ -616,10 +623,17 @@ export default function AdminPage() {
                   <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Description</label>
                   <textarea style={{ ...inputStyle, minHeight: 100, resize: "vertical" }} value={editDesc} onChange={e => setEditDesc(e.target.value)} />
                 </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Video Walkthrough URL</label>
+                  <input style={inputStyle} value={editVideoUrl} onChange={e => setEditVideoUrl(e.target.value)} placeholder="e.g., https://www.youtube.com/watch?v=ABC123" />
+                </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12, marginBottom: 12 }}>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Sort Order</label><input style={{ ...inputStyle, width: 100 }} type="number" value={editSortOrder} onChange={e => setEditSortOrder(e.target.value)} /></div>
                 </div>
-                <div style={{ display: "flex", gap: 24, marginBottom: 16 }}>
+                <div style={{ display: "flex", gap: 24, marginBottom: 16, flexWrap: "wrap" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+                    <Toggle checked={!editHidden} onChange={v => setEditHidden(!v)} /> Visible
+                  </label>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
                     <Toggle checked={editTub} onChange={setEditTub} /> Soaking Tub
                   </label>

@@ -4,7 +4,7 @@ import { redis } from "@/app/lib/redis";
 
 // Upstash Redis overrides store
 interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string; sortOrder?: number; featured?: boolean; videoUrl?: string }
-interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean; sortOrder?: number; featured?: boolean }
+interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean; sortOrder?: number; featured?: boolean; videoUrl?: string; hidden?: boolean }
 interface OverridesData { listings: Record<string, ListingOverride>; customListings: CustomListing[] }
 
 const GTA_HOSPITALS = [
@@ -104,14 +104,14 @@ export async function GET(request: Request) {
       bedrooms: cl.beds || 1,
       soakingTub: cl.soakingTub,
       carestayStandard: cl.carestayStandard,
-      hidden: false,
+      hidden: cl.hidden || false,
       nearbyHospital: cl.nearbyHospital,
       hospitalDistance: cl.hospitalDistance,
       sortOrder: cl.sortOrder ?? 50,
       featured: cl.featured || false,
-      videoUrl: "",
+      videoUrl: cl.videoUrl || "",
       isCustom: true,
-    }));
+    })).filter((l) => includeHidden || !l.hidden);
 
     const all = [...transformed, ...custom].sort((a, b) => (a.sortOrder ?? 50) - (b.sortOrder ?? 50));
 
