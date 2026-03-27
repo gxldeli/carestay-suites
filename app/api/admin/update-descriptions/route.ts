@@ -18,6 +18,8 @@ interface CustomListing {
   carestayStandard: boolean;
   sortOrder?: number;
   featured?: boolean;
+  videoUrl?: string;
+  hidden?: boolean;
 }
 
 interface OverridesData {
