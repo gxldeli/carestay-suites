@@ -153,6 +153,7 @@ export default function AdminPage() {
   const [editSortOrder, setEditSortOrder] = useState("50");
   const [editVideoUrl, setEditVideoUrl] = useState("");
   const [editHidden, setEditHidden] = useState(false);
+  const [addPhotoInput, setAddPhotoInput] = useState("");
 
   const openEditCustom = (cl: CustomListing) => {
     setEditingCustomId(cl.id);
@@ -172,6 +173,7 @@ export default function AdminPage() {
     setEditSortOrder(String(cl.sortOrder ?? 50));
     setEditVideoUrl(cl.videoUrl || "");
     setEditHidden(!!cl.hidden);
+    setAddPhotoInput("");
   };
 
   const saveEditCustom = async () => {
@@ -615,8 +617,8 @@ export default function AdminPage() {
                     </div>
                   )}
                   <div style={{ display: "flex", gap: 8 }}>
-                    <input id="addPhotoUrl" style={{ ...inputStyle, flex: 1 }} placeholder="Paste new image URL..." onKeyDown={e => { if (e.key === "Enter") { const inp = e.target as HTMLInputElement; if (inp.value.trim()) { setEditImg(prev => (prev.trim() ? prev.trim() + "\n" : "") + inp.value.trim()); inp.value = ""; } } }} />
-                    <button onClick={() => { const inp = document.getElementById("addPhotoUrl") as HTMLInputElement; if (inp?.value.trim()) { setEditImg(prev => (prev.trim() ? prev.trim() + "\n" : "") + inp.value.trim()); inp.value = ""; } }} style={{ ...btnStyle, padding: "8px 16px", fontSize: 12 }}>Add</button>
+                    <input style={{ ...inputStyle, flex: 1 }} placeholder="Paste new image URL..." value={addPhotoInput} onChange={e => setAddPhotoInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && addPhotoInput.trim()) { setEditImg(prev => (prev.trim() ? prev.trim() + "\n" : "") + addPhotoInput.trim()); setAddPhotoInput(""); } }} />
+                    <button onClick={() => { if (addPhotoInput.trim()) { setEditImg(prev => (prev.trim() ? prev.trim() + "\n" : "") + addPhotoInput.trim()); setAddPhotoInput(""); } }} style={{ ...btnStyle, padding: "8px 16px", fontSize: 12 }}>Add</button>
                   </div>
                 </div>
                 <div style={{ marginBottom: 12 }}>
