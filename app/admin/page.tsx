@@ -92,9 +92,45 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   );
 }
 
+function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+  if (!open) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }} />
+      <div style={{ position: "relative", background: "#12151a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: 28, width: "90%", maxWidth: 720, maxHeight: "80vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>{title}</h3>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.06)", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 18, cursor: "pointer", padding: "4px 10px", borderRadius: 6 }}>✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status?: string }) {
+  const s = status || "Available";
+  const map: Record<string, { bg: string; color: string }> = {
+    "Available": { bg: "rgba(0,255,170,0.15)", color: "#0fa" },
+    "Almost Booked": { bg: "rgba(255,160,0,0.15)", color: "#ffa000" },
+    "Waitlist Only": { bg: "rgba(0,140,255,0.15)", color: "#08f" },
+    "Booked": { bg: "rgba(255,60,60,0.15)", color: "#f66" },
+  };
+  const c = map[s] || map["Available"];
+  return <span style={{ background: c.bg, color: c.color, padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>{s}</span>;
+}
+
+const TABS = [
+  { key: "settings", label: "Site Settings" },
+  { key: "hostaway", label: "HostAway Listings" },
+  { key: "custom", label: "Custom Listings" },
+  { key: "reviews", label: "Reviews" },
+] as const;
+
 export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("settings");
   const [listings, setListings] = useState<ApiListing[]>([]);
   const [overrides, setOverrides] = useState<OverridesData>({ listings: {}, customListings: [], reviews: {} });
   const [reviewListingId, setReviewListingId] = useState<string | null>(null);
@@ -344,13 +380,25 @@ export default function AdminPage() {
             <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700 }}>CareStay Admin</h1>
             <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>{listings.length} HostAway listings &middot; {overrides.customListings.length} custom listings</p>
           </div>
-          <button onClick={() => { sessionStorage.removeItem(PW_KEY); setAuthed(false); }} style={{ padding: "8px 16px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-            Log Out
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={async () => { if (confirm("Reset ALL featured flags to OFF for every listing?")) { await adminPost("resetAllFeatured", {}); alert("All featured flags reset. Reload to see changes."); window.location.reload(); } }} style={{ padding: "8px 16px", background: "rgba(255,77,77,0.15)", color: "#f66", border: "1px solid rgba(255,77,77,0.2)", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>
+              Reset All Featured
+            </button>
+            <button onClick={() => { sessionStorage.removeItem(PW_KEY); setAuthed(false); }} style={{ padding: "8px 16px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+              Log Out
+            </button>
+          </div>
         </div>
 
-        {/* Site Settings */}
-        <div style={cardStyle}>
+        {/* Tab Navigation */}
+        <div style={{ display: "flex", gap: 0, marginBottom: 28, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setActiveTab(t.key)} style={{ padding: "12px 24px", background: "none", border: "none", borderBottom: activeTab === t.key ? "2px solid #14b8a6" : "2px solid transparent", color: activeTab === t.key ? "#14b8a6" : "rgba(255,255,255,0.45)", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}>{t.label}</button>
+          ))}
+        </div>
+
+        {/* ═══ TAB: Site Settings ═══ */}
+        {activeTab === "settings" && <div style={cardStyle}>
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Site Settings</h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
             <div>
@@ -420,59 +468,44 @@ export default function AdminPage() {
             </button>
             {settingsSaved && <span style={{ fontSize: 13, color: "#0fa" }}>Saved!</span>}
           </div>
-        </div>
+        </div>}
 
-        {/* HostAway Listings Table */}
-        <div style={cardStyle}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>HostAway Listings</h2>
+        {/* ═══ TAB: HostAway Listings ═══ */}
+        {activeTab === "hostaway" && <div style={cardStyle}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>HostAway Listings ({listings.length})</h2>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
                   <th style={thStyle}>Listing</th>
                   <th style={thStyle}>Location</th>
-                  <th style={thStyle}>API Price</th>
-                  <th style={thStyle}>Override $/mo</th>
-                  <th style={thStyle}>Sort</th>
+                  <th style={thStyle}>Price</th>
+                  <th style={thStyle}>Status</th>
                   <th style={thStyle}>Featured</th>
                   <th style={thStyle}>Visible</th>
-                  <th style={thStyle}>Soaking Tub</th>
-                  <th style={thStyle}>CareStay Std</th>
+                  <th style={thStyle}></th>
                 </tr>
               </thead>
               <tbody>
                 {listings.map((l) => {
                   const ov = overrides.listings[String(l.id)] || {};
-                  const isExpanded = expandedId === l.id;
                   return (
-                    <tr key={l.id} onClick={() => setExpandedId(isExpanded ? null : l.id)} style={{ cursor: "pointer" }}>
+                    <tr key={l.id}>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           {l.img && <img src={l.img} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect fill='%23222' width='40' height='40'/%3E%3Ctext x='50%25' y='50%25' fill='%23555' font-size='14' text-anchor='middle' dy='.35em'%3E?%3C/text%3E%3C/svg%3E"; }} />}
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 14 }}>{ov.titleOverride || l.title}</div>
-                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>ID: {l.id} {isExpanded ? "▲" : "▼"}</div>
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>ID: {l.id}</div>
                           </div>
                         </div>
                       </td>
                       <td style={tdStyle}>{l.location}</td>
-                      <td style={tdStyle}>${l.price.toLocaleString()}</td>
-                      <td style={tdStyle} onClick={e => e.stopPropagation()}>
-                        <input
-                          type="number" placeholder="—"
-                          value={ov.priceOverride ?? ""}
-                          onChange={(e) => updateOverride(l.id, "priceOverride", e.target.value ? Number(e.target.value) : undefined)}
-                          style={{ ...inputStyle, width: 100, padding: "6px 10px" }}
-                        />
-                        {saving === `${l.id}-priceOverride` && <span style={{ fontSize: 10, color: "#0fa", marginLeft: 4 }}>saving...</span>}
-                      </td>
-                      <td style={tdStyle} onClick={e => e.stopPropagation()}>
-                        <input type="number" min="1" max="99" value={ov.sortOrder ?? 50} onChange={(e) => updateOverride(l.id, "sortOrder", e.target.value ? Number(e.target.value) : 50)} style={{ ...inputStyle, width: 56, padding: "4px 6px", textAlign: "center" }} />
-                      </td>
+                      <td style={tdStyle}>{ov.priceOverride ? `$${ov.priceOverride.toLocaleString()}` : `$${l.price.toLocaleString()}`}/mo</td>
+                      <td style={tdStyle}><StatusBadge status={ov.availabilityStatus} /></td>
                       <td style={tdStyle} onClick={e => e.stopPropagation()}><Toggle checked={!!ov.featured} onChange={(v) => updateOverride(l.id, "featured", v)} /></td>
                       <td style={tdStyle} onClick={e => e.stopPropagation()}><Toggle checked={!ov.hidden} onChange={(v) => updateOverride(l.id, "hidden", !v)} /></td>
-                      <td style={tdStyle} onClick={e => e.stopPropagation()}><Toggle checked={!!ov.soakingTub} onChange={(v) => updateOverride(l.id, "soakingTub", v)} /></td>
-                      <td style={tdStyle} onClick={e => e.stopPropagation()}><Toggle checked={!!ov.carestayStandard} onChange={(v) => updateOverride(l.id, "carestayStandard", v)} /></td>
+                      <td style={tdStyle}><button onClick={() => setExpandedId(l.id)} style={{ background: "rgba(0,170,255,0.12)", color: "#0af", border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Edit</button></td>
                     </tr>
                   );
                 })}
@@ -480,16 +513,12 @@ export default function AdminPage() {
               {/* Expanded Edit Form — rendered outside table */}
             </table>
           </div>
-          {expandedId !== null && (() => {
-            const l = listings.find(x => x.id === expandedId);
+          {(() => {
+            const l = expandedId !== null ? listings.find(x => x.id === expandedId) : null;
             if (!l) return null;
             const ov = overrides.listings[String(l.id)] || {};
             return (
-              <div style={{ background: "rgba(0,255,170,0.03)", border: "1px solid rgba(0,255,170,0.1)", borderRadius: 12, padding: 20, marginTop: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0fa" }}>Edit: {l.title}</h3>
-                  <button onClick={() => setExpandedId(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 18, cursor: "pointer" }}>✕</button>
-                </div>
+              <Modal open={true} onClose={() => setExpandedId(null)} title={`Edit: ${ov.titleOverride || l.title}`}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                   <div>
                     <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Title Override</label>
@@ -540,13 +569,13 @@ export default function AdminPage() {
                   </label>
                   {saving === `${expandedId}-expanded` && <span style={{ fontSize: 12, color: "#0fa" }}>Saving...</span>}
                 </div>
-              </div>
+              </Modal>
             );
           })()}
-        </div>
+        </div>}
 
-        {/* Custom Listings */}
-        <div style={cardStyle}>
+        {/* ═══ TAB: Custom Listings ═══ */}
+        {activeTab === "custom" && <div style={cardStyle}>
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Custom Listings</h2>
           {overrides.customListings.length > 0 && (
             <div style={{ overflowX: "auto", marginBottom: 24 }}>
@@ -556,36 +585,41 @@ export default function AdminPage() {
                     <th style={thStyle}>Listing</th>
                     <th style={thStyle}>Location</th>
                     <th style={thStyle}>Price</th>
-                    <th style={thStyle}>Hospital</th>
-                    <th style={thStyle}>Sort</th>
-                    <th style={thStyle}>Move</th>
-                    <th style={thStyle}></th>
+                    <th style={thStyle}>Status</th>
+                    <th style={thStyle}>Featured</th>
+                    <th style={thStyle}>Visible</th>
+                    <th style={thStyle}>Order</th>
+                    <th style={thStyle}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {overrides.customListings.map((cl, idx) => (
-                    <tr key={cl.id} onClick={() => editingCustomId === cl.id ? setEditingCustomId(null) : openEditCustom(cl)} style={{ cursor: "pointer" }}>
+                    <tr key={cl.id}>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           {cl.images?.[0] && <img src={cl.images[0]} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect fill='%23222' width='40' height='40'/%3E%3Ctext x='50%25' y='50%25' fill='%23555' font-size='14' text-anchor='middle' dy='.35em'%3E?%3C/text%3E%3C/svg%3E"; }} />}
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 14 }}>{cl.title}</div>
-                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{cl.beds}bd / {cl.baths}ba / {cl.sqft}sqft {editingCustomId === cl.id ? "▲" : "▼"}</div>
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{cl.beds}bd / {cl.baths}ba</div>
                           </div>
                         </div>
                       </td>
                       <td style={tdStyle}>{cl.location}</td>
                       <td style={tdStyle}>${cl.price.toLocaleString()}/mo</td>
-                      <td style={tdStyle}>{cl.nearbyHospital}{cl.hospitalDistance ? ` (${cl.hospitalDistance})` : ""}</td>
-                      <td style={tdStyle}>{cl.sortOrder ?? 50}</td>
-                      <td style={tdStyle} onClick={e => e.stopPropagation()}>
+                      <td style={tdStyle}><StatusBadge status={cl.availabilityStatus} /></td>
+                      <td style={tdStyle}><Toggle checked={!!cl.featured} onChange={async (v) => { await adminPost("updateCustomListing", { id: cl.id, featured: v }); }} /></td>
+                      <td style={tdStyle}><Toggle checked={!cl.hidden} onChange={async (v) => { await adminPost("updateCustomListing", { id: cl.id, hidden: !v }); }} /></td>
+                      <td style={tdStyle}>
                         <div style={{ display: "flex", gap: 4 }}>
                           <button disabled={idx === 0} onClick={() => moveCustomListing(cl.id, "up")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: idx === 0 ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 12, padding: "2px 8px", cursor: idx === 0 ? "default" : "pointer", fontFamily: "inherit" }}>▲</button>
                           <button disabled={idx === overrides.customListings.length - 1} onClick={() => moveCustomListing(cl.id, "down")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: idx === overrides.customListings.length - 1 ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 12, padding: "2px 8px", cursor: idx === overrides.customListings.length - 1 ? "default" : "pointer", fontFamily: "inherit" }}>▼</button>
                         </div>
                       </td>
-                      <td style={tdStyle} onClick={e => e.stopPropagation()}>
-                        <button onClick={() => deleteCustom(cl.id)} style={{ background: "rgba(255,77,77,0.15)", color: "#f66", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>Delete</button>
+                      <td style={tdStyle}>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button onClick={() => openEditCustom(cl)} style={{ background: "rgba(0,170,255,0.12)", color: "#0af", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Edit</button>
+                          <button onClick={() => deleteCustom(cl.id)} style={{ background: "rgba(255,77,77,0.12)", color: "#f66", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Delete</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -598,11 +632,7 @@ export default function AdminPage() {
             const cl = overrides.customListings.find(x => x.id === editingCustomId);
             if (!cl) return null;
             return (
-              <div style={{ background: "rgba(0,255,170,0.03)", border: "1px solid rgba(0,255,170,0.1)", borderRadius: 12, padding: 20, marginBottom: 24 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0fa" }}>Edit: {cl.title}</h3>
-                  <button onClick={() => setEditingCustomId(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 18, cursor: "pointer" }}>✕</button>
-                </div>
+              <Modal open={true} onClose={() => setEditingCustomId(null)} title={`Edit: ${cl.title}`}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Title *</label><input style={inputStyle} value={editTitle} onChange={e => setEditTitle(e.target.value)} /></div>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Location</label><input style={inputStyle} value={editLocation} onChange={e => setEditLocation(e.target.value)} /></div>
@@ -682,7 +712,7 @@ export default function AdminPage() {
                   <button onClick={() => setEditingCustomId(null)} style={{ padding: "10px 20px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
                   {saving === "editCustom" && <span style={{ fontSize: 12, color: "#0fa" }}>Saving...</span>}
                 </div>
-              </div>
+              </Modal>
             );
           })()}
 
@@ -737,10 +767,10 @@ export default function AdminPage() {
             </label>
           </div>
           <button onClick={addCustomListing} style={btnStyle}>Add Listing</button>
-        </div>
+        </div>}
 
-        {/* Reviews Management */}
-        <div style={cardStyle}>
+        {/* ═══ TAB: Reviews ═══ */}
+        {activeTab === "reviews" && <div style={cardStyle}>
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Reviews Management</h2>
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Select Listing</label>
@@ -855,7 +885,7 @@ export default function AdminPage() {
               </div>
             );
           })()}
-        </div>
+        </div>}
       </div>
     </div>
   );
