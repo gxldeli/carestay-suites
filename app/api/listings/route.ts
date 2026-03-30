@@ -3,9 +3,11 @@ import { getListings, extractAmenityNames, extractBedroomCount } from "@/app/lib
 import { redis } from "@/app/lib/redis";
 
 // Upstash Redis overrides store
-interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string; sortOrder?: number; featured?: boolean; videoUrl?: string }
-interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean; sortOrder?: number; featured?: boolean; videoUrl?: string; hidden?: boolean }
-interface OverridesData { listings: Record<string, ListingOverride>; customListings: CustomListing[] }
+interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string; sortOrder?: number; featured?: boolean; videoUrl?: string; availabilityStatus?: string }
+interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean; sortOrder?: number; featured?: boolean; videoUrl?: string; hidden?: boolean; availabilityStatus?: string }
+interface ReviewItem { id: string; name: string; stars: number; text: string; date: string; verified: boolean; stayInfo?: string }
+interface ListingReviews { totalCount: number; items: ReviewItem[] }
+interface OverridesData { listings: Record<string, ListingOverride>; customListings: CustomListing[]; reviews?: Record<string, ListingReviews> }
 
 const GTA_HOSPITALS = [
   { name: "Toronto General Hospital", lat: 43.6594, lng: -79.3882 },
@@ -77,8 +79,11 @@ export async function GET(request: Request) {
           nearbyHospital: ov.nearbyHospital || autoHospital?.name || "",
           hospitalDistance: ov.hospitalDistance || autoHospital?.distance || "",
           sortOrder: ov.sortOrder ?? 50,
-          featured: ov.featured || false,
+          featured: ov.featured === true,
           videoUrl: ov.videoUrl || "",
+          availabilityStatus: ov.availabilityStatus || "Available",
+          reviewCount: (() => { const r = overrides.reviews?.[String(l.id)]; return r ? (r.totalCount || r.items.length) : 0; })(),
+          reviewAvg: (() => { const r = overrides.reviews?.[String(l.id)]; return r && r.items.length > 0 ? r.items.reduce((a, rv) => a + rv.stars, 0) / r.items.length : 0; })(),
         };
       })
       .filter((l) => includeHidden || !l.hidden);
@@ -108,8 +113,11 @@ export async function GET(request: Request) {
       nearbyHospital: cl.nearbyHospital,
       hospitalDistance: cl.hospitalDistance,
       sortOrder: cl.sortOrder ?? 50,
-      featured: cl.featured || false,
+      featured: cl.featured === true,
       videoUrl: cl.videoUrl || "",
+      availabilityStatus: cl.availabilityStatus || "Available",
+      reviewCount: (() => { const r = overrides.reviews?.[String(cl.id)]; return r ? (r.totalCount || r.items.length) : 0; })(),
+      reviewAvg: (() => { const r = overrides.reviews?.[String(cl.id)]; return r && r.items.length > 0 ? r.items.reduce((a, rv) => a + rv.stars, 0) / r.items.length : 0; })(),
       isCustom: true,
     })).filter((l) => includeHidden || !l.hidden);
 

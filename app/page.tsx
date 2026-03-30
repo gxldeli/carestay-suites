@@ -255,7 +255,7 @@ function Stats({ stats }: { stats?: { properties?: string; pros?: string; hospit
 }
 
 /* ─── LISTINGS ─── */
-interface ListingCard { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; featured?: boolean; maxGuests?: number; bedrooms?: number }
+interface ListingCard { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; featured?: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string }
 
 function ListingsSection() {
   const [apiListings, setApiListings] = useState<ListingCard[]>([]);
@@ -264,10 +264,11 @@ function ListingsSection() {
       .then(r => r.json())
       .then(data => {
         if (data.status === "success" && data.listings) {
-          setApiListings(data.listings.map((l: { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; featured?: boolean; maxGuests?: number; bedrooms?: number }) => ({
+          setApiListings(data.listings.map((l: { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; featured?: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string }) => ({
             id: l.id, title: l.title, location: l.location, beds: l.beds, baths: l.baths,
-            price: l.price, sqft: l.sqft, img: l.img, tag: l.location || "GTA", available: true, featured: l.featured || false,
-            maxGuests: l.maxGuests || 0, bedrooms: l.bedrooms || 0,
+            price: l.price, sqft: l.sqft, img: l.img, tag: l.location || "GTA", available: true, featured: l.featured === true,
+            maxGuests: l.maxGuests || 0, bedrooms: l.bedrooms || 0, reviewCount: l.reviewCount || 0, reviewAvg: l.reviewAvg || 0,
+            availabilityStatus: l.availabilityStatus || "Available",
           })));
         }
       })
@@ -276,7 +277,7 @@ function ListingsSection() {
 
   const featuredListings = apiListings.filter(l => l.featured);
   const allListings: (ListingCard & { source: "api" | "showcase" })[] = [
-    ...apiListings.map(l => ({ ...l, source: "api" as const })),
+    ...apiListings.filter(l => !l.featured).map(l => ({ ...l, source: "api" as const })),
     ...SHOWCASE_LISTINGS.map(l => ({ ...l, source: "showcase" as const, available: false })),
   ];
   const displayedListings = allListings.slice(0, 9);
@@ -303,11 +304,13 @@ function ListingsSection() {
                         <div className="listing-tags">
                           <span style={{ background: "rgba(240,192,64,0.9)", color: "#000", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>★ FEATURED</span>
                           <span className="listing-tag">{l.tag}</span>
+                          <span style={{ background: l.availabilityStatus === "Almost Booked" ? "rgba(255,160,0,0.85)" : l.availabilityStatus === "Waitlist Only" ? "rgba(0,140,255,0.85)" : l.availabilityStatus === "Booked" ? "rgba(255,60,60,0.85)" : "rgba(0,255,170,0.85)", color: l.availabilityStatus === "Available" || l.availabilityStatus === "Almost Booked" ? "#000" : "#fff", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>{l.availabilityStatus === "Almost Booked" ? "Almost Booked" : l.availabilityStatus === "Waitlist Only" ? "Waitlist" : l.availabilityStatus === "Booked" ? "Booked" : "Available"}</span>
                         </div>
                       </div>
                       <div className="listing-body">
                         <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 4 }}>{l.title}</h3>
-                        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>{l.location}</p>
+                        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: l.reviewCount ? 6 : 12 }}>{l.location}</p>
+                        {l.reviewCount ? <p style={{ fontSize: 12, color: "#f0c040", marginBottom: 10, fontWeight: 600 }}>★ {l.reviewAvg?.toFixed(1)} · {l.reviewCount} review{l.reviewCount !== 1 ? "s" : ""}</p> : null}
                         <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 14 }}>
                           {[
                             l.maxGuests ? `${l.maxGuests} guest${l.maxGuests !== 1 ? "s" : ""}` : null,
@@ -347,12 +350,17 @@ function ListingsSection() {
                     <img src={l.img} alt={l.title} className="listing-img" />
                     <div className="listing-tags">
                       <span className="listing-tag">{l.tag}</span>
-                      <span className={l.available ? "listing-avail" : "listing-wait"}>{l.available ? "Available" : l.source === "showcase" ? "Coming Soon" : "Waitlist"}</span>
+                      {l.source === "showcase" ? (
+                        <span className="listing-wait">Coming Soon</span>
+                      ) : (
+                        <span style={{ background: l.availabilityStatus === "Almost Booked" ? "rgba(255,160,0,0.85)" : l.availabilityStatus === "Waitlist Only" ? "rgba(0,140,255,0.85)" : l.availabilityStatus === "Booked" ? "rgba(255,60,60,0.85)" : "rgba(0,255,170,0.15)", color: l.availabilityStatus === "Almost Booked" ? "#000" : l.availabilityStatus === "Waitlist Only" ? "#fff" : l.availabilityStatus === "Booked" ? "#fff" : "#0fa", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>{l.availabilityStatus === "Almost Booked" ? "Almost Booked" : l.availabilityStatus === "Waitlist Only" ? "Waitlist" : l.availabilityStatus === "Booked" ? "Booked" : "Available"}</span>
+                      )}
                     </div>
                   </div>
                   <div className="listing-body">
                     <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 4 }}>{l.title}</h3>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>{l.location}</p>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: l.reviewCount ? 6 : 12 }}>{l.location}</p>
+                    {l.reviewCount ? <p style={{ fontSize: 12, color: "#f0c040", marginBottom: 10, fontWeight: 600 }}>★ {l.reviewAvg?.toFixed(1)} · {l.reviewCount} review{l.reviewCount !== 1 ? "s" : ""}</p> : null}
                     <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 14 }}>
                       {[
                         l.maxGuests ? `${l.maxGuests} guest${l.maxGuests !== 1 ? "s" : ""}` : null,

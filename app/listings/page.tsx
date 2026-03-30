@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 
-interface Listing { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; available: boolean; maxGuests?: number; bedrooms?: number }
+interface Listing { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; available: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string }
 
 export default function AllListingsPage() {
   const [listings, setListings] = useState<Listing[]>([]);
@@ -140,12 +140,13 @@ export default function AllListingsPage() {
                       <img src={l.img} alt={l.title} className="listing-img" />
                       <div style={{ position: "absolute", bottom: 10, left: 10, display: "flex", gap: 6 }}>
                         <span className="listing-tag">{l.location}</span>
-                        <span className="listing-avail">Available</span>
+                        <span style={{ background: l.availabilityStatus === "Almost Booked" ? "rgba(255,160,0,0.85)" : l.availabilityStatus === "Waitlist Only" ? "rgba(0,140,255,0.85)" : l.availabilityStatus === "Booked" ? "rgba(255,60,60,0.85)" : "rgba(0,255,170,0.15)", color: l.availabilityStatus === "Almost Booked" ? "#000" : l.availabilityStatus === "Waitlist Only" ? "#fff" : l.availabilityStatus === "Booked" ? "#fff" : "#0fa", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>{l.availabilityStatus === "Almost Booked" ? "Almost Booked" : l.availabilityStatus === "Waitlist Only" ? "Waitlist" : l.availabilityStatus === "Booked" ? "Booked" : "Available"}</span>
                       </div>
                     </div>
                     <div className="listing-body">
                       <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 4 }}>{l.title}</h3>
-                      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>{l.location}</p>
+                      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: l.reviewCount ? 6 : 12 }}>{l.location}</p>
+                      {l.reviewCount ? <p style={{ fontSize: 12, color: "#f0c040", marginBottom: 10, fontWeight: 600 }}>★ {l.reviewAvg?.toFixed(1)} · {l.reviewCount} review{l.reviewCount !== 1 ? "s" : ""}</p> : null}
                       <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 14 }}>
                         {[
                           l.maxGuests ? `${l.maxGuests} guest${l.maxGuests !== 1 ? "s" : ""}` : null,

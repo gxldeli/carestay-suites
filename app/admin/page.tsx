@@ -14,6 +14,7 @@ interface ListingOverride {
   sortOrder?: number;
   featured?: boolean;
   videoUrl?: string;
+  availabilityStatus?: string;
 }
 
 interface ApiListing {
@@ -47,6 +48,7 @@ interface CustomListing {
   featured?: boolean;
   videoUrl?: string;
   hidden?: boolean;
+  availabilityStatus?: string;
 }
 
 interface ReviewItem {
@@ -153,6 +155,7 @@ export default function AdminPage() {
   const [editSortOrder, setEditSortOrder] = useState("50");
   const [editVideoUrl, setEditVideoUrl] = useState("");
   const [editHidden, setEditHidden] = useState(false);
+  const [editAvailStatus, setEditAvailStatus] = useState("Available");
   const [addPhotoInput, setAddPhotoInput] = useState("");
   const [bulkPhotoInput, setBulkPhotoInput] = useState("");
 
@@ -174,6 +177,7 @@ export default function AdminPage() {
     setEditSortOrder(String(cl.sortOrder ?? 50));
     setEditVideoUrl(cl.videoUrl || "");
     setEditHidden(!!cl.hidden);
+    setEditAvailStatus(cl.availabilityStatus || "Available");
     setAddPhotoInput("");
   };
 
@@ -187,7 +191,7 @@ export default function AdminPage() {
       price: Number(editPrice), sqft: Number(editSqft), img: imgLines[0] || "", images: imgLines,
       description: editDesc, nearbyHospital: editHospital, hospitalDistance: editDistance,
       soakingTub: editTub, carestayStandard: editStandard, featured: editFeatured, sortOrder: Number(editSortOrder),
-      videoUrl: editVideoUrl, hidden: editHidden,
+      videoUrl: editVideoUrl, hidden: editHidden, availabilityStatus: editAvailStatus,
     });
     setSaving(null);
     setEditingCustomId(null);
@@ -300,7 +304,7 @@ export default function AdminPage() {
     await adminPost("addCustomListing", {
       title: newTitle, location: newLocation, beds: Number(newBeds), baths: Number(newBaths),
       price: Number(newPrice), sqft: Number(newSqft), img: imgLines[0] || "", images: imgLines, description: newDesc,
-      nearbyHospital: newHospital, hospitalDistance: newDistance, soakingTub: newTub, carestayStandard: newStandard, featured: newFeatured,
+      nearbyHospital: newHospital, hospitalDistance: newDistance, soakingTub: newTub, carestayStandard: newStandard, featured: newFeatured, availabilityStatus: "Available",
     });
     setNewTitle(""); setNewLocation(""); setNewBeds("1"); setNewBaths("1"); setNewPrice(""); setNewSqft("");
     setNewImg(""); setNewHospital(""); setNewDistance(""); setNewDesc(""); setNewTub(false); setNewStandard(false); setNewFeatured(false);
@@ -512,6 +516,15 @@ export default function AdminPage() {
                   <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Video Walkthrough URL</label>
                   <input style={inputStyle} defaultValue={ov.videoUrl || ""} placeholder="e.g., https://www.youtube.com/watch?v=ABC123" onBlur={e => { if (e.target.value !== (ov.videoUrl || "")) saveExpandedOverrides(l.id, { videoUrl: e.target.value || undefined }); }} />
                 </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Availability Status</label>
+                  <select style={{ ...inputStyle, width: 220, cursor: "pointer" }} value={ov.availabilityStatus || "Available"} onChange={e => saveExpandedOverrides(l.id, { availabilityStatus: e.target.value })}>
+                    <option value="Available">Available</option>
+                    <option value="Almost Booked">Almost Booked</option>
+                    <option value="Waitlist Only">Waitlist Only</option>
+                    <option value="Booked">Booked</option>
+                  </select>
+                </div>
                 <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
                     <Toggle checked={!ov.hidden} onChange={(v) => saveExpandedOverrides(l.id, { hidden: !v })} /> Visible
@@ -640,6 +653,15 @@ export default function AdminPage() {
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12, marginBottom: 12 }}>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Sort Order</label><input style={{ ...inputStyle, width: 100 }} type="number" value={editSortOrder} onChange={e => setEditSortOrder(e.target.value)} /></div>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Availability Status</label>
+                  <select style={{ ...inputStyle, width: 220, cursor: "pointer" }} value={editAvailStatus} onChange={e => setEditAvailStatus(e.target.value)}>
+                    <option value="Available">Available</option>
+                    <option value="Almost Booked">Almost Booked</option>
+                    <option value="Waitlist Only">Waitlist Only</option>
+                    <option value="Booked">Booked</option>
+                  </select>
                 </div>
                 <div style={{ display: "flex", gap: 24, marginBottom: 16, flexWrap: "wrap" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>

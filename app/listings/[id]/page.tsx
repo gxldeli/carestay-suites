@@ -56,7 +56,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
   );
 }
 
-interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; hospitalDistance?: string; featured?: boolean; videoUrl?: string; amenities?: string[]; latitude?: number; longitude?: number; maxGuests?: number; bedrooms?: number; address?: string }
+interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; hospitalDistance?: string; featured?: boolean; videoUrl?: string; amenities?: string[]; latitude?: number; longitude?: number; maxGuests?: number; bedrooms?: number; address?: string; availabilityStatus?: string }
 
 export default function ListingPage() {
   const params = useParams();
@@ -116,7 +116,7 @@ export default function ListingPage() {
               available: true, desc: match.description || "", description: match.description, images: match.images,
               nearbyHospital: match.nearbyHospital || "", hospitalDistance: match.hospitalDistance || "", featured: match.featured || false, videoUrl: match.videoUrl || "", amenities: match.amenities || [],
               address: match.address || "", latitude: match.latitude ?? undefined, longitude: match.longitude ?? undefined,
-              maxGuests: match.maxGuests || undefined, bedrooms: match.bedrooms || undefined,
+              maxGuests: match.maxGuests || undefined, bedrooms: match.bedrooms || undefined, availabilityStatus: match.availabilityStatus || "Available",
             });
           }
         }
@@ -149,6 +149,11 @@ export default function ListingPage() {
   const ratingLabel = avgStars >= 4.5 ? "Exceptional" : avgStars >= 4.0 ? "Excellent" : avgStars >= 3.5 ? "Very Good" : "Good";
   const displayTotalCount = reviewTotalCount || reviews.length;
   const isComingSoon = listing ? !listing.available : false;
+  const availStatus = listing?.availabilityStatus || "Available";
+  const isWaitlist = availStatus === "Waitlist Only" || availStatus === "Booked";
+  const ctaLabel = availStatus === "Booked" ? "Join Waitlist for Next Opening" : availStatus === "Waitlist Only" ? "Join Waitlist" : isComingSoon ? "Join Waitlist" : "Inquire Now";
+  const ctaHeading = isWaitlist ? "Join the Waitlist for This Suite" : isComingSoon ? "Join the Waitlist for This Suite" : "Inquire About This Suite";
+  const ctaSub = isWaitlist ? "Be first to know when this suite becomes available." : isComingSoon ? "Be first to know when this suite becomes available." : "Fill out the form below and we\u0027ll get back to you within 24 hours.";
   const handleSubmit = async () => {
     const tags = isComingSoon ? ["carestay-waitlist", "listing-waitlist"] : [];
     await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, moveIn, moveOut, message, listing: listing?.title, tags }) });
@@ -264,8 +269,8 @@ export default function ListingPage() {
               {/* Badges */}
               <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                 <span style={{ background: "rgba(0,170,255,0.1)", color: "#0af", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{listing.tag}</span>
-                <span style={{ background: listing.available ? "rgba(0,255,170,0.15)" : "rgba(255,77,77,0.15)", color: listing.available ? "#0fa" : "#f66", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>
-                  {listing.available ? "Available" : "Waitlist"}
+                <span style={{ background: availStatus === "Almost Booked" ? "rgba(255,160,0,0.15)" : availStatus === "Waitlist Only" ? "rgba(0,140,255,0.15)" : availStatus === "Booked" ? "rgba(255,60,60,0.15)" : "rgba(0,255,170,0.15)", color: availStatus === "Almost Booked" ? "#ffa000" : availStatus === "Waitlist Only" ? "#08f" : availStatus === "Booked" ? "#f66" : "#0fa", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>
+                  {availStatus === "Almost Booked" ? "Almost Booked — inquire now" : availStatus === "Waitlist Only" ? "Waitlist Only" : availStatus === "Booked" ? "Currently Booked" : "Available"}
                 </span>
                 {listing.featured && (
                   <span style={{ background: "rgba(240,192,64,0.15)", color: "#f0c040", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>★ Featured</span>
@@ -569,7 +574,7 @@ export default function ListingPage() {
                 </div>
 
                 <a href="#inquiry" style={{ display: "block", width: "100%", padding: "16px 0", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", borderRadius: 10, fontWeight: 700, fontSize: 15, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
-                  {isComingSoon ? "Join Waitlist" : "Inquire Now"}
+                  {ctaLabel}
                 </a>
 
                 <div style={{ marginTop: 20, padding: "14px 16px", background: "rgba(0,255,170,0.05)", borderRadius: 10, border: "1px solid rgba(0,255,170,0.1)" }}>
@@ -584,8 +589,8 @@ export default function ListingPage() {
         {/* Inquiry Form */}
         <div id="inquiry" ref={inquiryRef} className="wrap" style={{ paddingTop: 60, paddingBottom: 20 }}>
           <div style={{ maxWidth: 680, margin: "0 auto", background: "#12151a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 20, padding: "36px 32px" }}>
-            <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: "#fff", marginBottom: 6, textAlign: "center" }}>{isComingSoon ? "Join the Waitlist for This Suite" : "Inquire About This Suite"}</h2>
-            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", textAlign: "center", marginBottom: 28 }}>{isComingSoon ? "Be first to know when this suite becomes available." : "Fill out the form below and we\u0027ll get back to you within 24 hours."}</p>
+            <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: "#fff", marginBottom: 6, textAlign: "center" }}>{ctaHeading}</h2>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", textAlign: "center", marginBottom: 28 }}>{ctaSub}</p>
 
             {!submitted ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -705,7 +710,7 @@ export default function ListingPage() {
           </div>
           <div style={{ fontSize: 11, color: "#f0c040", marginTop: 2 }}>★ {avgStars.toFixed(1)} · {displayTotalCount} reviews</div>
         </div>
-        <a href="#inquiry" style={{ background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: "12px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: "none", whiteSpace: "nowrap" }}>{isComingSoon ? "Join Waitlist" : "Inquire Now"}</a>
+        <a href="#inquiry" style={{ background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", padding: "12px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: "none", whiteSpace: "nowrap" }}>{ctaLabel}</a>
       </div>
     </>
   );
