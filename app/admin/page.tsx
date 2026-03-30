@@ -195,6 +195,13 @@ export default function AdminPage() {
   const [addPhotoInput, setAddPhotoInput] = useState("");
   const [bulkPhotoInput, setBulkPhotoInput] = useState("");
 
+  // Bulk selection & search
+  const [selectedHostaway, setSelectedHostaway] = useState<Set<number>>(new Set());
+  const [selectedCustom, setSelectedCustom] = useState<Set<string>>(new Set());
+  const [haSearch, setHaSearch] = useState("");
+  const [clSearch, setClSearch] = useState("");
+  const [toast, setToast] = useState("");
+
   const openEditCustom = (cl: CustomListing) => {
     setEditingCustomId(cl.id);
     setEditTitle(cl.title);
@@ -346,10 +353,42 @@ export default function AdminPage() {
     setNewImg(""); setNewHospital(""); setNewDistance(""); setNewDesc(""); setNewTub(false); setNewStandard(false); setNewFeatured(false);
   };
 
-  const deleteCustom = async (id: string) => {
-    if (!confirm("Delete this listing?")) return;
+  const deleteCustom = async (id: string, name?: string) => {
+    if (!confirm(`Are you sure you want to delete "${name || "this listing"}"?`)) return;
     await adminPost("deleteCustomListing", { id });
+    showToast("Listing deleted");
   };
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2000); };
+
+  const bulkHostaway = async (field: string, value: unknown) => {
+    for (const id of selectedHostaway) {
+      await adminPost("updateListing", { id: String(id), [field]: value });
+    }
+    setSelectedHostaway(new Set());
+    showToast(`Updated ${selectedHostaway.size} listings`);
+  };
+
+  const bulkCustom = async (field: string, value: unknown) => {
+    for (const id of selectedCustom) {
+      await adminPost("updateCustomListing", { id, [field]: value });
+    }
+    setSelectedCustom(new Set());
+    showToast(`Updated ${selectedCustom.size} listings`);
+  };
+
+  const filteredHostaway = listings.filter(l => {
+    if (!haSearch) return true;
+    const q = haSearch.toLowerCase();
+    const ov = overrides.listings[String(l.id)] || {};
+    return (ov.titleOverride || l.title).toLowerCase().includes(q) || l.location.toLowerCase().includes(q);
+  });
+
+  const filteredCustom = overrides.customListings.filter(cl => {
+    if (!clSearch) return true;
+    const q = clSearch.toLowerCase();
+    return cl.title.toLowerCase().includes(q) || cl.location.toLowerCase().includes(q);
+  });
 
   /* ─── Login Screen ─── */
   if (!authed) {
@@ -373,6 +412,8 @@ export default function AdminPage() {
   /* ─── Admin Panel ─── */
   return (
     <div style={{ minHeight: "100vh", background: "#0a0c0f", fontFamily: "'DM Sans',system-ui,sans-serif", color: "#fff" }}>
+      {/* Toast */}
+      {toast && <div style={{ position: "fixed", top: 24, right: 24, zIndex: 2000, background: "#14b8a6", color: "#000", padding: "10px 20px", borderRadius: 10, fontSize: 13, fontWeight: 700, boxShadow: "0 4px 20px rgba(0,0,0,0.4)", animation: "fadeIn 0.2s" }}>{toast}</div>}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 24px 80px" }}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32, paddingBottom: 20, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -472,11 +513,25 @@ export default function AdminPage() {
 
         {/* ═══ TAB: HostAway Listings ═══ */}
         {activeTab === "hostaway" && <div style={cardStyle}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>HostAway Listings ({listings.length})</h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 16, flexWrap: "wrap" }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700 }}>HostAway Listings ({filteredHostaway.length})</h2>
+            <input placeholder="Search by title or location..." value={haSearch} onChange={e => setHaSearch(e.target.value)} style={{ ...inputStyle, width: 280, padding: "8px 14px" }} />
+          </div>
+          {selectedHostaway.size > 0 && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 16, padding: "12px 16px", background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", borderRadius: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#14b8a6", marginRight: 8 }}>{selectedHostaway.size} selected</span>
+              <select onChange={e => { if (e.target.value) { bulkHostaway("availabilityStatus", e.target.value); e.target.value = ""; } }} style={{ ...inputStyle, width: "auto", padding: "6px 10px", fontSize: 12 }}><option value="">Set Status...</option><option value="Available">Available</option><option value="Almost Booked">Almost Booked</option><option value="Waitlist Only">Waitlist Only</option><option value="Booked">Booked</option></select>
+              <button onClick={() => bulkHostaway("hidden", false)} style={{ padding: "6px 12px", background: "rgba(0,255,170,0.12)", color: "#0fa", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Show</button>
+              <button onClick={() => bulkHostaway("hidden", true)} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Hide</button>
+              <button onClick={() => bulkHostaway("featured", true)} style={{ padding: "6px 12px", background: "rgba(240,192,64,0.12)", color: "#f0c040", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Feature</button>
+              <button onClick={() => bulkHostaway("featured", false)} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Unfeature</button>
+            </div>
+          )}
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
+                  <th style={thStyle}><input type="checkbox" checked={filteredHostaway.length > 0 && filteredHostaway.every(l => selectedHostaway.has(l.id))} onChange={e => { if (e.target.checked) setSelectedHostaway(new Set(filteredHostaway.map(l => l.id))); else setSelectedHostaway(new Set()); }} /></th>
                   <th style={thStyle}>Listing</th>
                   <th style={thStyle}>Location</th>
                   <th style={thStyle}>Price</th>
@@ -487,10 +542,11 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {listings.map((l) => {
+                {filteredHostaway.map((l) => {
                   const ov = overrides.listings[String(l.id)] || {};
                   return (
-                    <tr key={l.id}>
+                    <tr key={l.id} style={{ transition: "background 0.15s" }} onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                      <td style={tdStyle}><input type="checkbox" checked={selectedHostaway.has(l.id)} onChange={e => { const s = new Set(selectedHostaway); if (e.target.checked) s.add(l.id); else s.delete(l.id); setSelectedHostaway(s); }} /></td>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           {l.img && <img src={l.img} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect fill='%23222' width='40' height='40'/%3E%3Ctext x='50%25' y='50%25' fill='%23555' font-size='14' text-anchor='middle' dy='.35em'%3E?%3C/text%3E%3C/svg%3E"; }} />}
@@ -503,14 +559,13 @@ export default function AdminPage() {
                       <td style={tdStyle}>{l.location}</td>
                       <td style={tdStyle}>{ov.priceOverride ? `$${ov.priceOverride.toLocaleString()}` : `$${l.price.toLocaleString()}`}/mo</td>
                       <td style={tdStyle}><StatusBadge status={ov.availabilityStatus} /></td>
-                      <td style={tdStyle} onClick={e => e.stopPropagation()}><Toggle checked={!!ov.featured} onChange={(v) => updateOverride(l.id, "featured", v)} /></td>
-                      <td style={tdStyle} onClick={e => e.stopPropagation()}><Toggle checked={!ov.hidden} onChange={(v) => updateOverride(l.id, "hidden", !v)} /></td>
-                      <td style={tdStyle}><button onClick={() => setExpandedId(l.id)} style={{ background: "rgba(0,170,255,0.12)", color: "#0af", border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Edit</button></td>
+                      <td style={tdStyle}><Toggle checked={!!ov.featured} onChange={(v) => updateOverride(l.id, "featured", v)} /></td>
+                      <td style={tdStyle}><Toggle checked={!ov.hidden} onChange={(v) => updateOverride(l.id, "hidden", !v)} /></td>
+                      <td style={tdStyle}><button onClick={() => setExpandedId(l.id)} style={{ background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)", borderRadius: 6, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Edit</button></td>
                     </tr>
                   );
                 })}
               </tbody>
-              {/* Expanded Edit Form — rendered outside table */}
             </table>
           </div>
           {(() => {
@@ -576,12 +631,26 @@ export default function AdminPage() {
 
         {/* ═══ TAB: Custom Listings ═══ */}
         {activeTab === "custom" && <div style={cardStyle}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Custom Listings</h2>
-          {overrides.customListings.length > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 16, flexWrap: "wrap" }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700 }}>Custom Listings ({filteredCustom.length})</h2>
+            <input placeholder="Search by title or location..." value={clSearch} onChange={e => setClSearch(e.target.value)} style={{ ...inputStyle, width: 280, padding: "8px 14px" }} />
+          </div>
+          {selectedCustom.size > 0 && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 16, padding: "12px 16px", background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", borderRadius: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#14b8a6", marginRight: 8 }}>{selectedCustom.size} selected</span>
+              <select onChange={e => { if (e.target.value) { bulkCustom("availabilityStatus", e.target.value); e.target.value = ""; } }} style={{ ...inputStyle, width: "auto", padding: "6px 10px", fontSize: 12 }}><option value="">Set Status...</option><option value="Available">Available</option><option value="Almost Booked">Almost Booked</option><option value="Waitlist Only">Waitlist Only</option><option value="Booked">Booked</option></select>
+              <button onClick={() => bulkCustom("hidden", false)} style={{ padding: "6px 12px", background: "rgba(0,255,170,0.12)", color: "#0fa", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Show</button>
+              <button onClick={() => bulkCustom("hidden", true)} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Hide</button>
+              <button onClick={() => bulkCustom("featured", true)} style={{ padding: "6px 12px", background: "rgba(240,192,64,0.12)", color: "#f0c040", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Feature</button>
+              <button onClick={() => bulkCustom("featured", false)} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Unfeature</button>
+            </div>
+          )}
+          {filteredCustom.length > 0 && (
             <div style={{ overflowX: "auto", marginBottom: 24 }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr>
+                    <th style={thStyle}><input type="checkbox" checked={filteredCustom.length > 0 && filteredCustom.every(cl => selectedCustom.has(cl.id))} onChange={e => { if (e.target.checked) setSelectedCustom(new Set(filteredCustom.map(cl => cl.id))); else setSelectedCustom(new Set()); }} /></th>
                     <th style={thStyle}>Listing</th>
                     <th style={thStyle}>Location</th>
                     <th style={thStyle}>Price</th>
@@ -593,8 +662,9 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {overrides.customListings.map((cl, idx) => (
-                    <tr key={cl.id}>
+                  {filteredCustom.map((cl, idx) => (
+                    <tr key={cl.id} style={{ transition: "background 0.15s" }} onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                      <td style={tdStyle}><input type="checkbox" checked={selectedCustom.has(cl.id)} onChange={e => { const s = new Set(selectedCustom); if (e.target.checked) s.add(cl.id); else s.delete(cl.id); setSelectedCustom(s); }} /></td>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           {cl.images?.[0] && <img src={cl.images[0]} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect fill='%23222' width='40' height='40'/%3E%3Ctext x='50%25' y='50%25' fill='%23555' font-size='14' text-anchor='middle' dy='.35em'%3E?%3C/text%3E%3C/svg%3E"; }} />}
@@ -617,8 +687,8 @@ export default function AdminPage() {
                       </td>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => openEditCustom(cl)} style={{ background: "rgba(0,170,255,0.12)", color: "#0af", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Edit</button>
-                          <button onClick={() => deleteCustom(cl.id)} style={{ background: "rgba(255,77,77,0.12)", color: "#f66", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Delete</button>
+                          <button onClick={() => openEditCustom(cl)} style={{ background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Edit</button>
+                          <button onClick={() => deleteCustom(cl.id, cl.title)} style={{ background: "rgba(255,77,77,0.12)", color: "#f66", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Delete</button>
                         </div>
                       </td>
                     </tr>
