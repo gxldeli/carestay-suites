@@ -154,6 +154,7 @@ export default function AdminPage() {
   const [editVideoUrl, setEditVideoUrl] = useState("");
   const [editHidden, setEditHidden] = useState(false);
   const [addPhotoInput, setAddPhotoInput] = useState("");
+  const [bulkPhotoInput, setBulkPhotoInput] = useState("");
 
   const openEditCustom = (cl: CustomListing) => {
     setEditingCustomId(cl.id);
@@ -619,6 +620,14 @@ export default function AdminPage() {
                   <div style={{ display: "flex", gap: 8 }}>
                     <input style={{ ...inputStyle, flex: 1 }} placeholder="Paste new image URL..." value={addPhotoInput} onChange={e => setAddPhotoInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && addPhotoInput.trim()) { setEditImg(prev => (prev.trim() ? prev.trim() + "\n" : "") + addPhotoInput.trim()); setAddPhotoInput(""); } }} />
                     <button onClick={() => { if (addPhotoInput.trim()) { setEditImg(prev => (prev.trim() ? prev.trim() + "\n" : "") + addPhotoInput.trim()); setAddPhotoInput(""); } }} style={{ ...btnStyle, padding: "8px 16px", fontSize: 12 }}>Add</button>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Bulk Add — paste multiple URLs (one per line)</label>
+                    <textarea rows={4} style={{ ...inputStyle, minHeight: 70, resize: "vertical", marginBottom: 6 }} value={bulkPhotoInput} onChange={e => setBulkPhotoInput(e.target.value)} placeholder="Paste multiple image URLs here, one per line" />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => { const urls = bulkPhotoInput.split("\n").map(s => s.trim()).filter(Boolean); if (urls.length) { setEditImg(prev => { const existing = prev.trim(); return existing ? existing + "\n" + urls.join("\n") : urls.join("\n"); }); setBulkPhotoInput(""); } }} style={{ ...btnStyle, padding: "8px 16px", fontSize: 12 }}>Add All ({bulkPhotoInput.split("\n").filter(s => s.trim()).length})</button>
+                      <button onClick={async () => { try { const text = await navigator.clipboard.readText(); if (text.trim()) { setBulkPhotoInput(prev => prev.trim() ? prev.trim() + "\n" + text.trim() : text.trim()); } } catch { /* clipboard denied */ } }} style={{ padding: "8px 16px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Paste from clipboard</button>
+                    </div>
                   </div>
                 </div>
                 <div style={{ marginBottom: 12 }}>
