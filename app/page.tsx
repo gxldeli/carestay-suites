@@ -1,5 +1,7 @@
 "use client";
 
+declare global { interface Window { fbq: (...args: unknown[]) => void; } }
+
 import { useState, useEffect, useRef, ReactNode } from "react";
 import Link from "next/link";
 import { ShieldCheck, MapPin, ClipboardList, CalendarDays } from "lucide-react";
@@ -527,6 +529,7 @@ function Contact() {
   const handleSubmit = async () => {
     if (!email) return;
     await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, hospital, tags: ["carestay-waitlist", "homepage-signup"] }) });
+    if (typeof window !== "undefined" && window.fbq) { window.fbq("track", "Lead"); }
     setDone(true);
   };
   return (

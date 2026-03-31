@@ -1,5 +1,7 @@
 "use client";
 
+declare global { interface Window { fbq: (...args: unknown[]) => void; } }
+
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -157,6 +159,7 @@ export default function ListingPage() {
   const handleSubmit = async () => {
     const tags = isComingSoon ? ["carestay-waitlist", "listing-waitlist"] : [];
     await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, moveIn, moveOut, message, listing: listing?.title, tags }) });
+    if (typeof window !== "undefined" && window.fbq) { window.fbq("track", "Lead"); }
     setSubmitted(true);
   };
 
