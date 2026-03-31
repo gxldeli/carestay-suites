@@ -362,7 +362,7 @@ export default function AdminPage() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2000); };
 
   const bulkHostaway = async (field: string, value: unknown) => {
-    for (const id of selectedHostaway) {
+    for (const id of Array.from(selectedHostaway)) {
       await adminPost("updateListing", { id: String(id), [field]: value });
     }
     setSelectedHostaway(new Set());
@@ -370,7 +370,7 @@ export default function AdminPage() {
   };
 
   const bulkCustom = async (field: string, value: unknown) => {
-    for (const id of selectedCustom) {
+    for (const id of Array.from(selectedCustom)) {
       await adminPost("updateCustomListing", { id, [field]: value });
     }
     setSelectedCustom(new Set());
