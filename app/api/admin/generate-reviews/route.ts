@@ -106,8 +106,8 @@ function generateDatesAndStays(count: number): { date: string; stay: { label: st
   // Calculate total days needed (sum of stays + gaps of ~14 days between)
   const totalNeeded = stays.reduce((sum, s) => sum + s.days, 0) + (count - 1) * 14;
 
-  // If we need more days than available, shrink gaps
-  const gap = totalNeeded > totalDays ? Math.max(7, Math.floor((totalDays - stays.reduce((s, x) => s + x.days, 0)) / Math.max(count - 1, 1))) : rand(14, 28);
+  // Gap between end of one stay and start of next — ensures at least 28 days between review dates
+  const gap = totalNeeded > totalDays ? Math.max(7, Math.floor((totalDays - stays.reduce((s, x) => s + x.days, 0)) / Math.max(count - 1, 1))) : rand(21, 35);
 
   const results: { date: string; stay: { label: string; days: number } }[] = [];
   let cursor = rangeStart + rand(0, 14) * 86400000; // start within first 2 weeks
@@ -216,11 +216,12 @@ export async function GET(request: Request) {
       stars.push(isFeatured ? featuredStars() : nonFeaturedStars());
     }
 
-    // Build reviews
+    // Build reviews — vary hospital per review
     const items: ReviewItem[] = [];
-    const hospital = listing.hospital || pick(HOSPITALS);
+    const shuffledHospitals = shuffle(HOSPITALS);
 
     for (let i = 0; i < reviewCount; i++) {
+      const hospital = listing.hospital || shuffledHospitals[i % shuffledHospitals.length];
       const text = pickReviewText(stars[i], hospital, globalUsedTexts);
       items.push({
         id: `rev-gen-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
