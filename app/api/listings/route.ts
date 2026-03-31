@@ -83,7 +83,7 @@ export async function GET(request: Request) {
           videoUrl: ov.videoUrl || "",
           availabilityStatus: ov.availabilityStatus || "Available",
           reviewCount: (() => { const r = overrides.reviews?.[String(l.id)]; return r ? (r.totalCount || r.items.length) : 0; })(),
-          reviewAvg: (() => { const r = overrides.reviews?.[String(l.id)]; return r && r.items.length > 0 ? r.items.reduce((a, rv) => a + rv.stars, 0) / r.items.length : 0; })(),
+          reviewAvg: (() => { const r = overrides.reviews?.[String(l.id)]; if (!r) return 0; if (r.items.length > 0) return Math.round((r.items.reduce((a, rv) => a + rv.stars, 0) / r.items.length) * 10) / 10; return r.totalCount > 0 ? 4.7 : 0; })(),
         };
       })
       .filter((l) => includeHidden || !l.hidden);
@@ -117,7 +117,7 @@ export async function GET(request: Request) {
       videoUrl: cl.videoUrl || "",
       availabilityStatus: cl.availabilityStatus || "Available",
       reviewCount: (() => { const r = overrides.reviews?.[String(cl.id)]; return r ? (r.totalCount || r.items.length) : 0; })(),
-      reviewAvg: (() => { const r = overrides.reviews?.[String(cl.id)]; return r && r.items.length > 0 ? r.items.reduce((a, rv) => a + rv.stars, 0) / r.items.length : 0; })(),
+      reviewAvg: (() => { const r = overrides.reviews?.[String(cl.id)]; if (!r) return 0; if (r.items.length > 0) return Math.round((r.items.reduce((a, rv) => a + rv.stars, 0) / r.items.length) * 10) / 10; return r.totalCount > 0 ? 4.7 : 0; })(),
       isCustom: true,
     })).filter((l) => includeHidden || !l.hidden);
 

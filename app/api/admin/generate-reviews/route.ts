@@ -66,6 +66,7 @@ const STAY_OPTIONS: { label: string; days: number }[] = [
   { label: "Stayed 3 months", days: 90 },
   { label: "Stayed 8 weeks", days: 56 },
   { label: "Stayed 10 weeks", days: 70 },
+  { label: "Stayed 1 month", days: 30 },
 ];
 
 /* ─── Helpers ─── */
@@ -76,14 +77,16 @@ function shuffle<T>(arr: T[]): T[] { const a = [...arr]; for (let i = a.length -
 
 function featuredStars(): number {
   const r = Math.random();
-  if (r < 0.6) return 5;
+  if (r < 0.55) return 5;
+  if (r < 0.8) return 4.5;
   return 4;
 }
 
 function nonFeaturedStars(): number {
   const r = Math.random();
-  if (r < 0.35) return 5;
-  if (r < 0.75) return 4;
+  if (r < 0.3) return 5;
+  if (r < 0.6) return 4.5;
+  if (r < 0.85) return 4;
   return 3.5;
 }
 
@@ -158,10 +161,26 @@ export async function GET(request: Request) {
 
   const results: Record<string, { featured: boolean; totalCount: number; writtenReviews: number; avgStars: number }> = {};
 
-  // Collect all visible listings
-  const hostawayIds = Object.entries(data.listings)
-    .filter(([, ov]) => !ov.hidden)
-    .map(([id, ov]) => ({ id, featured: ov.featured === true, hospital: undefined as string | undefined }));
+  // Fetch all HostAway listings from the API to get every listing ID (not just overridden ones)
+  let apiListingIds: { id: string; hospital?: string }[] = [];
+  try {
+    const baseUrl = new URL(request.url).origin;
+    const res = await fetch(`${baseUrl}/api/listings?includeHidden=true`);
+    const json = await res.json();
+    if (json.status === "success" && json.listings) {
+      apiListingIds = json.listings
+        .filter((l: { isCustom?: boolean }) => !l.isCustom)
+        .map((l: { id: number | string; nearbyHospital?: string }) => ({
+          id: String(l.id),
+          hospital: l.nearbyHospital || undefined,
+        }));
+    }
+  } catch { /* fall back to override keys only */ }
+
+  // Collect all visible listings — use API listing IDs for HostAway (covers ALL listings, not just overridden)
+  const hostawayIds = apiListingIds.length > 0
+    ? apiListingIds.map(l => ({ id: l.id, featured: (data.listings[l.id]?.featured === true), hospital: l.hospital }))
+    : Object.entries(data.listings).filter(([, ov]) => !ov.hidden).map(([id, ov]) => ({ id, featured: ov.featured === true, hospital: undefined as string | undefined }));
 
   const customIds = data.customListings
     .filter(cl => !cl.hidden)
