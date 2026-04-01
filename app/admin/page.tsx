@@ -1009,16 +1009,17 @@ export default function AdminPage() {
         {/* ═══ TAB: Reservations ═══ */}
         {activeTab === "reservations" && <div style={cardStyle}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700 }}>Reservations ({filteredRes.length})</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 700 }}>Reservations {resLoading ? "(loading...)" : `(${filteredRes.length})`}</h2>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <input placeholder="Search guest or property..." value={resSearch} onChange={e => setResSearch(e.target.value)} style={{ ...inputStyle, width: 200, padding: "8px 14px" }} />
               {resProperties.length > 0 && <select value={resProperty} onChange={e => setResProperty(e.target.value)} style={{ ...inputStyle, width: 200, padding: "8px 14px", cursor: "pointer" }}><option value="">All Properties</option>{resProperties.map(p => <option key={p} value={p}>{p}</option>)}</select>}
               <input type="month" value={resMonth} onChange={e => setResMonth(e.target.value)} style={{ ...inputStyle, width: 150, padding: "8px 14px" }} />
               {(resMonth || resProperty) && <button onClick={() => { setResMonth(""); setResProperty(""); }} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "rgba(255,255,255,0.5)", padding: "6px 10px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Clear</button>}
-              <button onClick={loadReservations} disabled={resLoading} style={{ ...btnStyle, padding: "8px 16px", fontSize: 13 }}>{resLoading ? "Loading..." : "Fetch Reservations"}</button>
+              <button onClick={loadReservations} disabled={resLoading} style={{ ...btnStyle, padding: "8px 16px", fontSize: 13 }}>{resLoading ? "Loading..." : reservations.length > 0 ? "Refresh" : "Fetch Reservations"}</button>
             </div>
           </div>
-          {reservations.length === 0 && !resLoading && <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", padding: 40 }}>Click &quot;Fetch Reservations&quot; to load data from HostAway.</p>}
+          {reservations.length === 0 && resLoading && <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", padding: 40 }}>Loading reservations from HostAway...</p>}
+          {reservations.length === 0 && !resLoading && <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", padding: 40 }}>No reservations found. Click &quot;Fetch Reservations&quot; to reload.</p>}
           {filteredRes.length > 0 && (
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
