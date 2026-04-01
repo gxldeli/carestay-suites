@@ -204,11 +204,12 @@ export default function AdminPage() {
   const [toast, setToast] = useState("");
 
   // Reservations
-  interface Reservation { id: number; guestName: string; guestEmail?: string; guestPhone?: string; listingName: string; listingId: number; channelName: string; channelId?: number; checkIn: string; checkOut: string; nights: number; totalPrice: number; basePrice: number; hostPayout: number; cleaningFee: number; hostServiceFee: number; guestServiceFee: number; discount: number; channelCommission: number; pricePerNight: number; numberOfGuests: number; status: string; currency: string; payments?: unknown }
+  interface Reservation { id: number; guestName: string; listingName: string; listingId: number; channelName: string; checkIn: string; checkOut: string; nights: number; totalPrice: number; basePrice: number; hostPayout: number; cleaningFee: number; hostServiceFee: number; guestServiceFee: number; discount: number; pricePerNight: number; numberOfGuests: number; status: string; currency: string; rawFinance?: Record<string, unknown> }
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [resLoading, setResLoading] = useState(false);
   const [resSearch, setResSearch] = useState("");
   const [resMonth, setResMonth] = useState("");
+  const [resProperty, setResProperty] = useState("");
   const [payoutRes, setPayoutRes] = useState<Reservation | null>(null);
   const [payoutMgmtFee, setPayoutMgmtFee] = useState("15");
 
@@ -415,6 +416,8 @@ export default function AdminPage() {
     setPayoutMgmtFee("15");
   };
 
+  const resProperties = Array.from(new Set(reservations.map(r => r.listingName).filter(Boolean))).sort();
+
   const filteredRes = reservations.filter(r => {
     if (resSearch) {
       const q = resSearch.toLowerCase();
@@ -425,6 +428,7 @@ export default function AdminPage() {
       const co = r.checkOut.slice(0, 7);
       if (ci !== resMonth && co !== resMonth) return false;
     }
+    if (resProperty && r.listingName !== resProperty) return false;
     return true;
   });
 
@@ -1000,9 +1004,10 @@ export default function AdminPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
             <h2 style={{ fontSize: 18, fontWeight: 700 }}>Reservations ({filteredRes.length})</h2>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <input placeholder="Search guest or property..." value={resSearch} onChange={e => setResSearch(e.target.value)} style={{ ...inputStyle, width: 220, padding: "8px 14px" }} />
-              <input type="month" value={resMonth} onChange={e => setResMonth(e.target.value)} style={{ ...inputStyle, width: 160, padding: "8px 14px" }} />
-              {resMonth && <button onClick={() => setResMonth("")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "rgba(255,255,255,0.5)", padding: "6px 10px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Clear</button>}
+              <input placeholder="Search guest or property..." value={resSearch} onChange={e => setResSearch(e.target.value)} style={{ ...inputStyle, width: 200, padding: "8px 14px" }} />
+              {resProperties.length > 0 && <select value={resProperty} onChange={e => setResProperty(e.target.value)} style={{ ...inputStyle, width: 200, padding: "8px 14px", cursor: "pointer" }}><option value="">All Properties</option>{resProperties.map(p => <option key={p} value={p}>{p}</option>)}</select>}
+              <input type="month" value={resMonth} onChange={e => setResMonth(e.target.value)} style={{ ...inputStyle, width: 150, padding: "8px 14px" }} />
+              {(resMonth || resProperty) && <button onClick={() => { setResMonth(""); setResProperty(""); }} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "rgba(255,255,255,0.5)", padding: "6px 10px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Clear</button>}
               <button onClick={loadReservations} disabled={resLoading} style={{ ...btnStyle, padding: "8px 16px", fontSize: 13 }}>{resLoading ? "Loading..." : "Fetch Reservations"}</button>
             </div>
           </div>
@@ -1042,141 +1047,163 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Payout Modal */}
+          {/* Payout Modal — 3-Way Split */}
           {payoutRes && (() => {
             const r = payoutRes;
             const nights = r.nights || Math.max(1, Math.ceil((new Date(r.checkOut).getTime() - new Date(r.checkIn).getTime()) / 86400000));
             const mgmtPct = Number(payoutMgmtFee) || 0;
+            const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-            // All financials from HostAway — no manual input needed
-            const basePrice = r.basePrice;
+            // Use totalPrice for room fee if basePrice is 0
+            const roomFee = r.basePrice || r.totalPrice || 0;
             const cleaningFee = r.cleaningFee;
             const discount = r.discount;
             const hostServiceFee = r.hostServiceFee;
-            const hostPayout = r.hostPayout;
-            const pricePerNight = r.pricePerNight || (nights > 0 ? Math.round(basePrice / nights) : 0);
+            const guestServiceFee = r.guestServiceFee;
+            const pricePerNight = r.pricePerNight || (nights > 0 ? Math.round(roomFee / nights) : 0);
+            const guestTotal = roomFee + cleaningFee - discount + guestServiceFee;
 
-            // If hostPayout is available from HostAway, use it directly; otherwise calculate
-            const airbnbPayout = hostPayout > 0 ? hostPayout : (basePrice - discount + cleaningFee - hostServiceFee);
+            // Airbnb payout = what host receives after platform fees
+            const airbnbPayout = r.hostPayout > 0 ? r.hostPayout : (roomFee - discount + cleaningFee - hostServiceFee);
 
-            // Management fee = mgmtPct% of (base - discount + cleaning)
-            const mgmtBase = basePrice - discount + cleaningFee;
+            // BookedHosts takes: management fee + cleaning fee
+            const mgmtBase = roomFee - discount + cleaningFee;
             const mgmtFee = Math.round(mgmtBase * mgmtPct / 100 * 100) / 100;
-            const ownerPayout = Math.round((airbnbPayout - mgmtFee) * 100) / 100;
+            const bookedHostsRevenue = mgmtFee + cleaningFee;
 
-            // Monthly breakdown — split by calendar months from check-in
+            // Owner receives: Airbnb payout - management fee - cleaning fee
+            const ownerPayout = Math.round((airbnbPayout - mgmtFee - cleaningFee) * 100) / 100;
+
+            // Monthly breakdown
             const numPayments = Math.max(1, Math.ceil(nights / 30));
-            const months: { label: string; nights: number; roomFee: number; discountPortion: number; airbnbPortion: number; mgmtPortion: number; ownerPortion: number }[] = [];
+            const months: { label: string; nights: number; room: number; airbnbPay: number; mgmt: number; clean: number; owner: number }[] = [];
             const ciDate = new Date(r.checkIn);
             let remainNights = nights;
             for (let m = 0; m < numPayments; m++) {
-              const mStart = new Date(ciDate);
-              mStart.setDate(mStart.getDate() + m * 30);
+              const mStart = new Date(ciDate); mStart.setDate(mStart.getDate() + m * 30);
               const mNights = Math.min(30, remainNights);
-              const mEnd = new Date(mStart);
-              mEnd.setDate(mEnd.getDate() + mNights - 1);
+              const mEnd = new Date(mStart); mEnd.setDate(mEnd.getDate() + mNights - 1);
               remainNights -= mNights;
-              const proportion = mNights / nights;
-              const mRoom = Math.round(basePrice * proportion);
-              const mDisc = Math.round(discount * proportion);
-              const mAirbnb = Math.round(hostServiceFee * proportion);
-              const mMgmtBase = mRoom - mDisc + (m === 0 ? cleaningFee : 0);
-              const mMgmt = Math.round(mMgmtBase * mgmtPct / 100);
-              const mPayout = Math.round(airbnbPayout * proportion);
-              months.push({ label: `${mStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${mEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`, nights: mNights, roomFee: mRoom, discountPortion: mDisc, airbnbPortion: mAirbnb, mgmtPortion: mMgmt, ownerPortion: mPayout - mMgmt });
+              const p = mNights / nights;
+              const mRoom = Math.round(roomFee * p);
+              const mAirbnbPay = Math.round(airbnbPayout * p);
+              const mClean = m === 0 ? cleaningFee : 0;
+              const mMgmt = Math.round((mRoom - Math.round(discount * p) + mClean) * mgmtPct / 100);
+              months.push({ label: `${mStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${mEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`, nights: mNights, room: mRoom, airbnbPay: mAirbnbPay, mgmt: mMgmt, clean: mClean, owner: mAirbnbPay - mMgmt - mClean });
             }
-
-            const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             const copySummary = () => {
               const lines = [
                 `Payout Summary — ${r.guestName} at ${r.listingName}`,
-                `Check-in: ${r.checkIn} | Check-out: ${r.checkOut} | ${nights} nights`,
-                `Channel: ${r.channelName} | Rate: $${pricePerNight}/night`,
-                "",
-                `Room Fee: $${fmt(basePrice)}`,
-                discount > 0 ? `Discount: -$${fmt(discount)}` : null,
-                `Cleaning Fee: $${fmt(cleaningFee)}`,
-                `Host Service Fee: -$${fmt(hostServiceFee)}`,
-                `Payout from ${r.channelName}: $${fmt(airbnbPayout)}`,
-                "",
-                `Management Fee (${mgmtPct}%): -$${fmt(mgmtFee)}`,
-                `Owner Receives: $${fmt(ownerPayout)}`,
+                `Check-in: ${r.checkIn} | Check-out: ${r.checkOut} | ${nights} nights | ${r.channelName}`,
+                "", "WHAT THE GUEST PAID:",
+                `  Room Fee: $${fmt(roomFee)}`,
+                discount > 0 ? `  Discount: -$${fmt(discount)}` : null,
+                `  Cleaning Fee: $${fmt(cleaningFee)}`,
+                guestServiceFee > 0 ? `  Guest Service Fee: $${fmt(guestServiceFee)}` : null,
+                `  Total: $${fmt(guestTotal)}`,
+                "", "WHAT AIRBNB TAKES:",
+                `  Host Service Fee: -$${fmt(hostServiceFee)}`,
+                `  Payout to Host: $${fmt(airbnbPayout)}`,
+                "", "WHAT BOOKEDHOSTS RECEIVES:",
+                `  Management Fee (${mgmtPct}%): $${fmt(mgmtFee)}`,
+                `  Cleaning Fee: $${fmt(cleaningFee)}`,
+                `  Total: $${fmt(bookedHostsRevenue)}`,
+                "", "WHAT THE OWNER RECEIVES:",
+                `  $${fmt(ownerPayout)}`,
               ].filter(Boolean);
-              if (numPayments > 1) {
-                lines.push("", "Monthly Breakdown:");
-                months.forEach((m, i) => lines.push(`  Month ${i + 1} (${m.label}, ${m.nights}n): Owner $${fmt(m.ownerPortion)}`));
-              }
-              lines.push("", "Note: Owner payout is AFTER platform fees, AFTER management fee. Subtract any supplies/extras separately.");
+              if (numPayments > 1) { lines.push("", "MONTHLY:"); months.forEach((m, i) => lines.push(`  Month ${i + 1} (${m.label}): Owner $${fmt(m.owner)}`)); }
               navigator.clipboard.writeText(lines.join("\n"));
               showToast("Summary copied to clipboard");
             };
 
+            // Show raw finance data link for debugging
+            const showRaw = () => { console.log("Raw finance data:", JSON.stringify(r.rawFinance, null, 2)); showToast("Raw data logged to console (F12)"); };
+
             return (
               <Modal open={true} onClose={() => setPayoutRes(null)} title={`Payout — ${r.guestName}`}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Guest</label><div style={{ fontSize: 14, fontWeight: 600 }}>{r.guestName}</div></div>
+                {/* Header info */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Property</label><div style={{ fontSize: 14, fontWeight: 600 }}>{r.listingName}</div></div>
-                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Check-in</label><div style={{ fontSize: 14 }}>{r.checkIn}</div></div>
-                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Check-out ({nights} nights)</label><div style={{ fontSize: 14 }}>{r.checkOut}</div></div>
-                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Channel</label><div style={{ fontSize: 14 }}>{r.channelName}</div></div>
-                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Rate</label><div style={{ fontSize: 14 }}>${pricePerNight}/night</div></div>
+                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Dates</label><div style={{ fontSize: 13 }}>{r.checkIn} → {r.checkOut} ({nights}n)</div></div>
+                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Channel / Rate</label><div style={{ fontSize: 13 }}>{r.channelName} · ${pricePerNight}/night</div></div>
                 </div>
-                <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>Financial Breakdown (from {r.channelName})</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "6px 24px", fontSize: 14 }}>
-                    <span>Room Fee ({nights} nights × ${pricePerNight})</span><span style={{ textAlign: "right" }}>${fmt(basePrice)}</span>
-                    {discount > 0 && <><span style={{ color: "#f66" }}>Discount</span><span style={{ textAlign: "right", color: "#f66" }}>-${fmt(discount)}</span></>}
+
+                {/* Section 1: What Guest Paid */}
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14, marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>What the Guest Paid</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "4px 24px", fontSize: 13 }}>
+                    <span>Room Fee ({nights}n × ${pricePerNight})</span><span style={{ textAlign: "right" }}>${fmt(roomFee)}</span>
                     <span>Cleaning Fee</span><span style={{ textAlign: "right" }}>${fmt(cleaningFee)}</span>
+                    {discount > 0 && <><span style={{ color: "#f66" }}>Discount</span><span style={{ textAlign: "right", color: "#f66" }}>-${fmt(discount)}</span></>}
+                    {guestServiceFee > 0 && <><span>Guest Service Fee</span><span style={{ textAlign: "right" }}>${fmt(guestServiceFee)}</span></>}
+                    <span style={{ fontWeight: 600, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.04)" }}>Total</span><span style={{ textAlign: "right", fontWeight: 600, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.04)" }}>${fmt(guestTotal)}</span>
+                  </div>
+                </div>
+
+                {/* Section 2: What Airbnb Takes */}
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14, marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#f66", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>What {r.channelName} Takes</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "4px 24px", fontSize: 13 }}>
                     <span style={{ color: "#f66" }}>Host Service Fee</span><span style={{ textAlign: "right", color: "#f66" }}>-${fmt(hostServiceFee)}</span>
-                    <span style={{ fontWeight: 600, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.06)" }}>Payout from {r.channelName}</span><span style={{ textAlign: "right", fontWeight: 600, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.06)" }}>${fmt(airbnbPayout)}</span>
+                    <span style={{ fontWeight: 600, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.04)" }}>Payout to Host</span><span style={{ textAlign: "right", fontWeight: 600, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.04)" }}>${fmt(airbnbPayout)}</span>
                   </div>
                 </div>
-                <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>Management Fee</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                    <label style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>Management Fee %</label>
-                    <input style={{ ...inputStyle, width: 80, padding: "6px 10px", textAlign: "center" }} type="number" value={payoutMgmtFee} onChange={e => setPayoutMgmtFee(e.target.value)} />
+
+                {/* Section 3: What BookedHosts Receives */}
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14, marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#0af", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>What BookedHosts Receives</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>Management Fee %</span>
+                    <input style={{ ...inputStyle, width: 70, padding: "5px 8px", textAlign: "center", fontSize: 13 }} type="number" value={payoutMgmtFee} onChange={e => setPayoutMgmtFee(e.target.value)} />
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "6px 24px", fontSize: 14 }}>
-                    <span style={{ color: "#f66" }}>Management Fee ({mgmtPct}% of ${fmt(mgmtBase)})</span><span style={{ textAlign: "right", color: "#f66" }}>-${fmt(mgmtFee)}</span>
-                    <span style={{ fontWeight: 700, fontSize: 18, color: "#0fa", paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.08)" }}>Owner Receives</span><span style={{ textAlign: "right", fontWeight: 700, fontSize: 18, color: "#0fa", paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.08)" }}>${fmt(ownerPayout)}</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "4px 24px", fontSize: 13 }}>
+                    <span>Management Fee ({mgmtPct}%)</span><span style={{ textAlign: "right" }}>${fmt(mgmtFee)}</span>
+                    <span>Cleaning Fee</span><span style={{ textAlign: "right" }}>${fmt(cleaningFee)}</span>
+                    <span style={{ fontWeight: 600, color: "#0af", paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.04)" }}>Total BookedHosts</span><span style={{ textAlign: "right", fontWeight: 600, color: "#0af", paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.04)" }}>${fmt(bookedHostsRevenue)}</span>
                   </div>
-                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 8 }}>Owner payout is AFTER platform fees, AFTER management fee. Subtract any supplies/extras separately.</p>
                 </div>
+
+                {/* Section 4: Owner Receives */}
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14, marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#0fa", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>What the Owner Receives</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "4px 24px", fontSize: 13 }}>
+                    <span>Payout from {r.channelName}</span><span style={{ textAlign: "right" }}>${fmt(airbnbPayout)}</span>
+                    <span style={{ color: "#f66" }}>Management Fee ({mgmtPct}%)</span><span style={{ textAlign: "right", color: "#f66" }}>-${fmt(mgmtFee)}</span>
+                    <span style={{ color: "#f66" }}>Cleaning Fee (to BookedHosts)</span><span style={{ textAlign: "right", color: "#f66" }}>-${fmt(cleaningFee)}</span>
+                    <span style={{ fontWeight: 700, fontSize: 18, color: "#0fa", paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.08)" }}>Owner Payout</span><span style={{ textAlign: "right", fontWeight: 700, fontSize: 18, color: "#0fa", paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.08)" }}>${fmt(ownerPayout)}</span>
+                  </div>
+                </div>
+
+                {/* Monthly Breakdown */}
                 {numPayments > 1 && (
-                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginBottom: 16 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>Monthly Breakdown ({numPayments} payments)</div>
+                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14, marginBottom: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>Monthly Breakdown ({numPayments} payments)</div>
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                      <thead>
-                        <tr>
-                          <th style={{ ...thStyle, fontSize: 10 }}>#</th>
-                          <th style={{ ...thStyle, fontSize: 10 }}>Dates</th>
-                          <th style={{ ...thStyle, fontSize: 10, textAlign: "right" }}>Nights</th>
-                          <th style={{ ...thStyle, fontSize: 10, textAlign: "right" }}>Room</th>
-                          <th style={{ ...thStyle, fontSize: 10, textAlign: "right", color: "#f66" }}>Fees</th>
-                          <th style={{ ...thStyle, fontSize: 10, textAlign: "right", color: "#f66" }}>Mgmt</th>
-                          <th style={{ ...thStyle, fontSize: 10, textAlign: "right", color: "#0fa" }}>Owner</th>
+                      <thead><tr>
+                        <th style={{ ...thStyle, fontSize: 10 }}>#</th>
+                        <th style={{ ...thStyle, fontSize: 10 }}>Dates</th>
+                        <th style={{ ...thStyle, fontSize: 10, textAlign: "right" }}>Nights</th>
+                        <th style={{ ...thStyle, fontSize: 10, textAlign: "right" }}>Airbnb Pay</th>
+                        <th style={{ ...thStyle, fontSize: 10, textAlign: "right", color: "#0af" }}>BookedHosts</th>
+                        <th style={{ ...thStyle, fontSize: 10, textAlign: "right", color: "#0fa" }}>Owner</th>
+                      </tr></thead>
+                      <tbody>{months.map((m, i) => (
+                        <tr key={i}>
+                          <td style={{ ...tdStyle, fontSize: 12 }}>{i + 1}</td>
+                          <td style={{ ...tdStyle, fontSize: 12 }}>{m.label}</td>
+                          <td style={{ ...tdStyle, fontSize: 12, textAlign: "right" }}>{m.nights}</td>
+                          <td style={{ ...tdStyle, fontSize: 12, textAlign: "right" }}>${fmt(m.airbnbPay)}</td>
+                          <td style={{ ...tdStyle, fontSize: 12, textAlign: "right", color: "#0af" }}>${fmt(m.mgmt + m.clean)}</td>
+                          <td style={{ ...tdStyle, fontSize: 12, textAlign: "right", color: "#0fa", fontWeight: 600 }}>${fmt(m.owner)}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {months.map((m, i) => (
-                          <tr key={i}>
-                            <td style={{ ...tdStyle, fontSize: 12 }}>{i + 1}</td>
-                            <td style={{ ...tdStyle, fontSize: 12 }}>{m.label}</td>
-                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right" }}>{m.nights}</td>
-                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right" }}>${fmt(m.roomFee)}</td>
-                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right", color: "#f66" }}>-${fmt(m.airbnbPortion + m.discountPortion)}</td>
-                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right", color: "#f66" }}>-${fmt(m.mgmtPortion)}</td>
-                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right", color: "#0fa", fontWeight: 600 }}>${fmt(m.ownerPortion)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
+                      ))}</tbody>
                     </table>
                   </div>
                 )}
                 <div style={{ display: "flex", gap: 12 }}>
                   <button onClick={copySummary} style={{ ...btnStyle, padding: "10px 20px", fontSize: 13 }}>Copy Summary</button>
+                  <button onClick={showRaw} style={{ padding: "10px 20px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Debug Raw Data</button>
                   <button onClick={() => setPayoutRes(null)} style={{ padding: "10px 20px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Close</button>
                 </div>
               </Modal>

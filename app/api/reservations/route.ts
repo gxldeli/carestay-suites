@@ -12,32 +12,54 @@ export async function GET(request: Request) {
     const listingId = searchParams.get("listingId") || undefined;
     const raw = await getReservations({ status, listingId });
 
-    // Log full first reservation object to see all available fields
+    // Log FULL first reservation with every single field
     if (raw.length > 0) {
-      console.log("HOSTAWAY RESERVATION SAMPLE (all fields):", JSON.stringify(raw[0], null, 2));
+      const sample = raw[0];
+      console.log("=== FULL HOSTAWAY RESERVATION OBJECT ===");
+      console.log(JSON.stringify(sample, null, 2));
+      // Also log just the keys and money-related values
+      const moneyFields: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(sample)) {
+        if (typeof v === "number" || (typeof v === "string" && /^\d+\.?\d*$/.test(v)) || k.toLowerCase().includes("price") || k.toLowerCase().includes("fee") || k.toLowerCase().includes("payout") || k.toLowerCase().includes("total") || k.toLowerCase().includes("cost") || k.toLowerCase().includes("amount") || k.toLowerCase().includes("discount") || k.toLowerCase().includes("commission") || k.toLowerCase().includes("revenue") || k.toLowerCase().includes("payment") || k.toLowerCase().includes("money") || k.toLowerCase().includes("finance")) {
+          moneyFields[k] = v;
+        }
+      }
+      console.log("=== MONEY-RELATED FIELDS ===", JSON.stringify(moneyFields, null, 2));
     }
 
     const reservations = raw.map((r: Record<string, unknown>) => {
-      const nights = Number(r.nights || 0);
-      const totalPrice = Number(r.totalPrice || 0);
-      const basePrice = Number(r.basePrice || r.price || 0);
-      const hostPayout = Number(r.hostPayout || 0);
-      const cleaningFee = Number(r.cleaningFee || 0);
-      const hostServiceFee = Number(r.hostServiceFee || r.hostChannelFee || 0);
-      const guestServiceFee = Number(r.guestServiceFee || 0);
-      const discount = Number(r.discount || r.promotionDiscount || r.couponDiscount || 0);
-      const channelCommission = Number(r.channelCommissionAmount || r.commission || 0);
-      const pricePerNight = nights > 0 ? Math.round(basePrice / nights) : Number(r.pricePerNight || 0);
+      // Try every possible field name for financial data
+      const fin = r.finance as Record<string, unknown> | undefined;
+      const money = r.money as Record<string, unknown> | undefined;
+      const prices = r.prices as Record<string, unknown> | undefined;
+
+      const totalPrice = Number(r.totalPrice || fin?.totalPrice || money?.totalPrice || prices?.totalPrice || r.price || 0);
+      const basePrice = Number(r.basePrice || fin?.basePrice || money?.basePrice || r.price || r.totalPrice || fin?.totalPrice || 0);
+      const hostPayout = Number(r.hostPayout || r.expectedPayout || fin?.hostPayout || fin?.expectedPayout || money?.hostPayout || 0);
+      const cleaningFee = Number(r.cleaningFee || fin?.cleaningFee || money?.cleaningFee || 0);
+      const hostServiceFee = Number(r.hostServiceFee || r.hostChannelFee || r.channelCommissionAmount || fin?.hostServiceFee || 0);
+      const guestServiceFee = Number(r.guestServiceFee || fin?.guestServiceFee || 0);
+      const discount = Math.abs(Number(r.discount || r.promotionDiscount || r.couponDiscount || fin?.discount || 0));
+      const nights = Number(r.nights || r.numberOfNights || 0);
+      const pricePerNight = nights > 0 ? Math.round((basePrice || totalPrice) / nights) : Number(r.pricePerNight || 0);
+
+      // Build rawFinance with every money-related field for debugging
+      const rawFinance: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(r)) {
+        if (k.toLowerCase().includes("price") || k.toLowerCase().includes("fee") || k.toLowerCase().includes("payout") || k.toLowerCase().includes("total") || k.toLowerCase().includes("cost") || k.toLowerCase().includes("amount") || k.toLowerCase().includes("discount") || k.toLowerCase().includes("commission") || k.toLowerCase().includes("revenue") || k.toLowerCase().includes("night")) {
+          rawFinance[k] = v;
+        }
+      }
+      if (fin) rawFinance._finance = fin;
+      if (money) rawFinance._money = money;
+      if (prices) rawFinance._prices = prices;
 
       return {
         id: r.id,
         guestName: r.guestName || r.guestFirstName || "Unknown Guest",
-        guestEmail: r.guestEmail || "",
-        guestPhone: r.guestPhone || "",
         listingName: r.listingName || `Listing ${r.listingMapId || r.listingId}`,
         listingId: r.listingMapId || r.listingId,
         channelName: r.channelName || r.source || "Direct",
-        channelId: r.channelId,
         checkIn: r.arrivalDate || r.checkInDate || "",
         checkOut: r.departureDate || r.checkOutDate || "",
         nights,
@@ -47,14 +69,12 @@ export async function GET(request: Request) {
         cleaningFee,
         hostServiceFee,
         guestServiceFee,
-        discount: Math.abs(discount),
-        channelCommission,
+        discount,
         pricePerNight,
         numberOfGuests: Number(r.numberOfGuests || r.adults || 1),
         status: r.status || "unknown",
         currency: r.currency || "CAD",
-        // Pass through any monthly payment data if available
-        payments: r.payments || r.paymentSchedule || null,
+        rawFinance,
       };
     });
 
