@@ -431,9 +431,14 @@ export default function AdminPage() {
       if (!r.guestName.toLowerCase().includes(q) && !r.listingName.toLowerCase().includes(q)) return false;
     }
     if (resMonth) {
-      const ci = r.checkIn.slice(0, 7);
-      const co = r.checkOut.slice(0, 7);
-      if (ci !== resMonth && co !== resMonth) return false;
+      // Check if the selected month overlaps with the stay period at all
+      // e.g. stay Jan 16 - May 15, selecting March should match
+      const monthStart = new Date(resMonth + "-01");
+      const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0); // last day of month
+      const ciDate = new Date(r.checkIn);
+      const coDate = new Date(r.checkOut);
+      // Reservation overlaps this month if: checkIn <= end of month AND checkOut >= start of month
+      if (ciDate > monthEnd || coDate < monthStart) return false;
     }
     if (resProperty && r.listingName !== resProperty) return false;
     return true;
@@ -1020,7 +1025,41 @@ export default function AdminPage() {
           </div>
           {reservations.length === 0 && resLoading && <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", padding: 40 }}>Loading reservations from HostAway...</p>}
           {reservations.length === 0 && !resLoading && <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", padding: 40 }}>No reservations found. Click &quot;Fetch Reservations&quot; to reload.</p>}
-          {filteredRes.length > 0 && (
+          {filteredRes.length > 0 && (() => {
+            const mgmtPct = Number(payoutMgmtFee) || 15;
+            const fmt2 = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            // Calculate month-specific nights and payout for each reservation
+            const getMonthPortion = (r: Reservation) => {
+              if (!resMonth) return null;
+              const mStart = new Date(resMonth + "-01");
+              const mEnd = new Date(mStart.getFullYear(), mStart.getMonth() + 1, 0);
+              const ci = new Date(r.checkIn);
+              const co = new Date(r.checkOut);
+              const overlapStart = ci > mStart ? ci : mStart;
+              const overlapEnd = co < mEnd ? co : mEnd;
+              const overlapNights = Math.max(0, Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / 86400000));
+              const totalNights = r.nights || Math.max(1, Math.ceil((co.getTime() - ci.getTime()) / 86400000));
+              const proportion = totalNights > 0 ? overlapNights / totalNights : 0;
+              const roomFeeFromApi = r.roomFee || r.basePrice || 0;
+              const roomFeeBeforeDiscount = r.discount > 0 ? roomFeeFromApi + r.discount : roomFeeFromApi;
+              const roomFeeAfterDiscount = roomFeeBeforeDiscount - r.discount;
+              const hostServiceFee = r.hostServiceFee > 0 ? r.hostServiceFee : Math.round((roomFeeAfterDiscount + r.cleaningFee) * 0.155 * 100) / 100;
+              const airbnbPayout = r.hostPayout > 0 && r.hostPayout !== r.totalPrice ? r.hostPayout : (roomFeeAfterDiscount + r.cleaningFee - hostServiceFee);
+              const mAirbnbPay = Math.round(airbnbPayout * proportion * 100) / 100;
+              const mClean = proportion > 0 && ci >= mStart && ci <= mEnd ? r.cleaningFee : 0; // cleaning in check-in month
+              const mRoom = Math.round(roomFeeBeforeDiscount * proportion);
+              const mDisc = Math.round(r.discount * proportion);
+              const mMgmt = Math.round((mRoom - mDisc + mClean) * mgmtPct / 100 * 100) / 100;
+              const mOwner = Math.round((mAirbnbPay - mMgmt - mClean) * 100) / 100;
+              return { overlapNights, proportion, mAirbnbPay, mMgmt, mClean, mOwner };
+            };
+
+            const monthPortions = filteredRes.map(r => ({ r, mp: getMonthPortion(r) }));
+            const totalOwnerThisMonth = resMonth ? monthPortions.reduce((sum, { mp }) => sum + (mp?.mOwner || 0), 0) : 0;
+            const totalBHThisMonth = resMonth ? monthPortions.reduce((sum, { mp }) => sum + (mp?.mMgmt || 0) + (mp?.mClean || 0), 0) : 0;
+
+            return (
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
@@ -1031,29 +1070,42 @@ export default function AdminPage() {
                     <th style={thStyle}>Check-out</th>
                     <th style={thStyle}>Nights</th>
                     <th style={thStyle}>Channel</th>
-                    <th style={thStyle}>Payout</th>
+                    <th style={thStyle}>Total Payout</th>
+                    {resMonth && <th style={{ ...thStyle, color: "#0fa" }}>This Month</th>}
+                    {resMonth && <th style={{ ...thStyle, color: "#0fa" }}>Owner</th>}
                     <th style={thStyle}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRes.map(r => {
-                    return (
-                      <tr key={r.id} onClick={() => openPayout(r)} style={{ cursor: "pointer", transition: "background 0.15s" }} onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                        <td style={tdStyle}><span style={{ fontWeight: 600 }}>{r.guestName}</span></td>
-                        <td style={tdStyle}>{r.listingName}</td>
-                        <td style={tdStyle}>{r.checkIn}</td>
-                        <td style={tdStyle}>{r.checkOut}</td>
-                        <td style={tdStyle}>{r.nights || Math.max(1, Math.ceil((new Date(r.checkOut).getTime() - new Date(r.checkIn).getTime()) / 86400000))}</td>
-                        <td style={tdStyle}><span style={{ background: "rgba(0,170,255,0.1)", color: "#0af", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{r.channelName}</span></td>
-                        <td style={tdStyle}>${(r.hostPayout || r.totalPrice).toLocaleString()}</td>
-                        <td style={tdStyle}><StatusBadge status={r.status === "confirmed" || r.status === "new" ? "Available" : r.status === "cancelled" ? "Booked" : "Almost Booked"} /></td>
-                      </tr>
-                    );
-                  })}
+                  {monthPortions.map(({ r, mp }) => (
+                    <tr key={r.id} onClick={() => openPayout(r)} style={{ cursor: "pointer", transition: "background 0.15s" }} onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                      <td style={tdStyle}><span style={{ fontWeight: 600 }}>{r.guestName}</span></td>
+                      <td style={tdStyle}>{r.listingName}</td>
+                      <td style={tdStyle}>{r.checkIn}</td>
+                      <td style={tdStyle}>{r.checkOut}</td>
+                      <td style={tdStyle}>{r.nights || Math.max(1, Math.ceil((new Date(r.checkOut).getTime() - new Date(r.checkIn).getTime()) / 86400000))}{mp ? ` (${mp.overlapNights} this mo)` : ""}</td>
+                      <td style={tdStyle}><span style={{ background: "rgba(0,170,255,0.1)", color: "#0af", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{r.channelName}</span></td>
+                      <td style={tdStyle}>${(r.hostPayout || r.totalPrice).toLocaleString()}</td>
+                      {mp && <td style={tdStyle}>${fmt2(mp.mAirbnbPay)}</td>}
+                      {mp && <td style={{ ...tdStyle, color: "#0fa", fontWeight: 600 }}>${fmt2(mp.mOwner)}</td>}
+                      <td style={tdStyle}><StatusBadge status={r.status === "confirmed" || r.status === "new" ? "Available" : r.status === "cancelled" ? "Booked" : "Almost Booked"} /></td>
+                    </tr>
+                  ))}
                 </tbody>
+                {resMonth && (
+                  <tfoot>
+                    <tr style={{ borderTop: "2px solid rgba(255,255,255,0.1)" }}>
+                      <td colSpan={7} style={{ ...tdStyle, fontWeight: 700, textAlign: "right", paddingRight: 16 }}>Month Totals:</td>
+                      <td style={{ ...tdStyle, fontWeight: 700 }}>${fmt2(totalOwnerThisMonth + totalBHThisMonth)}</td>
+                      <td style={{ ...tdStyle, fontWeight: 700, color: "#0fa" }}>${fmt2(totalOwnerThisMonth)}</td>
+                      <td style={{ ...tdStyle, fontSize: 11, color: "rgba(255,255,255,0.4)" }}>BH: ${fmt2(totalBHThisMonth)}</td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
-          )}
+            );
+          })()}
 
           {/* Payout Modal — 3-Way Split */}
           {payoutRes && (() => {
