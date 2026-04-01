@@ -12,47 +12,52 @@ export async function GET(request: Request) {
     const listingId = searchParams.get("listingId") || undefined;
     const raw = await getReservations({ status, listingId });
 
-    // Log FULL first reservation with every single field
+    // Log FULL first reservation — every single key
     if (raw.length > 0) {
-      const sample = raw[0];
-      console.log("=== FULL HOSTAWAY RESERVATION OBJECT ===");
-      console.log(JSON.stringify(sample, null, 2));
-      // Also log just the keys and money-related values
-      const moneyFields: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(sample)) {
-        if (typeof v === "number" || (typeof v === "string" && /^\d+\.?\d*$/.test(v)) || k.toLowerCase().includes("price") || k.toLowerCase().includes("fee") || k.toLowerCase().includes("payout") || k.toLowerCase().includes("total") || k.toLowerCase().includes("cost") || k.toLowerCase().includes("amount") || k.toLowerCase().includes("discount") || k.toLowerCase().includes("commission") || k.toLowerCase().includes("revenue") || k.toLowerCase().includes("payment") || k.toLowerCase().includes("money") || k.toLowerCase().includes("finance")) {
-          moneyFields[k] = v;
-        }
-      }
-      console.log("=== MONEY-RELATED FIELDS ===", JSON.stringify(moneyFields, null, 2));
+      console.log("=== HOSTAWAY FULL RESERVATION KEYS ===", Object.keys(raw[0]).join(", "));
+      console.log("=== HOSTAWAY FULL RESERVATION ===", JSON.stringify(raw[0], null, 2));
     }
 
     const reservations = raw.map((r: Record<string, unknown>) => {
-      // Try every possible field name for financial data
-      const fin = r.finance as Record<string, unknown> | undefined;
-      const money = r.money as Record<string, unknown> | undefined;
-      const prices = r.prices as Record<string, unknown> | undefined;
-
-      const totalPrice = Number(r.totalPrice || fin?.totalPrice || money?.totalPrice || prices?.totalPrice || r.price || 0);
-      const basePrice = Number(r.basePrice || fin?.basePrice || money?.basePrice || r.price || r.totalPrice || fin?.totalPrice || 0);
-      const hostPayout = Number(r.hostPayout || r.expectedPayout || fin?.hostPayout || fin?.expectedPayout || money?.hostPayout || 0);
-      const cleaningFee = Number(r.cleaningFee || fin?.cleaningFee || money?.cleaningFee || 0);
-      const hostServiceFee = Number(r.hostServiceFee || r.hostChannelFee || r.channelCommissionAmount || fin?.hostServiceFee || 0);
-      const guestServiceFee = Number(r.guestServiceFee || fin?.guestServiceFee || 0);
-      const discount = Math.abs(Number(r.discount || r.promotionDiscount || r.couponDiscount || fin?.discount || 0));
       const nights = Number(r.nights || r.numberOfNights || 0);
-      const pricePerNight = nights > 0 ? Math.round((basePrice || totalPrice) / nights) : Number(r.pricePerNight || 0);
 
-      // Build rawFinance with every money-related field for debugging
+      // HostAway field exploration — try every known field name
+      const totalPrice = Number(r.totalPrice || 0);
+      const hostPayout = Number(r.hostPayout || r.expectedPayout || 0);
+      const cleaningFee = Number(r.cleaningFee || 0);
+      const hostServiceFee = Number(r.hostServiceFee || r.hostChannelFee || r.channelCommissionAmount || 0);
+      const guestServiceFee = Number(r.guestServiceFee || 0);
+      const discount = Math.abs(Number(r.discount || r.promotionDiscount || r.couponDiscount || 0));
+
+      // basePrice in HostAway is often the room rate BEFORE cleaning and discount
+      // totalPrice is often basePrice - discount + cleaningFee (what host receives before platform fee)
+      const basePrice = Number(r.basePrice || 0);
+
+      // If we have totalPrice but NOT a separate basePrice, totalPrice likely includes cleaning
+      // In that case, room fee = totalPrice - cleaningFee
+      const roomFee = basePrice > 0 ? basePrice : (totalPrice > 0 ? totalPrice - cleaningFee : 0);
+
+      const pricePerNight = nights > 0 ? Math.round(roomFee / nights) : Number(r.pricePerNight || 0);
+
+      // Collect ALL fields for raw debugging
       const rawFinance: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(r)) {
-        if (k.toLowerCase().includes("price") || k.toLowerCase().includes("fee") || k.toLowerCase().includes("payout") || k.toLowerCase().includes("total") || k.toLowerCase().includes("cost") || k.toLowerCase().includes("amount") || k.toLowerCase().includes("discount") || k.toLowerCase().includes("commission") || k.toLowerCase().includes("revenue") || k.toLowerCase().includes("night")) {
-          rawFinance[k] = v;
+        if (v !== null && v !== undefined && v !== "" && v !== 0 && v !== "0" && v !== "0.00") {
+          const kl = k.toLowerCase();
+          if (kl.includes("price") || kl.includes("fee") || kl.includes("payout") || kl.includes("total") ||
+              kl.includes("cost") || kl.includes("amount") || kl.includes("discount") || kl.includes("commission") ||
+              kl.includes("revenue") || kl.includes("night") || kl.includes("payment") || kl.includes("money") ||
+              kl.includes("finance") || kl.includes("earning") || kl.includes("pricing") || kl.includes("charge")) {
+            rawFinance[k] = v;
+          }
         }
       }
-      if (fin) rawFinance._finance = fin;
-      if (money) rawFinance._money = money;
-      if (prices) rawFinance._prices = prices;
+      // Also grab any nested objects that might contain pricing
+      for (const nestedKey of ["finance", "money", "prices", "pricing", "financials", "reservationPricing", "listingMapPricings", "payments", "paymentSchedule"]) {
+        if (r[nestedKey] && typeof r[nestedKey] === "object") {
+          rawFinance[`_${nestedKey}`] = r[nestedKey];
+        }
+      }
 
       return {
         id: r.id,
@@ -64,6 +69,7 @@ export async function GET(request: Request) {
         checkOut: r.departureDate || r.checkOutDate || "",
         nights,
         totalPrice,
+        roomFee,
         basePrice,
         hostPayout,
         cleaningFee,
