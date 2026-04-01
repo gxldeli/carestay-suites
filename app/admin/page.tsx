@@ -131,7 +131,8 @@ const TABS = [
 export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("settings");
+  const [activeTab, setActiveTab] = useState<string>(() => (typeof window !== "undefined" && localStorage.getItem("adminActiveTab")) || "settings");
+  const switchTab = (tab: string) => { setActiveTab(tab); if (typeof window !== "undefined") localStorage.setItem("adminActiveTab", tab); };
   const [listings, setListings] = useState<ApiListing[]>([]);
   const [overrides, setOverrides] = useState<OverridesData>({ listings: {}, customListings: [], reviews: {} });
   const [reviewListingId, setReviewListingId] = useState<string | null>(null);
@@ -487,7 +488,7 @@ export default function AdminPage() {
         {/* Tab Navigation */}
         <div style={{ display: "flex", gap: 0, marginBottom: 28, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
           {TABS.map(t => (
-            <button key={t.key} onClick={() => setActiveTab(t.key)} style={{ padding: "12px 24px", background: "none", border: "none", borderBottom: activeTab === t.key ? "2px solid #14b8a6" : "2px solid transparent", color: activeTab === t.key ? "#14b8a6" : "rgba(255,255,255,0.45)", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}>{t.label}</button>
+            <button key={t.key} onClick={() => switchTab(t.key)} style={{ padding: "12px 24px", background: "none", border: "none", borderBottom: activeTab === t.key ? "2px solid #14b8a6" : "2px solid transparent", color: activeTab === t.key ? "#14b8a6" : "rgba(255,255,255,0.45)", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}>{t.label}</button>
           ))}
         </div>
 
