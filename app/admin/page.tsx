@@ -213,6 +213,8 @@ export default function AdminPage() {
   const [resProperty, setResProperty] = useState("");
   const [payoutRes, setPayoutRes] = useState<Reservation | null>(null);
   const [payoutMgmtFee, setPayoutMgmtFee] = useState("15");
+  const [payoutMisc, setPayoutMisc] = useState("0");
+  const [payoutMiscNote, setPayoutMiscNote] = useState("");
 
   const openEditCustom = (cl: CustomListing) => {
     setEditingCustomId(cl.id);
@@ -422,6 +424,8 @@ export default function AdminPage() {
   const openPayout = (r: Reservation) => {
     setPayoutRes(r);
     setPayoutMgmtFee("15");
+    setPayoutMisc("0");
+    setPayoutMiscNote("");
   };
 
   const resProperties = Array.from(new Set(reservations.map(r => r.listingName).filter(Boolean))).sort();
@@ -1143,7 +1147,9 @@ export default function AdminPage() {
             const bookedHostsRevenue = mgmtFee + cleaningFee;
 
             // Owner: Airbnb payout minus management minus cleaning
+            const miscAmount = Number(payoutMisc) || 0;
             const ownerPayout = Math.round((airbnbPayout - mgmtFee - cleaningFee) * 100) / 100;
+            const ownerFinal = Math.round((ownerPayout - miscAmount) * 100) / 100;
 
             // Guest total (what they see on Airbnb)
             const guestServiceFee = r.guestServiceFee;
@@ -1183,7 +1189,9 @@ export default function AdminPage() {
                 `  Management Fee (${mgmtPct}%): $${fmt(mgmtFee)}`,
                 `  Cleaning Fee: $${fmt(cleaningFee)}`,
                 `  Total: $${fmt(bookedHostsRevenue)}`,
-                "", `OWNER RECEIVES: $${fmt(ownerPayout)}`,
+                "", `SUBTOTAL TO OWNER: $${fmt(ownerPayout)}`,
+                miscAmount > 0 ? `Supplies/Misc${payoutMiscNote ? ` (${payoutMiscNote})` : ""}: -$${fmt(miscAmount)}` : null,
+                `FINAL OWNER PAYOUT: $${fmt(ownerFinal)}`,
               ].filter(Boolean);
               if (numPayments > 1) { lines.push("", "MONTHLY:"); months.forEach((m, i) => lines.push(`  Month ${i + 1} (${m.label}, ${m.nights}n): Room $${fmt(m.room)}${m.disc > 0 ? ` - Disc $${fmt(m.disc)}` : ""}${m.clean > 0 ? ` + Clean $${fmt(m.clean)}` : ""} → Owner $${fmt(m.owner)}`)); }
               navigator.clipboard.writeText(lines.join("\n"));
@@ -1234,7 +1242,19 @@ export default function AdminPage() {
                     <span>Payout from {r.channelName}</span><span style={{ textAlign: "right" }}>${fmt(airbnbPayout)}</span>
                     <span style={{ color: "#f66" }}>− Management fee ({mgmtPct}%)</span><span style={{ textAlign: "right", color: "#f66" }}>-${fmt(mgmtFee)}</span>
                     <span style={{ color: "#f66" }}>− Cleaning fee (to BookedHosts)</span><span style={{ textAlign: "right", color: "#f66" }}>-${fmt(cleaningFee)}</span>
-                    <span style={{ fontWeight: 700, fontSize: 20, color: "#0fa", paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.08)" }}>Owner Receives</span><span style={{ textAlign: "right", fontWeight: 700, fontSize: 20, color: "#0fa", paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.08)" }}>${fmt(ownerPayout)}</span>
+                    <span style={{ fontWeight: 600, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.06)" }}>Subtotal to Owner</span><span style={{ textAlign: "right", fontWeight: 600, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.06)" }}>${fmt(ownerPayout)}</span>
+                  </div>
+                  <div style={{ marginTop: 12, display: "flex", gap: 10, alignItems: "flex-end" }}>
+                    <div style={{ flex: "0 0 120px" }}><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Supplies / Misc ($)</label><input style={{ ...inputStyle, padding: "6px 10px" }} type="number" value={payoutMisc} onChange={e => setPayoutMisc(e.target.value)} /></div>
+                    <div style={{ flex: 1 }}><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Note (optional)</label><input style={{ ...inputStyle, padding: "6px 10px" }} placeholder="e.g., Cleaning supplies, towels, lock battery" value={payoutMiscNote} onChange={e => setPayoutMiscNote(e.target.value)} /></div>
+                  </div>
+                  {miscAmount > 0 && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "5px 24px", fontSize: 13, marginTop: 10 }}>
+                      <span style={{ color: "#f66" }}>− Supplies/Misc{payoutMiscNote ? ` (${payoutMiscNote})` : ""}</span><span style={{ textAlign: "right", color: "#f66" }}>-${fmt(miscAmount)}</span>
+                    </div>
+                  )}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "5px 24px", fontSize: 13, marginTop: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 20, color: "#0fa", paddingTop: 10, borderTop: "2px solid rgba(0,255,170,0.2)" }}>Final Owner Payout</span><span style={{ textAlign: "right", fontWeight: 700, fontSize: 20, color: "#0fa", paddingTop: 10, borderTop: "2px solid rgba(0,255,170,0.2)" }}>${fmt(ownerFinal)}</span>
                   </div>
                 </div>
 
