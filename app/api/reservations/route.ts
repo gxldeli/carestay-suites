@@ -79,10 +79,20 @@ export async function GET(request: Request) {
         pricePerNight,
         numberOfGuests: Number(r.numberOfGuests || r.adults || 1),
         status: r.status || "unknown",
+        isConfirmed: r.isConfirmed,
+        isPaid: r.isPaid,
+        source: r.source,
+        channelId: r.channelId,
         currency: r.currency || "CAD",
         rawFinance,
       };
     });
+
+    // Log each reservation's status + guest for debugging
+    console.log("=== ALL RESERVATIONS WITH STATUS ===");
+    for (const r of reservations) {
+      console.log(`  ${r.guestName} | ${r.listingName} | ${r.checkIn} → ${r.checkOut} | status: "${r.status}" | nights: ${r.nights} | payout: $${r.totalPrice}`);
+    }
 
     // Filter out inquiries, cancelled, and other non-confirmed statuses
     // Only keep: new, confirmed, modified, pending, awaitingPayment
