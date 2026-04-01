@@ -404,22 +404,17 @@ export default function AdminPage() {
     return cl.title.toLowerCase().includes(q) || cl.location.toLowerCase().includes(q);
   });
 
-  const loadReservations = async () => {
+  const loadReservations = async (propertyId?: string) => {
     setResLoading(true);
     try {
-      const res = await fetch("/api/reservations?password=" + (sessionStorage.getItem(PW_KEY) || ""));
+      let url = "/api/reservations?password=" + (sessionStorage.getItem(PW_KEY) || "");
+      if (propertyId) url += "&listingId=" + propertyId;
+      const res = await fetch(url);
       const data = await res.json();
       if (data.status === "success") setReservations(data.reservations || []);
     } catch { /* ignore */ }
     setResLoading(false);
   };
-
-  // Auto-load reservations when switching to tab (only if not already loaded)
-  useEffect(() => {
-    if (activeTab === "reservations" && reservations.length === 0 && !resLoading) {
-      loadReservations();
-    }
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openPayout = (r: Reservation) => {
     setPayoutRes(r);
@@ -428,23 +423,18 @@ export default function AdminPage() {
     setPayoutMiscNote("");
   };
 
-  const resProperties = Array.from(new Set(reservations.map(r => r.listingName).filter(Boolean))).sort();
-
   const filteredRes = reservations.filter(r => {
     if (resSearch) {
       const q = resSearch.toLowerCase();
       if (!r.guestName.toLowerCase().includes(q) && !r.listingName.toLowerCase().includes(q)) return false;
     }
     if (resMonth) {
-      // Check if the selected month overlaps with the stay period — use UTC to avoid timezone bugs
       const ms = new Date(resMonth + "-01T00:00:00Z");
-      const me = new Date(Date.UTC(ms.getUTCFullYear(), ms.getUTCMonth() + 1, 0)); // last day of month
+      const me = new Date(Date.UTC(ms.getUTCFullYear(), ms.getUTCMonth() + 1, 0));
       const ci = new Date(r.checkIn + "T00:00:00Z");
       const co = new Date(r.checkOut + "T00:00:00Z");
-      // Reservation overlaps this month if: checkIn <= end of month AND checkOut > start of month
       if (ci.getTime() > me.getTime() || co.getTime() <= ms.getTime()) return false;
     }
-    if (resProperty && r.listingName !== resProperty) return false;
     return true;
   });
 
@@ -1020,15 +1010,18 @@ export default function AdminPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
             <h2 style={{ fontSize: 18, fontWeight: 700 }}>Reservations {resLoading ? "(loading...)" : `(${filteredRes.length})`}</h2>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <input placeholder="Search guest or property..." value={resSearch} onChange={e => setResSearch(e.target.value)} style={{ ...inputStyle, width: 200, padding: "8px 14px" }} />
-              {resProperties.length > 0 && <select value={resProperty} onChange={e => setResProperty(e.target.value)} style={{ ...inputStyle, width: 200, padding: "8px 14px", cursor: "pointer" }}><option value="">All Properties</option>{resProperties.map(p => <option key={p} value={p}>{p}</option>)}</select>}
+              <input placeholder="Search guest..." value={resSearch} onChange={e => setResSearch(e.target.value)} style={{ ...inputStyle, width: 160, padding: "8px 14px" }} />
+              <select value={resProperty} onChange={e => { setResProperty(e.target.value); }} style={{ ...inputStyle, width: 220, padding: "8px 14px", cursor: "pointer" }}>
+                <option value="">Select a Property</option>
+                {listings.map(l => <option key={l.id} value={String(l.id)}>{l.title}</option>)}
+              </select>
               <input type="month" value={resMonth} onChange={e => setResMonth(e.target.value)} style={{ ...inputStyle, width: 150, padding: "8px 14px" }} />
-              {(resMonth || resProperty) && <button onClick={() => { setResMonth(""); setResProperty(""); }} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "rgba(255,255,255,0.5)", padding: "6px 10px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Clear</button>}
-              <button onClick={loadReservations} disabled={resLoading} style={{ ...btnStyle, padding: "8px 16px", fontSize: 13 }}>{resLoading ? "Loading..." : reservations.length > 0 ? "Refresh" : "Fetch Reservations"}</button>
+              {(resMonth || resProperty) && <button onClick={() => { setResMonth(""); setResProperty(""); setReservations([]); }} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "rgba(255,255,255,0.5)", padding: "6px 10px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Clear</button>}
+              <button onClick={() => loadReservations(resProperty || undefined)} disabled={resLoading} style={{ ...btnStyle, padding: "8px 16px", fontSize: 13 }}>{resLoading ? "Loading..." : "Fetch"}</button>
             </div>
           </div>
           {reservations.length === 0 && resLoading && <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", padding: 40 }}>Fetching reservations from HostAway... this may take a few seconds.</p>}
-          {reservations.length === 0 && !resLoading && <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", padding: 40 }}>No reservations loaded yet. Click &quot;Refresh&quot; to fetch from HostAway.</p>}
+          {reservations.length === 0 && !resLoading && <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", padding: 40 }}>Select a property and click &quot;Fetch&quot; to load reservations. Selecting a property first is faster.</p>}
           {filteredRes.length > 0 && (() => {
             const mgmtPct = Number(payoutMgmtFee) || 15;
             const fmt2 = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
