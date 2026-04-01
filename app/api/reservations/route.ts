@@ -95,21 +95,19 @@ export async function GET(request: Request) {
     }
 
     // Filter out inquiries, cancelled, and other non-confirmed statuses
-    // Only keep: new, confirmed, modified, pending, awaitingPayment
     const activeStatuses = new Set(["new", "confirmed", "modified", "pending", "awaitingPayment", "awaitingpayment"]);
     const activeReservations = reservations.filter(r => {
       const s = String(r.status).toLowerCase();
       return activeStatuses.has(s);
     });
 
-    // Deduplicate: if same guest + same property + same check-in, keep the one with more nights (latest modification)
+    // Deduplicate: if same guest + same property + same check-in, keep the one with more nights
     const deduped: typeof activeReservations = [];
     const seen = new Map<string, number>();
     for (const r of activeReservations) {
       const key = `${r.guestName}-${String(r.listingId)}-${r.checkIn}`;
       const existingIdx = seen.get(key);
       if (existingIdx !== undefined) {
-        // Keep the one with more nights (more recent modification)
         if (r.nights > deduped[existingIdx].nights) {
           deduped[existingIdx] = r;
         }
@@ -119,13 +117,50 @@ export async function GET(request: Request) {
       }
     }
 
-    // Log status distribution for debugging
-    const statusCounts: Record<string, number> = {};
-    for (const r of reservations) { statusCounts[r.status] = (statusCounts[r.status] || 0) + 1; }
-    console.log("=== RESERVATION STATUS COUNTS ===", JSON.stringify(statusCounts));
-    console.log(`=== FILTERED: ${reservations.length} total → ${activeReservations.length} active → ${deduped.length} deduped ===`);
+    // Remove overlapping reservations at the same property — a single unit can only have
+    // one guest at a time. When multiple reservations overlap at the same property, keep
+    // the one with the highest payout (the real booking). The others are likely inquiries
+    // or pre-approvals that HostAway marks as "new".
+    const grouped = new Map<string | number, typeof deduped>();
+    for (const r of deduped) {
+      const pid = String(r.listingId);
+      if (!grouped.has(pid)) grouped.set(pid, []);
+      grouped.get(pid)!.push(r);
+    }
 
-    return NextResponse.json({ status: "success", reservations: deduped, count: deduped.length });
+    const final: typeof deduped = [];
+    for (const [, propRes] of Array.from(grouped.entries())) {
+      // Sort by check-in date
+      propRes.sort((a, b) => a.checkIn.localeCompare(b.checkIn));
+
+      // Greedily pick non-overlapping reservations, preferring higher payout
+      const picked: typeof deduped = [];
+      for (const r of propRes) {
+        // Check if this reservation overlaps with any already-picked one
+        const overlaps = picked.some(p => {
+          const pCI = p.checkIn;
+          const pCO = p.checkOut;
+          // Overlap: r starts before p ends AND r ends after p starts
+          return r.checkIn < pCO && r.checkOut > pCI;
+        });
+
+        if (!overlaps) {
+          picked.push(r);
+        } else {
+          // Find the overlapping reservation and keep the one with higher payout
+          const overlapIdx = picked.findIndex(p => r.checkIn < p.checkOut && r.checkOut > p.checkIn);
+          if (overlapIdx !== -1 && r.totalPrice > picked[overlapIdx].totalPrice) {
+            picked[overlapIdx] = r; // replace with higher-value booking
+          }
+        }
+      }
+      final.push(...picked);
+    }
+
+    // Sort final by check-in date descending (most recent first)
+    final.sort((a, b) => b.checkIn.localeCompare(a.checkIn));
+
+    return NextResponse.json({ status: "success", reservations: final, count: final.length });
   } catch (e) {
     return NextResponse.json({ status: "error", message: e instanceof Error ? e.message : "Failed to fetch reservations" }, { status: 500 });
   }

@@ -195,7 +195,7 @@ export async function getReservations(params?: { status?: string; listingId?: st
     if (params?.listingId) qs.set("listingMapId", params.listingId);
     const res = await fetch(`${HOSTAWAY_API_BASE}/reservations?${qs.toString()}`, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      next: { revalidate: 60 },
+      cache: "no-store",
     });
     if (!res.ok) break;
     const data = await res.json();
