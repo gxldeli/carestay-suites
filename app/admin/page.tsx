@@ -431,14 +431,13 @@ export default function AdminPage() {
       if (!r.guestName.toLowerCase().includes(q) && !r.listingName.toLowerCase().includes(q)) return false;
     }
     if (resMonth) {
-      // Check if the selected month overlaps with the stay period at all
-      // e.g. stay Jan 16 - May 15, selecting March should match
-      const monthStart = new Date(resMonth + "-01");
-      const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0); // last day of month
-      const ciDate = new Date(r.checkIn);
-      const coDate = new Date(r.checkOut);
-      // Reservation overlaps this month if: checkIn <= end of month AND checkOut >= start of month
-      if (ciDate > monthEnd || coDate < monthStart) return false;
+      // Check if the selected month overlaps with the stay period — use UTC to avoid timezone bugs
+      const ms = new Date(resMonth + "-01T00:00:00Z");
+      const me = new Date(Date.UTC(ms.getUTCFullYear(), ms.getUTCMonth() + 1, 0)); // last day of month
+      const ci = new Date(r.checkIn + "T00:00:00Z");
+      const co = new Date(r.checkOut + "T00:00:00Z");
+      // Reservation overlaps this month if: checkIn <= end of month AND checkOut > start of month
+      if (ci.getTime() > me.getTime() || co.getTime() <= ms.getTime()) return false;
     }
     if (resProperty && r.listingName !== resProperty) return false;
     return true;
@@ -1032,22 +1031,29 @@ export default function AdminPage() {
             // Calculate month-specific nights and payout for each reservation
             const getMonthPortion = (r: Reservation) => {
               if (!resMonth) return null;
-              const mStart = new Date(resMonth + "-01");
-              const mEnd = new Date(mStart.getFullYear(), mStart.getMonth() + 1, 0);
-              const ci = new Date(r.checkIn);
-              const co = new Date(r.checkOut);
-              const overlapStart = ci > mStart ? ci : mStart;
-              const overlapEnd = co < mEnd ? co : mEnd;
-              const overlapNights = Math.max(0, Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / 86400000));
-              const totalNights = r.nights || Math.max(1, Math.ceil((co.getTime() - ci.getTime()) / 86400000));
+              // Use UTC dates to avoid timezone issues
+              const mStartStr = resMonth + "-01";
+              const mStartD = new Date(mStartStr + "T00:00:00Z");
+              const mEndD = new Date(Date.UTC(mStartD.getUTCFullYear(), mStartD.getUTCMonth() + 1, 0)); // last day of month
+              const ciD = new Date(r.checkIn + "T00:00:00Z");
+              const coD = new Date(r.checkOut + "T00:00:00Z");
+
+              // Overlap: max(checkIn, monthStart) to min(checkOut, monthEnd+1day)
+              const overlapStartMs = Math.max(ciD.getTime(), mStartD.getTime());
+              const overlapEndMs = Math.min(coD.getTime(), mEndD.getTime() + 86400000); // include last day
+              const overlapNights = Math.max(0, Math.floor((overlapEndMs - overlapStartMs) / 86400000));
+              const totalNights = r.nights || Math.max(1, Math.floor((coD.getTime() - ciD.getTime()) / 86400000));
               const proportion = totalNights > 0 ? overlapNights / totalNights : 0;
+
+              // Financial calculations
               const roomFeeFromApi = r.roomFee || r.basePrice || 0;
               const roomFeeBeforeDiscount = r.discount > 0 ? roomFeeFromApi + r.discount : roomFeeFromApi;
               const roomFeeAfterDiscount = roomFeeBeforeDiscount - r.discount;
               const hostServiceFee = r.hostServiceFee > 0 ? r.hostServiceFee : Math.round((roomFeeAfterDiscount + r.cleaningFee) * 0.155 * 100) / 100;
               const airbnbPayout = r.hostPayout > 0 && r.hostPayout !== r.totalPrice ? r.hostPayout : (roomFeeAfterDiscount + r.cleaningFee - hostServiceFee);
               const mAirbnbPay = Math.round(airbnbPayout * proportion * 100) / 100;
-              const mClean = proportion > 0 && ci >= mStart && ci <= mEnd ? r.cleaningFee : 0; // cleaning in check-in month
+              const ciInMonth = ciD.getTime() >= mStartD.getTime() && ciD.getTime() <= mEndD.getTime();
+              const mClean = proportion > 0 && ciInMonth ? r.cleaningFee : 0;
               const mRoom = Math.round(roomFeeBeforeDiscount * proportion);
               const mDisc = Math.round(r.discount * proportion);
               const mMgmt = Math.round((mRoom - mDisc + mClean) * mgmtPct / 100 * 100) / 100;
