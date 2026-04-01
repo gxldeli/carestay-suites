@@ -414,7 +414,7 @@ export default function AdminPage() {
     setResLoading(false);
   };
 
-  // Auto-load reservations when switching to tab
+  // Auto-load reservations when switching to tab (only if not already loaded)
   useEffect(() => {
     if (activeTab === "reservations" && reservations.length === 0 && !resLoading) {
       loadReservations();
@@ -1027,8 +1027,8 @@ export default function AdminPage() {
               <button onClick={loadReservations} disabled={resLoading} style={{ ...btnStyle, padding: "8px 16px", fontSize: 13 }}>{resLoading ? "Loading..." : reservations.length > 0 ? "Refresh" : "Fetch Reservations"}</button>
             </div>
           </div>
-          {reservations.length === 0 && resLoading && <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", padding: 40 }}>Loading reservations from HostAway...</p>}
-          {reservations.length === 0 && !resLoading && <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", padding: 40 }}>No reservations found. Click &quot;Fetch Reservations&quot; to reload.</p>}
+          {reservations.length === 0 && resLoading && <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", padding: 40 }}>Fetching reservations from HostAway... this may take a few seconds.</p>}
+          {reservations.length === 0 && !resLoading && <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", padding: 40 }}>No reservations loaded yet. Click &quot;Refresh&quot; to fetch from HostAway.</p>}
           {filteredRes.length > 0 && (() => {
             const mgmtPct = Number(payoutMgmtFee) || 15;
             const fmt2 = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1036,34 +1036,32 @@ export default function AdminPage() {
             // Calculate month-specific nights and payout for each reservation
             const getMonthPortion = (r: Reservation) => {
               if (!resMonth) return null;
-              // Use UTC dates to avoid timezone issues
-              const mStartStr = resMonth + "-01";
-              const mStartD = new Date(mStartStr + "T00:00:00Z");
-              const mEndD = new Date(Date.UTC(mStartD.getUTCFullYear(), mStartD.getUTCMonth() + 1, 0)); // last day of month
+              const mStartD = new Date(resMonth + "-01T00:00:00Z");
+              const mEndD = new Date(Date.UTC(mStartD.getUTCFullYear(), mStartD.getUTCMonth() + 1, 0));
               const ciD = new Date(r.checkIn + "T00:00:00Z");
               const coD = new Date(r.checkOut + "T00:00:00Z");
 
-              // Overlap: max(checkIn, monthStart) to min(checkOut, monthEnd+1day)
               const overlapStartMs = Math.max(ciD.getTime(), mStartD.getTime());
-              const overlapEndMs = Math.min(coD.getTime(), mEndD.getTime() + 86400000); // include last day
+              const overlapEndMs = Math.min(coD.getTime(), mEndD.getTime() + 86400000);
               const overlapNights = Math.max(0, Math.floor((overlapEndMs - overlapStartMs) / 86400000));
               const totalNights = r.nights || Math.max(1, Math.floor((coD.getTime() - ciD.getTime()) / 86400000));
               const proportion = totalNights > 0 ? overlapNights / totalNights : 0;
 
-              // Financial calculations
-              const roomFeeFromApi = r.roomFee || r.basePrice || 0;
-              const roomFeeBeforeDiscount = r.discount > 0 ? roomFeeFromApi + r.discount : roomFeeFromApi;
-              const roomFeeAfterDiscount = roomFeeBeforeDiscount - r.discount;
-              const hostServiceFee = r.hostServiceFee > 0 ? r.hostServiceFee : Math.round((roomFeeAfterDiscount + r.cleaningFee) * 0.155 * 100) / 100;
-              const airbnbPayout = r.hostPayout > 0 && r.hostPayout !== r.totalPrice ? r.hostPayout : (roomFeeAfterDiscount + r.cleaningFee - hostServiceFee);
-              const mAirbnbPay = Math.round(airbnbPayout * proportion * 100) / 100;
+              // Simple: use totalPrice as what HostAway shows, apply proportion
+              // totalPrice from HostAway = room after discount + cleaning (before Airbnb fee)
+              const total = r.totalPrice || 0;
+              const mTotal = Math.round(total * proportion * 100) / 100;
+              // Airbnb takes 15.5%
+              const mAirbnbFee = Math.round(mTotal * 0.155 * 100) / 100;
+              const mAirbnbPay = Math.round((mTotal - mAirbnbFee) * 100) / 100;
+              // Cleaning only in check-in month
               const ciInMonth = ciD.getTime() >= mStartD.getTime() && ciD.getTime() <= mEndD.getTime();
               const mClean = proportion > 0 && ciInMonth ? r.cleaningFee : 0;
-              const mRoom = Math.round(roomFeeBeforeDiscount * proportion);
-              const mDisc = Math.round(r.discount * proportion);
-              const mMgmt = Math.round((mRoom - mDisc + mClean) * mgmtPct / 100 * 100) / 100;
-              const mOwner = Math.round((mAirbnbPay - mMgmt - mClean) * 100) / 100;
-              return { overlapNights, proportion, mAirbnbPay, mMgmt, mClean, mOwner };
+              const mMgmt = Math.round((mTotal - mClean) * mgmtPct / 100 * 100) / 100;
+              // But mgmt is on the pre-Airbnb-fee amount, so use proportion of total
+              const mMgmtFee = Math.round(mTotal * mgmtPct / 100 * 100) / 100;
+              const mOwner = Math.round((mAirbnbPay - mMgmtFee - mClean) * 100) / 100;
+              return { overlapNights, proportion, mAirbnbPay, mMgmt: mMgmtFee, mClean, mOwner };
             };
 
             const monthPortions = filteredRes.map(r => ({ r, mp: getMonthPortion(r) }));
