@@ -84,7 +84,38 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({ status: "success", reservations, count: reservations.length });
+    // Filter out inquiries, cancelled, and other non-confirmed statuses
+    // Only keep: new, confirmed, modified, pending, awaitingPayment
+    const activeStatuses = new Set(["new", "confirmed", "modified", "pending", "awaitingPayment", "awaitingpayment"]);
+    const activeReservations = reservations.filter(r => {
+      const s = String(r.status).toLowerCase();
+      return activeStatuses.has(s);
+    });
+
+    // Deduplicate: if same guest + same property + same check-in, keep the one with more nights (latest modification)
+    const deduped: typeof activeReservations = [];
+    const seen = new Map<string, number>();
+    for (const r of activeReservations) {
+      const key = `${r.guestName}-${String(r.listingId)}-${r.checkIn}`;
+      const existingIdx = seen.get(key);
+      if (existingIdx !== undefined) {
+        // Keep the one with more nights (more recent modification)
+        if (r.nights > deduped[existingIdx].nights) {
+          deduped[existingIdx] = r;
+        }
+      } else {
+        seen.set(key, deduped.length);
+        deduped.push(r);
+      }
+    }
+
+    // Log status distribution for debugging
+    const statusCounts: Record<string, number> = {};
+    for (const r of reservations) { statusCounts[r.status] = (statusCounts[r.status] || 0) + 1; }
+    console.log("=== RESERVATION STATUS COUNTS ===", JSON.stringify(statusCounts));
+    console.log(`=== FILTERED: ${reservations.length} total → ${activeReservations.length} active → ${deduped.length} deduped ===`);
+
+    return NextResponse.json({ status: "success", reservations: deduped, count: deduped.length });
   } catch (e) {
     return NextResponse.json({ status: "error", message: e instanceof Error ? e.message : "Failed to fetch reservations" }, { status: 500 });
   }
