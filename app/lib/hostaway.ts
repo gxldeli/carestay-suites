@@ -1,3 +1,4 @@
+/* ─── HostAway API Client ─── */
 const HOSTAWAY_CLIENT_ID = process.env.HOSTAWAY_CLIENT_ID || "";
 const HOSTAWAY_CLIENT_SECRET = process.env.HOSTAWAY_CLIENT_SECRET || "";
 const HOSTAWAY_API_BASE = "https://api.hostaway.com/v1";
