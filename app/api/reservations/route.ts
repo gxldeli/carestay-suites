@@ -131,7 +131,7 @@ export async function GET(request: Request) {
     const final: typeof deduped = [];
     for (const [, propRes] of Array.from(grouped.entries())) {
       // Sort by check-in date
-      propRes.sort((a, b) => a.checkIn.localeCompare(b.checkIn));
+      propRes.sort((a, b) => String(a.checkIn).localeCompare(String(b.checkIn)));
 
       // Greedily pick non-overlapping reservations, preferring higher payout
       const picked: typeof deduped = [];
@@ -158,7 +158,7 @@ export async function GET(request: Request) {
     }
 
     // Sort final by check-in date descending (most recent first)
-    final.sort((a, b) => b.checkIn.localeCompare(a.checkIn));
+    final.sort((a, b) => String(b.checkIn).localeCompare(String(a.checkIn)));
 
     return NextResponse.json({ status: "success", reservations: final, count: final.length });
   } catch (e) {
