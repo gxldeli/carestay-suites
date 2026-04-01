@@ -204,16 +204,12 @@ export default function AdminPage() {
   const [toast, setToast] = useState("");
 
   // Reservations
-  interface Reservation { id: number; guestName: string; listingName: string; listingId: number; channelName: string; checkIn: string; checkOut: string; totalPrice: number; basePrice: number; cleaningFee: number; channelCommission: number; numberOfGuests: number; status: string; currency: string }
+  interface Reservation { id: number; guestName: string; guestEmail?: string; guestPhone?: string; listingName: string; listingId: number; channelName: string; channelId?: number; checkIn: string; checkOut: string; nights: number; totalPrice: number; basePrice: number; hostPayout: number; cleaningFee: number; hostServiceFee: number; guestServiceFee: number; discount: number; channelCommission: number; pricePerNight: number; numberOfGuests: number; status: string; currency: string; payments?: unknown }
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [resLoading, setResLoading] = useState(false);
   const [resSearch, setResSearch] = useState("");
   const [resMonth, setResMonth] = useState("");
   const [payoutRes, setPayoutRes] = useState<Reservation | null>(null);
-  const [payoutRate, setPayoutRate] = useState("");
-  const [payoutDiscount, setPayoutDiscount] = useState("0");
-  const [payoutCleaning, setPayoutCleaning] = useState("");
-  const [payoutAirbnbFee, setPayoutAirbnbFee] = useState("3");
   const [payoutMgmtFee, setPayoutMgmtFee] = useState("15");
 
   const openEditCustom = (cl: CustomListing) => {
@@ -415,12 +411,7 @@ export default function AdminPage() {
   };
 
   const openPayout = (r: Reservation) => {
-    const nights = Math.max(1, Math.ceil((new Date(r.checkOut).getTime() - new Date(r.checkIn).getTime()) / 86400000));
     setPayoutRes(r);
-    setPayoutRate(String(Math.round(r.totalPrice / nights)));
-    setPayoutCleaning(String(r.cleaningFee || 0));
-    setPayoutDiscount("0");
-    setPayoutAirbnbFee("3");
     setPayoutMgmtFee("15");
   };
 
@@ -1027,22 +1018,21 @@ export default function AdminPage() {
                     <th style={thStyle}>Check-out</th>
                     <th style={thStyle}>Nights</th>
                     <th style={thStyle}>Channel</th>
-                    <th style={thStyle}>Total</th>
+                    <th style={thStyle}>Payout</th>
                     <th style={thStyle}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRes.map(r => {
-                    const nights = Math.max(1, Math.ceil((new Date(r.checkOut).getTime() - new Date(r.checkIn).getTime()) / 86400000));
                     return (
                       <tr key={r.id} onClick={() => openPayout(r)} style={{ cursor: "pointer", transition: "background 0.15s" }} onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                         <td style={tdStyle}><span style={{ fontWeight: 600 }}>{r.guestName}</span></td>
                         <td style={tdStyle}>{r.listingName}</td>
                         <td style={tdStyle}>{r.checkIn}</td>
                         <td style={tdStyle}>{r.checkOut}</td>
-                        <td style={tdStyle}>{nights}</td>
+                        <td style={tdStyle}>{r.nights || Math.max(1, Math.ceil((new Date(r.checkOut).getTime() - new Date(r.checkIn).getTime()) / 86400000))}</td>
                         <td style={tdStyle}><span style={{ background: "rgba(0,170,255,0.1)", color: "#0af", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{r.channelName}</span></td>
-                        <td style={tdStyle}>${r.totalPrice.toLocaleString()}</td>
+                        <td style={tdStyle}>${(r.hostPayout || r.totalPrice).toLocaleString()}</td>
                         <td style={tdStyle}><StatusBadge status={r.status === "confirmed" || r.status === "new" ? "Available" : r.status === "cancelled" ? "Booked" : "Almost Booked"} /></td>
                       </tr>
                     );
@@ -1055,49 +1045,69 @@ export default function AdminPage() {
           {/* Payout Modal */}
           {payoutRes && (() => {
             const r = payoutRes;
-            const nights = Math.max(1, Math.ceil((new Date(r.checkOut).getTime() - new Date(r.checkIn).getTime()) / 86400000));
-            const rate = Number(payoutRate) || 0;
-            const discountPct = Number(payoutDiscount) || 0;
-            const cleaning = Number(payoutCleaning) || 0;
-            const airbnbPct = Number(payoutAirbnbFee) || 0;
+            const nights = r.nights || Math.max(1, Math.ceil((new Date(r.checkOut).getTime() - new Date(r.checkIn).getTime()) / 86400000));
             const mgmtPct = Number(payoutMgmtFee) || 0;
 
-            const grossBase = rate * nights;
-            const discount = Math.round(grossBase * discountPct / 100);
-            const netBase = grossBase - discount;
-            const subtotal = netBase + cleaning;
-            const airbnbFee = Math.round(subtotal * airbnbPct / 100);
-            const totalPayout = subtotal - airbnbFee;
-            const mgmtFee = Math.round((netBase + cleaning) * mgmtPct / 100);
-            const ownerPayout = totalPayout - mgmtFee;
-            const numPayments = Math.max(1, Math.ceil(nights / 30));
+            // All financials from HostAway — no manual input needed
+            const basePrice = r.basePrice;
+            const cleaningFee = r.cleaningFee;
+            const discount = r.discount;
+            const hostServiceFee = r.hostServiceFee;
+            const hostPayout = r.hostPayout;
+            const pricePerNight = r.pricePerNight || (nights > 0 ? Math.round(basePrice / nights) : 0);
 
-            // Monthly breakdown
-            const months: { label: string; basePortion: number; cleanPortion: number; airbnbPortion: number; mgmtPortion: number; ownerPortion: number }[] = [];
+            // If hostPayout is available from HostAway, use it directly; otherwise calculate
+            const airbnbPayout = hostPayout > 0 ? hostPayout : (basePrice - discount + cleaningFee - hostServiceFee);
+
+            // Management fee = mgmtPct% of (base - discount + cleaning)
+            const mgmtBase = basePrice - discount + cleaningFee;
+            const mgmtFee = Math.round(mgmtBase * mgmtPct / 100 * 100) / 100;
+            const ownerPayout = Math.round((airbnbPayout - mgmtFee) * 100) / 100;
+
+            // Monthly breakdown — split by calendar months from check-in
+            const numPayments = Math.max(1, Math.ceil(nights / 30));
+            const months: { label: string; nights: number; roomFee: number; discountPortion: number; airbnbPortion: number; mgmtPortion: number; ownerPortion: number }[] = [];
             const ciDate = new Date(r.checkIn);
             let remainNights = nights;
             for (let m = 0; m < numPayments; m++) {
               const mStart = new Date(ciDate);
               mStart.setDate(mStart.getDate() + m * 30);
-              const mEnd = new Date(mStart);
-              mEnd.setDate(mEnd.getDate() + Math.min(30, remainNights) - 1);
               const mNights = Math.min(30, remainNights);
+              const mEnd = new Date(mStart);
+              mEnd.setDate(mEnd.getDate() + mNights - 1);
               remainNights -= mNights;
-              const mBase = rate * mNights;
-              const mDisc = Math.round(mBase * discountPct / 100);
-              const mNetBase = mBase - mDisc;
-              const mClean = m === 0 ? cleaning : 0;
-              const mSub = mNetBase + mClean;
-              const mAirbnb = Math.round(mSub * airbnbPct / 100);
-              const mMgmt = Math.round((mNetBase + mClean) * mgmtPct / 100);
-              const mOwner = mSub - mAirbnb - mMgmt;
-              months.push({ label: `${mStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${mEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`, basePortion: mNetBase, cleanPortion: mClean, airbnbPortion: mAirbnb, mgmtPortion: mMgmt, ownerPortion: mOwner });
+              const proportion = mNights / nights;
+              const mRoom = Math.round(basePrice * proportion);
+              const mDisc = Math.round(discount * proportion);
+              const mAirbnb = Math.round(hostServiceFee * proportion);
+              const mMgmtBase = mRoom - mDisc + (m === 0 ? cleaningFee : 0);
+              const mMgmt = Math.round(mMgmtBase * mgmtPct / 100);
+              const mPayout = Math.round(airbnbPayout * proportion);
+              months.push({ label: `${mStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${mEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`, nights: mNights, roomFee: mRoom, discountPortion: mDisc, airbnbPortion: mAirbnb, mgmtPortion: mMgmt, ownerPortion: mPayout - mMgmt });
             }
 
+            const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
             const copySummary = () => {
-              const lines = [`Payout Summary — ${r.guestName} at ${r.listingName}`, `Check-in: ${r.checkIn} | Check-out: ${r.checkOut} | Total Nights: ${nights}`, `Rate: $${rate}/night | Discount: ${discountPct}%`, ""];
-              months.forEach((m, i) => lines.push(`Month ${i + 1} (${m.label}): Owner receives $${m.ownerPortion.toLocaleString()}`));
-              lines.push("", `Total Owner Payout: $${ownerPayout.toLocaleString()}`, `Management Fee (${mgmtPct}%): $${mgmtFee.toLocaleString()}`, `Airbnb Fee: $${airbnbFee.toLocaleString()}`);
+              const lines = [
+                `Payout Summary — ${r.guestName} at ${r.listingName}`,
+                `Check-in: ${r.checkIn} | Check-out: ${r.checkOut} | ${nights} nights`,
+                `Channel: ${r.channelName} | Rate: $${pricePerNight}/night`,
+                "",
+                `Room Fee: $${fmt(basePrice)}`,
+                discount > 0 ? `Discount: -$${fmt(discount)}` : null,
+                `Cleaning Fee: $${fmt(cleaningFee)}`,
+                `Host Service Fee: -$${fmt(hostServiceFee)}`,
+                `Payout from ${r.channelName}: $${fmt(airbnbPayout)}`,
+                "",
+                `Management Fee (${mgmtPct}%): -$${fmt(mgmtFee)}`,
+                `Owner Receives: $${fmt(ownerPayout)}`,
+              ].filter(Boolean);
+              if (numPayments > 1) {
+                lines.push("", "Monthly Breakdown:");
+                months.forEach((m, i) => lines.push(`  Month ${i + 1} (${m.label}, ${m.nights}n): Owner $${fmt(m.ownerPortion)}`));
+              }
+              lines.push("", "Note: Owner payout is AFTER platform fees, AFTER management fee. Subtract any supplies/extras separately.");
               navigator.clipboard.writeText(lines.join("\n"));
               showToast("Summary copied to clipboard");
             };
@@ -1109,30 +1119,30 @@ export default function AdminPage() {
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Property</label><div style={{ fontSize: 14, fontWeight: 600 }}>{r.listingName}</div></div>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Check-in</label><div style={{ fontSize: 14 }}>{r.checkIn}</div></div>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Check-out ({nights} nights)</label><div style={{ fontSize: 14 }}>{r.checkOut}</div></div>
+                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Channel</label><div style={{ fontSize: 14 }}>{r.channelName}</div></div>
+                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Rate</label><div style={{ fontSize: 14 }}>${pricePerNight}/night</div></div>
                 </div>
                 <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>Adjustable Inputs</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                    <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Nightly Rate ($)</label><input style={inputStyle} type="number" value={payoutRate} onChange={e => setPayoutRate(e.target.value)} /></div>
-                    <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Discount %</label><input style={inputStyle} type="number" value={payoutDiscount} onChange={e => setPayoutDiscount(e.target.value)} /></div>
-                    <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Cleaning Fee ($)</label><input style={inputStyle} type="number" value={payoutCleaning} onChange={e => setPayoutCleaning(e.target.value)} /></div>
-                    <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Airbnb Host Fee %</label><input style={inputStyle} type="number" value={payoutAirbnbFee} onChange={e => setPayoutAirbnbFee(e.target.value)} /></div>
-                    <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Management Fee %</label><input style={inputStyle} type="number" value={payoutMgmtFee} onChange={e => setPayoutMgmtFee(e.target.value)} /></div>
-                  </div>
-                </div>
-                <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>Payout Summary</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>Financial Breakdown (from {r.channelName})</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "6px 24px", fontSize: 14 }}>
-                    <span>Gross Base ({nights} nights × ${rate})</span><span style={{ textAlign: "right" }}>${grossBase.toLocaleString()}</span>
-                    {discount > 0 && <><span style={{ color: "#f66" }}>Discount ({discountPct}%)</span><span style={{ textAlign: "right", color: "#f66" }}>-${discount.toLocaleString()}</span></>}
-                    <span>Net Base Rate</span><span style={{ textAlign: "right" }}>${netBase.toLocaleString()}</span>
-                    <span>Cleaning Fee</span><span style={{ textAlign: "right" }}>${cleaning.toLocaleString()}</span>
-                    <span style={{ fontWeight: 600 }}>Subtotal</span><span style={{ textAlign: "right", fontWeight: 600 }}>${subtotal.toLocaleString()}</span>
-                    <span style={{ color: "#f66" }}>Airbnb Host Fee ({airbnbPct}%)</span><span style={{ textAlign: "right", color: "#f66" }}>-${airbnbFee.toLocaleString()}</span>
-                    <span style={{ fontWeight: 600 }}>Total Payout from Airbnb</span><span style={{ textAlign: "right", fontWeight: 600 }}>${totalPayout.toLocaleString()}</span>
-                    <span style={{ color: "#f66" }}>Management Fee ({mgmtPct}%)</span><span style={{ textAlign: "right", color: "#f66" }}>-${mgmtFee.toLocaleString()}</span>
-                    <span style={{ fontWeight: 700, fontSize: 16, color: "#0fa", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)" }}>Owner Payout</span><span style={{ textAlign: "right", fontWeight: 700, fontSize: 16, color: "#0fa", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)" }}>${ownerPayout.toLocaleString()}</span>
+                    <span>Room Fee ({nights} nights × ${pricePerNight})</span><span style={{ textAlign: "right" }}>${fmt(basePrice)}</span>
+                    {discount > 0 && <><span style={{ color: "#f66" }}>Discount</span><span style={{ textAlign: "right", color: "#f66" }}>-${fmt(discount)}</span></>}
+                    <span>Cleaning Fee</span><span style={{ textAlign: "right" }}>${fmt(cleaningFee)}</span>
+                    <span style={{ color: "#f66" }}>Host Service Fee</span><span style={{ textAlign: "right", color: "#f66" }}>-${fmt(hostServiceFee)}</span>
+                    <span style={{ fontWeight: 600, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.06)" }}>Payout from {r.channelName}</span><span style={{ textAlign: "right", fontWeight: 600, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.06)" }}>${fmt(airbnbPayout)}</span>
                   </div>
+                </div>
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>Management Fee</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                    <label style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>Management Fee %</label>
+                    <input style={{ ...inputStyle, width: 80, padding: "6px 10px", textAlign: "center" }} type="number" value={payoutMgmtFee} onChange={e => setPayoutMgmtFee(e.target.value)} />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "6px 24px", fontSize: 14 }}>
+                    <span style={{ color: "#f66" }}>Management Fee ({mgmtPct}% of ${fmt(mgmtBase)})</span><span style={{ textAlign: "right", color: "#f66" }}>-${fmt(mgmtFee)}</span>
+                    <span style={{ fontWeight: 700, fontSize: 18, color: "#0fa", paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.08)" }}>Owner Receives</span><span style={{ textAlign: "right", fontWeight: 700, fontSize: 18, color: "#0fa", paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.08)" }}>${fmt(ownerPayout)}</span>
+                  </div>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 8 }}>Owner payout is AFTER platform fees, AFTER management fee. Subtract any supplies/extras separately.</p>
                 </div>
                 {numPayments > 1 && (
                   <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginBottom: 16 }}>
@@ -1142,9 +1152,9 @@ export default function AdminPage() {
                         <tr>
                           <th style={{ ...thStyle, fontSize: 10 }}>#</th>
                           <th style={{ ...thStyle, fontSize: 10 }}>Dates</th>
-                          <th style={{ ...thStyle, fontSize: 10, textAlign: "right" }}>Base</th>
-                          <th style={{ ...thStyle, fontSize: 10, textAlign: "right" }}>Clean</th>
-                          <th style={{ ...thStyle, fontSize: 10, textAlign: "right", color: "#f66" }}>Airbnb</th>
+                          <th style={{ ...thStyle, fontSize: 10, textAlign: "right" }}>Nights</th>
+                          <th style={{ ...thStyle, fontSize: 10, textAlign: "right" }}>Room</th>
+                          <th style={{ ...thStyle, fontSize: 10, textAlign: "right", color: "#f66" }}>Fees</th>
                           <th style={{ ...thStyle, fontSize: 10, textAlign: "right", color: "#f66" }}>Mgmt</th>
                           <th style={{ ...thStyle, fontSize: 10, textAlign: "right", color: "#0fa" }}>Owner</th>
                         </tr>
@@ -1154,11 +1164,11 @@ export default function AdminPage() {
                           <tr key={i}>
                             <td style={{ ...tdStyle, fontSize: 12 }}>{i + 1}</td>
                             <td style={{ ...tdStyle, fontSize: 12 }}>{m.label}</td>
-                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right" }}>${m.basePortion.toLocaleString()}</td>
-                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right" }}>{m.cleanPortion > 0 ? `$${m.cleanPortion.toLocaleString()}` : "—"}</td>
-                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right", color: "#f66" }}>-${m.airbnbPortion.toLocaleString()}</td>
-                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right", color: "#f66" }}>-${m.mgmtPortion.toLocaleString()}</td>
-                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right", color: "#0fa", fontWeight: 600 }}>${m.ownerPortion.toLocaleString()}</td>
+                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right" }}>{m.nights}</td>
+                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right" }}>${fmt(m.roomFee)}</td>
+                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right", color: "#f66" }}>-${fmt(m.airbnbPortion + m.discountPortion)}</td>
+                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right", color: "#f66" }}>-${fmt(m.mgmtPortion)}</td>
+                            <td style={{ ...tdStyle, fontSize: 12, textAlign: "right", color: "#0fa", fontWeight: 600 }}>${fmt(m.ownerPortion)}</td>
                           </tr>
                         ))}
                       </tbody>

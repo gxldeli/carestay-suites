@@ -184,14 +184,26 @@ export async function getListing(id: number): Promise<HostAwayListing | null> {
 
 export async function getReservations(params?: { status?: string; listingId?: string }): Promise<Record<string, unknown>[]> {
   const token = await getAccessToken();
-  const qs = new URLSearchParams({ limit: "100", sortOrder: "desc" });
-  if (params?.status) qs.set("status", params.status);
-  if (params?.listingId) qs.set("listingMapId", params.listingId);
-  const res = await fetch(`${HOSTAWAY_API_BASE}/reservations?${qs.toString()}`, {
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    next: { revalidate: 60 },
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.status === "success" ? (data.result || []) : [];
+  const allResults: Record<string, unknown>[] = [];
+  let offset = 0;
+  const limit = 50;
+
+  // Paginate through all results
+  while (true) {
+    const qs = new URLSearchParams({ limit: String(limit), offset: String(offset), sortOrder: "desc" });
+    if (params?.status) qs.set("status", params.status);
+    if (params?.listingId) qs.set("listingMapId", params.listingId);
+    const res = await fetch(`${HOSTAWAY_API_BASE}/reservations?${qs.toString()}`, {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) break;
+    const data = await res.json();
+    const page = data.status === "success" ? (data.result || []) : [];
+    allResults.push(...page);
+    if (page.length < limit) break; // last page
+    offset += limit;
+  }
+
+  return allResults;
 }
