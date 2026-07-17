@@ -49,8 +49,7 @@ export default function AnnouncementBanner() {
         left: 0,
         right: 0,
         zIndex: 200,
-        background: "#111827",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        background: "var(--ink)",
         height: 40,
         display: "flex",
         alignItems: "center",
@@ -59,7 +58,7 @@ export default function AnnouncementBanner() {
         padding: "0 48px 0 16px",
       }}
     >
-      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
         {text}
       </span>
       <a
@@ -68,9 +67,9 @@ export default function AnnouncementBanner() {
         style={{
           flexShrink: 0,
           padding: "4px 14px",
-          background: "linear-gradient(135deg,#0fa,#0af)",
-          color: "#0a0c0f",
-          borderRadius: 6,
+          background: "#fff",
+          color: "var(--ink)",
+          borderRadius: 999,
           fontSize: 12,
           fontWeight: 700,
           textDecoration: "none",
@@ -89,7 +88,7 @@ export default function AnnouncementBanner() {
           transform: "translateY(-50%)",
           background: "none",
           border: "none",
-          color: "rgba(255,255,255,0.35)",
+          color: "rgba(255,255,255,0.5)",
           fontSize: 18,
           cursor: "pointer",
           lineHeight: 1,

@@ -2,22 +2,142 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── CareStay Suites · Light Editorial Design System ─── */
+
 :root {
-  --navy: #0a0c0f;
-  --deep: #0d1117;
-  --card: #12151a;
-  --accent: #0fa;
-  --accent2: #0af;
-  --gold: #c9a55c;
-  --text: #fff;
-  --muted: rgba(255,255,255,0.45);
-  --border: rgba(255,255,255,0.06);
+  --bg: #FAF8F5;            /* warm off-white base */
+  --surface: #FFFFFF;
+  --surface-warm: #F3EFE9;
+  --ink: #1C1B1A;           /* charcoal text */
+  --ink-soft: #5C5853;
+  --ink-faint: #97918A;
+  --accent: #2D2BFF;        /* royal blue */
+  --accent-dark: #1F1DD4;
+  --accent-soft: #EDEDFF;
+  --line: #E8E3DC;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow: 0 10px 30px rgba(28, 27, 26, 0.07);
+  --shadow-lift: 0 16px 44px rgba(28, 27, 26, 0.12);
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { font-family: 'DM Sans', system-ui, -apple-system, sans-serif; color: #fff; background: #0a0c0f; -webkit-font-smoothing: antialiased; }
-::selection { background: rgba(0,255,170,0.3); color: #fff; }
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: rgba(45, 43, 255, 0.15); color: var(--ink); }
+
+img { max-width: 100%; }
+
+/* ─── Shared layout ─── */
+.wrap { max-width: 1160px; margin: 0 auto; width: 100%; padding: 0 24px; }
+.section { padding: 96px 0; }
+.section-tight { padding: 64px 0; }
+
+/* ─── Typography ─── */
+.h-display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  line-height: 1.08;
+}
+.eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.lede { font-size: 18px; line-height: 1.65; color: var(--ink-soft); }
+
+/* ─── Buttons ─── */
+.btn-primary {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  padding: 15px 30px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: background 0.2s, transform 0.15s;
+}
+.btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); }
+.btn-ghost {
+  display: inline-block;
+  background: transparent;
+  color: var(--ink);
+  padding: 14px 28px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1.5px solid var(--line);
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: border-color 0.2s, background 0.2s;
+}
+.btn-ghost:hover { border-color: var(--ink); background: #fff; }
+
+/* ─── Cards ─── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lift); }
+
+/* ─── Photo slots (awaiting real photography) ─── */
+.photo-slot {
+  background: var(--surface-warm);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  overflow: hidden;
+}
+
+/* ─── Forms ─── */
+.form-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  color: var(--ink);
+  font-size: 15px;
+  outline: none;
+  font-family: var(--font-body);
+  transition: border-color 0.2s;
+}
+.form-input:focus { border-color: var(--accent); }
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
 
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
