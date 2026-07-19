@@ -16,8 +16,10 @@ export default function AnnouncementBanner() {
       .then((r) => r.json())
       .then((d) => {
         if (d.status === "success" && d.settings?.bannerEnabled !== false) {
-          setText(d.settings.bannerText || "🏥 New suites dropping soon — join the waitlist");
-          setButtonText(d.settings.bannerButtonText || "Join");
+          const legacyText = "🏥 New suites dropping soon — join the waitlist";
+          const usesLegacyMessage = !d.settings.bannerText || d.settings.bannerText === legacyText;
+          setText(usesLegacyMessage ? "Furnished stays across the GTA" : d.settings.bannerText);
+          setButtonText(usesLegacyMessage && (!d.settings.bannerButtonText || d.settings.bannerButtonText === "Join") ? "Inquire" : d.settings.bannerButtonText || "Learn More");
           setLinkUrl(d.settings.bannerLinkUrl || "/#contact");
           setVisible(true);
         }
@@ -40,7 +42,7 @@ export default function AnnouncementBanner() {
 
   return (
     <>
-    <style>{`.has-banner{padding-top:40px}.has-banner nav{top:40px!important}`}</style>
+    <style dangerouslySetInnerHTML={{ __html: ".has-banner{padding-top:40px}.has-banner nav{top:40px!important}" }} />
     <div
       id="announcement-banner"
       style={{
@@ -49,7 +51,8 @@ export default function AnnouncementBanner() {
         left: 0,
         right: 0,
         zIndex: 200,
-        background: "var(--ink)",
+        background: "var(--night)",
+        borderBottom: "1px solid rgba(255,255,255,0.1)",
         height: 40,
         display: "flex",
         alignItems: "center",
@@ -58,7 +61,7 @@ export default function AnnouncementBanner() {
         padding: "0 48px 0 16px",
       }}
     >
-      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.86)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
         {text}
       </span>
       <a
@@ -67,8 +70,8 @@ export default function AnnouncementBanner() {
         style={{
           flexShrink: 0,
           padding: "4px 14px",
-          background: "#fff",
-          color: "var(--ink)",
+          background: "linear-gradient(135deg,var(--accent),var(--accent2))",
+          color: "#fff",
           borderRadius: 999,
           fontSize: 12,
           fontWeight: 700,
@@ -88,7 +91,7 @@ export default function AnnouncementBanner() {
           transform: "translateY(-50%)",
           background: "none",
           border: "none",
-          color: "rgba(255,255,255,0.5)",
+          color: "rgba(255,255,255,0.55)",
           fontSize: 18,
           cursor: "pointer",
           lineHeight: 1,

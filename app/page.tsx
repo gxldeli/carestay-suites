@@ -4,59 +4,23 @@ declare global { interface Window { fbq: (...args: unknown[]) => void; } }
 
 import { useState, useEffect, useRef, ReactNode } from "react";
 import Link from "next/link";
-import SiteNav from "@/app/components/SiteNav";
-import SiteFooter from "@/app/components/SiteFooter";
-import {
-  ShieldCheck,
-  KeyRound,
-  Wifi,
-  Sparkles,
-  Headphones,
-  Building2,
-  Briefcase,
-  Umbrella,
-  Clapperboard,
-  ChevronDown,
-} from "lucide-react";
+import { ShieldCheck, MapPin, ClipboardList, CalendarDays } from "lucide-react";
 
-/* ─── Types ─── */
-interface Listing {
-  id: number | string;
-  title: string;
-  location: string;
-  img: string;
-  price: number;
-  beds: number;
-  baths: number;
-  maxGuests: number;
-  bedrooms: number;
-  reviewCount: number;
-  reviewAvg: number;
-  availabilityStatus: string;
-}
+/* ─── DATA ─── */
+const HOSPITALS = ["Toronto General", "SickKids", "Mount Sinai", "Sunnybrook", "St. Michael's", "Princess Margaret", "Humber River", "Scarborough Health", "North York General", "Credit Valley", "Trillium Health"];
 
-interface SiteSettings {
-  statProperties?: string;
-  statHealthcarePros?: string;
-  statHospitalPartnerships?: string;
-  statAverageRating?: string;
-}
+const CARESTAY_STANDARD: { icon: ReactNode; name: string; desc: string }[] = [
+  { icon: "🏠", name: "Fully Furnished", desc: "Comfortable spaces ready for everyday living" },
+  { icon: "🔑", name: "Easy Check-In", desc: "A straightforward arrival experience" },
+  { icon: "📶", name: "Connected", desc: "Reliable Wi-Fi for work and downtime" },
+  { icon: "🧹", name: "Professionally Managed", desc: "Property care from a local operations team" },
+  { icon: "💬", name: "Responsive Support", desc: "Real help when you need it" },
+];
 
-const AVAILABILITY_STYLES: Record<string, { color: string; bg: string }> = {
-  Available: { color: "#0E7C4A", bg: "#E7F5EE" },
-  "Almost Booked": { color: "#B45309", bg: "#FDF0E0" },
-  "Waitlist Only": { color: "#1D4ED8", bg: "#E8EEFC" },
-  Booked: { color: "#B91C1C", bg: "#FBE9E9" },
-};
-
-function availabilityStyle(status: string) {
-  return AVAILABILITY_STYLES[status] || { color: "#0E7C4A", bg: "#E7F5EE" };
-}
-
-/* ─── Hooks ─── */
+/* ─── HOOKS ─── */
 function useInView(threshold = 0.15) {
   const ref = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(false);
+  const [inView, setInView] = useState(true);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -70,68 +34,198 @@ function useInView(threshold = 0.15) {
 function FadeIn({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
   const [ref, inView] = useInView();
   return (
-    <div ref={ref} style={{ opacity: inView ? 1 : 0, transform: inView ? "translateY(0)" : "translateY(24px)", transition: `opacity 0.6s ease ${delay}s, transform 0.6s ease ${delay}s` }}>
-      {children}
-    </div>
+    <div ref={ref} style={{ opacity: inView ? 1 : 0, transform: inView ? "translateY(0)" : "translateY(24px)", transition: `opacity 0.6s ease ${delay}s, transform 0.6s ease ${delay}s` }}>{children}</div>
   );
 }
 
-/* ─── Responsive rules ─── */
-function PageStyles() {
-  return <style>{`
-    .home-hero-grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:56px;align-items:center}
-    .home-trust-row{display:flex;flex-wrap:wrap;gap:20px 36px;justify-content:space-between;align-items:center}
-    .home-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
-    .home-who-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
-    .home-suites-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-    .home-form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    @media(max-width:1020px){
-      .home-who-grid{grid-template-columns:repeat(2,1fr)}
-      .home-suites-grid{grid-template-columns:repeat(2,1fr)}
+/* ─── STYLES ─── */
+function Styles() {
+  return <style dangerouslySetInnerHTML={{ __html: `
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    @keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased}
+
+    .wrap{max-width:1200px;margin:0 auto;width:100%}
+    .pad{padding:80px 24px}
+
+    /* Hero */
+    .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+    .hero-img-wrap{position:relative}
+    .hero-h1{font-family:'Cormorant Garamond',serif;font-size:58px;font-weight:700;line-height:1.02;color:var(--ink);letter-spacing:-0.035em}
+    .hero-ctas{display:flex;gap:12px;flex-wrap:wrap}
+    .hero-ctas a{padding:16px 30px;border-radius:999px;font-weight:700;font-size:15px;text-decoration:none;text-align:center;transition:transform .2s ease,box-shadow .2s ease,background .2s ease}
+    .hero-ctas a:hover{transform:translateY(-2px)}
+    .cta-primary{background:var(--accent);color:#fff;box-shadow:0 12px 24px rgba(45,43,255,.2)}
+    .cta-secondary{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+
+    /* Stats */
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+    .stat-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px 16px;text-align:center;box-shadow:var(--shadow)}
+    .stat-num{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .stat-label{font-size:12px;color:var(--ink-soft);margin-top:4px;font-weight:600}
+
+    /* Listings */
+    .listings-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+    .listing-card{background:var(--surface);border-radius:18px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s}
+    .listing-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lift)}
+    .listing-img{width:100%;height:220px;object-fit:cover;display:block}
+    .listing-body{padding:16px 18px}
+    .listing-tags{position:absolute;bottom:10px;left:10px;display:flex;gap:6px}
+    .listing-tag{background:rgba(23,38,48,0.82);backdrop-filter:blur(10px);color:#fff;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
+    .listing-avail{background:rgba(45,43,255,0.15);color:var(--accent);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
+    .listing-wait{background:rgba(23,38,48,0.82);color:#fff;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
+
+    /* Standard */
+    .standard-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+    .standard-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px 16px;text-align:center;box-shadow:var(--shadow)}
+
+    /* Healthcare */
+    .health-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+    .pain-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .pain-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px}
+
+    /* Steps */
+    .steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+    .step-card{position:relative;padding:28px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+
+    /* Form */
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .form-input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 16px;color:var(--ink);font-size:14px;outline:none;font-family:inherit}
+    .form-input:focus{border-color:rgba(45,43,255,0.4)}
+    .form-label{display:block;font-size:11px;font-weight:600;color:rgba(30,42,50,0.5);margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase}
+
+    /* Footer */
+    .footer-grid{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap}
+    .footer-links{display:flex;gap:48px}
+
+    /* Nav */
+    .nav-links{display:flex;align-items:center;gap:28px}
+    .nav-mobile{display:none}
+    .nav-link{color:var(--ink-soft);text-decoration:none;font-size:14px;font-weight:600;transition:color .2s}
+    .nav-link:hover{color:var(--accent)}
+    .nav-cta{background:var(--accent);color:#fff;padding:11px 22px;border-radius:999px;font-weight:700;font-size:13px;text-decoration:none}
+
+    /* Section headers */
+    .sh-label{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:0.1em;text-transform:uppercase}
+    .sh-title{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:700;color:var(--ink);margin-top:10px;letter-spacing:-0.02em;line-height:1.15}
+    .sh-sub{font-size:15px;color:var(--ink-soft);margin-top:12px;line-height:1.7;max-width:520px}
+    .sh-center{text-align:center}
+    .sh-center .sh-sub{margin-left:auto;margin-right:auto}
+
+    /* Tub banner */
+    .tub-banner{background:var(--paper-alt);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:20px 24px;text-align:center}
+    .tub-text{font-size:15px;color:rgba(30,42,50,0.6)}
+    .tub-text span{color:var(--accent);font-weight:700}
+
+    @media(max-width:1024px){
+      .listings-grid{grid-template-columns:repeat(2,1fr)}
+      .standard-grid{grid-template-columns:repeat(3,1fr)}
+      .hero-h1{font-size:42px}
     }
-    @media(max-width:760px){
-      .home-hero-grid{grid-template-columns:1fr;gap:36px}
-      .home-trust-row{justify-content:flex-start}
-      .home-stats-grid{grid-template-columns:repeat(2,1fr)}
-      .home-who-grid{grid-template-columns:1fr}
-      .home-suites-grid{grid-template-columns:1fr}
-      .home-form-row{grid-template-columns:1fr}
+    @media(max-width:768px){
+      .hero-grid{grid-template-columns:1fr;gap:32px}
+      .hero-img-wrap{display:none}
+      .hero-h1{font-size:36px}
+      .hero-ctas a{width:100%;padding:16px 24px;font-size:16px}
+      .stats-grid{grid-template-columns:1fr 1fr}
+      .listings-grid{grid-template-columns:1fr}
+      .standard-grid{grid-template-columns:1fr 1fr}
+      .health-grid{grid-template-columns:1fr}
+      .pain-grid{grid-template-columns:1fr}
+      .steps-grid{grid-template-columns:1fr}
+      .form-grid{grid-template-columns:1fr}
+      .footer-grid{flex-direction:column}
+      .footer-links{flex-direction:column;gap:28px}
+      .nav-links{display:none!important}
+      .nav-mobile{display:block!important}
+      .pad{padding:56px 18px}
+      .sh-title{font-size:28px}
+      .stat-num{font-size:30px}
     }
-  `}</style>;
+    @media(max-width:480px){
+      .standard-grid{grid-template-columns:1fr}
+      .hero-h1{font-size:30px}
+    }
+  ` }} />;
 }
 
-/* ─── Hero ─── */
-function Hero() {
+/* ─── NAV ─── */
+function Nav({ scrolled }: { scrolled: boolean }) {
+  const [open, setOpen] = useState(false);
   return (
-    <section className="section" style={{ paddingTop: 72 }}>
-      <div className="wrap">
-        <div className="home-hero-grid">
+    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: scrolled ? "rgba(255,253,249,0.95)" : "transparent", backdropFilter: scrolled ? "blur(20px)" : "none", borderBottom: scrolled ? "1px solid rgba(30,42,50,0.06)" : "none", transition: "all 0.4s" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 72 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: "linear-gradient(135deg,var(--accent),var(--accent2))", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#fff" }}>CS</div>
+          <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "var(--ink)" }}>CareStay <span style={{ fontWeight: 400, color: "rgba(30,42,50,0.6)" }}>Suites</span></span>
+        </div>
+        <div className="nav-links">
+          {[{ l: "Listings", h: "/listings" }, { l: "Healthcare", h: "/healthcare" }, { l: "Corporate", h: "/corporate" }, { l: "About", h: "/about" }, { l: "Contact", h: "#contact" }].map(i => <a key={i.l} href={i.h} className="nav-link">{i.l}</a>)}
+          <a href="#contact" className="nav-cta">Inquire Now</a>
+        </div>
+        <button className="nav-mobile" aria-label="Toggle navigation" aria-expanded={open} onClick={() => setOpen(!open)} style={{ background: "none", border: "none", fontSize: 28, color: "var(--ink)", cursor: "pointer" }}>{open ? "✕" : "☰"}</button>
+      </div>
+      {open && (
+        <div style={{ background: "rgba(255,253,249,0.98)", padding: "16px 24px 24px", borderTop: "1px solid rgba(30,42,50,0.06)" }}>
+          {[{ l: "Listings", h: "/listings" }, { l: "Healthcare", h: "/healthcare" }, { l: "Corporate", h: "/corporate" }, { l: "About", h: "/about" }, { l: "Contact", h: "#contact" }].map(i => <a key={i.l} href={i.h} onClick={() => setOpen(false)} style={{ display: "block", color: "rgba(30,42,50,0.8)", textDecoration: "none", fontSize: 17, padding: "14px 0", borderBottom: "1px solid rgba(30,42,50,0.06)" }}>{i.l}</a>)}
+          <a href="#contact" onClick={() => setOpen(false)} style={{ display: "block", background: "var(--accent)", color: "#fff", textAlign: "center", padding: 16, borderRadius: 10, fontWeight: 700, fontSize: 16, marginTop: 16, textDecoration: "none" }}>Inquire Now</a>
+        </div>
+      )}
+    </nav>
+  );
+}
+
+/* ─── HERO ─── */
+function Hero({ tagline }: { tagline?: string }) {
+  const legacyTagline = "Move-in ready suites primarily across the Greater Toronto Area and beyond. Verified properties. No scams, no deposits lost, no bait-and-switch. Trusted by nurses, physicians, and medical staff.";
+  const heroTagline = !tagline || tagline === legacyTagline
+    ? "Comfortable, fully equipped suites with flexible stays, easy self check-in, and responsive local support from arrival to departure."
+    : tagline;
+
+  return (
+    <section style={{ minHeight: "100vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden", background: "linear-gradient(155deg,#f7f3ed 0%,#fffdf9 48%,#e8eff3 100%)" }}>
+      <div style={{ position: "absolute", inset: 0, opacity: 0.04, backgroundImage: "radial-gradient(circle at 1px 1px,rgba(30,42,50,0.3) 1px,transparent 0)", backgroundSize: "40px 40px" }} />
+      <div style={{ position: "absolute", top: "10%", right: "5%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(45,43,255,0.06) 0%,transparent 70%)", filter: "blur(60px)" }} />
+      <div className="pad" style={{ maxWidth: 1200, margin: "0 auto", width: "100%", position: "relative", zIndex: 1, paddingTop: 120, paddingBottom: 80 }}>
+        <div className="hero-grid">
           <div>
             <FadeIn>
-              <div className="eyebrow" style={{ marginBottom: 20 }}>Corporate housing in Toronto</div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(45,43,255,0.08)", border: "1px solid rgba(45,43,255,0.2)", borderRadius: 100, padding: "8px 18px", marginBottom: 28 }}>
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--accent)", animation: "pulse 2s infinite" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Furnished stays across Toronto</span>
+              </div>
             </FadeIn>
-            <FadeIn delay={0.08}>
-              <h1 className="h-display" style={{ fontSize: "clamp(40px, 6vw, 64px)" }}>
-                Furnished stays for professionals in Toronto.
+            <FadeIn delay={0.1}>
+              <h1 className="hero-h1">
+                Furnished stays for{" "}
+                <span style={{ background: "linear-gradient(135deg,var(--accent),var(--accent2))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>professionals in Toronto.</span>
               </h1>
             </FadeIn>
-            <FadeIn delay={0.16}>
-              <p className="lede" style={{ margin: "24px 0 36px", maxWidth: 480 }}>
-                Fully equipped suites, flexible terms, keyless self check-in — and every stay on a signed agreement.
+            <FadeIn delay={0.2}>
+              <p style={{ fontSize: 17, lineHeight: 1.7, color: "rgba(30,42,50,0.55)", maxWidth: 500, margin: "24px 0 36px" }}>
+                {heroTagline}
               </p>
             </FadeIn>
-            <FadeIn delay={0.24}>
-              <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-                <Link href="/listings" className="btn-primary">Find your suite</Link>
-                <Link href="/corporate" className="btn-ghost">For companies</Link>
+            <FadeIn delay={0.3}>
+              <div className="hero-ctas">
+                <a href="#listings" className="cta-primary">Browse Suites</a>
+                <a href="/corporate" className="cta-secondary">For Companies</a>
               </div>
             </FadeIn>
           </div>
           <FadeIn delay={0.2}>
-            <div style={{ position: "relative" }}>
-              <div className="photo-slot" style={{ aspectRatio: "4/5" }}>[SUITE_PHOTO]</div>
-              <div style={{ position: "absolute", bottom: 18, left: 18, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 999, padding: "10px 18px", fontSize: 13, fontWeight: 600, color: "var(--ink-soft)", boxShadow: "var(--shadow)" }}>
-                Professionally managed · Toronto
+            <div className="hero-img-wrap">
+              <div style={{ borderRadius: 24, overflow: "hidden", boxShadow: "0 28px 64px rgba(30,42,50,0.2)", border: "1px solid rgba(30,42,50,0.08)" }}>
+                <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80" alt="Luxury furnished suite" style={{ width: "100%", height: 440, objectFit: "cover", display: "block" }} />
+              </div>
+              <div style={{ position: "absolute", bottom: -16, left: -16, background: "rgba(255,253,249,0.92)", backdropFilter: "blur(20px)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 10, background: "linear-gradient(135deg,var(--accent),var(--accent2))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800 }}>✓</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>Professionally Managed</div>
+                  <div style={{ fontSize: 11, color: "rgba(30,42,50,0.5)" }}>Real suites · responsive local support</div>
+                </div>
               </div>
             </div>
           </FadeIn>
@@ -141,24 +235,23 @@ function Hero() {
   );
 }
 
-/* ─── Trust band ─── */
-const TRUST_ITEMS: { icon: ReactNode; label: string }[] = [
-  { icon: <ShieldCheck size={20} strokeWidth={1.75} />, label: "Professionally managed" },
-  { icon: <KeyRound size={20} strokeWidth={1.75} />, label: "Keyless self check-in" },
-  { icon: <Wifi size={20} strokeWidth={1.75} />, label: "Fast wifi" },
-  { icon: <Sparkles size={20} strokeWidth={1.75} />, label: "Housekeeping options" },
-  { icon: <Headphones size={20} strokeWidth={1.75} />, label: "24/7 guest support" },
-];
-
-function TrustBand() {
+/* ─── STATS ─── */
+function Stats() {
+  const [ref, inView] = useInView();
+  const trustPoints = [
+    { n: "✓", l: "Professionally Managed" },
+    { n: "✓", l: "Fully Equipped Suites" },
+    { n: "✓", l: "Flexible Arrangements" },
+    { n: "✓", l: "Responsive Local Support" },
+  ];
   return (
-    <section style={{ borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)", background: "var(--surface)" }}>
-      <div className="wrap" style={{ padding: "28px 24px" }}>
-        <div className="home-trust-row">
-          {TRUST_ITEMS.map((t) => (
-            <div key={t.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ color: "var(--accent)", display: "inline-flex" }}>{t.icon}</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-soft)" }}>{t.label}</span>
+    <section ref={ref} style={{ background: "var(--paper-alt)", borderTop: "1px solid rgba(30,42,50,0.05)", borderBottom: "1px solid rgba(30,42,50,0.05)" }}>
+      <div className="pad" style={{ maxWidth: 1200, margin: "0 auto", paddingTop: 40, paddingBottom: 40 }}>
+        <div className="stats-grid">
+          {trustPoints.map((s, i) => (
+            <div key={i} className="stat-card" style={{ opacity: inView ? 1 : 0, transform: inView ? "translateY(0)" : "translateY(20px)", transition: `all 0.6s ease ${i * 0.1}s` }}>
+              <div className="stat-num">{s.n}</div>
+              <div className="stat-label">{s.l}</div>
             </div>
           ))}
         </div>
@@ -167,352 +260,313 @@ function TrustBand() {
   );
 }
 
-/* ─── Stats strip ─── */
-function StatsStrip({ settings }: { settings: SiteSettings | null }) {
-  const stats = [
-    { n: settings?.statProperties || "60+", l: "Properties managed" },
-    { n: settings?.statHealthcarePros || "150+", l: "Professionals housed" },
-    { n: settings?.statHospitalPartnerships || "30+", l: "Corporate & insurance partners" },
-    { n: settings?.statAverageRating || "4.9", l: "Average guest rating" },
-  ];
-  return (
-    <section className="section-tight">
-      <div className="wrap">
-        <div className="home-stats-grid">
-          {stats.map((s, i) => (
-            <FadeIn key={s.l} delay={i * 0.08}>
-              <div style={{ textAlign: "center" }}>
-                <div className="h-display" style={{ fontSize: 44, color: "var(--accent)" }}>{s.n}</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-faint)", marginTop: 6 }}>{s.l}</div>
-              </div>
-            </FadeIn>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+/* ─── LISTINGS ─── */
+interface ListingCard { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; featured?: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string }
 
-/* ─── Who stays with us ─── */
-const AUDIENCES: { icon: ReactNode; title: string; desc: string }[] = [
-  {
-    icon: <Building2 size={24} strokeWidth={1.75} />,
-    title: "Relocations & new hires",
-    desc: "Moving someone to Toronto? We set your new hires and transferring employees up in a fully equipped suite, so arrival is about the job — not the logistics.",
-  },
-  {
-    icon: <Briefcase size={24} strokeWidth={1.75} />,
-    title: "Consultants on contract",
-    desc: "A dedicated workspace, fast wifi, and a real kitchen — everything you need to settle in and do the work. Stays that fit your assignment, however it evolves.",
-  },
-  {
-    icon: <Umbrella size={24} strokeWidth={1.75} />,
-    title: "Insurance & displaced homeowners",
-    desc: "The care in our name started here. When a claim displaces a household, we move fast to place them somewhere that feels like home, working directly with adjusters throughout.",
-  },
-  {
-    icon: <Clapperboard size={24} strokeWidth={1.75} />,
-    title: "Film & project crews",
-    desc: "Multi-suite placements for productions and project teams, coordinated through a single point of contact. Terms that flex when the schedule does.",
-  },
-];
-
-function WhoStays() {
-  return (
-    <section className="section" style={{ background: "var(--surface)", borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }}>
-      <div className="wrap">
-        <FadeIn>
-          <div style={{ marginBottom: 48, maxWidth: 560 }}>
-            <div className="eyebrow" style={{ marginBottom: 14 }}>Who stays with us</div>
-            <h2 className="h-display" style={{ fontSize: "clamp(30px, 4vw, 42px)" }}>Built for the way professionals actually move.</h2>
-          </div>
-        </FadeIn>
-        <div className="home-who-grid">
-          {AUDIENCES.map((a, i) => (
-            <FadeIn key={a.title} delay={i * 0.08}>
-              <div className="card" style={{ padding: 28, height: "100%" }}>
-                <div style={{ width: 48, height: 48, borderRadius: 14, background: "var(--accent-soft)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
-                  {a.icon}
-                </div>
-                <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 20, marginBottom: 10, color: "var(--ink)" }}>{a.title}</h3>
-                <p style={{ fontSize: 14, lineHeight: 1.65, color: "var(--ink-soft)" }}>{a.desc}</p>
-              </div>
-            </FadeIn>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─── Suites ─── */
-function SuitesSection() {
-  const [listings, setListings] = useState<Listing[]>([]);
+function ListingsSection() {
+  const [apiListings, setApiListings] = useState<ListingCard[]>([]);
+  const [listingsLoaded, setListingsLoaded] = useState(false);
   useEffect(() => {
     fetch("/api/listings")
-      .then((r) => r.json())
-      .then((data) => {
+      .then(r => r.json())
+      .then(data => {
         if (data.status === "success" && data.listings) {
-          setListings(
-            data.listings.map((l: { id: number | string; title: string; location: string; img: string; price: number; beds: number; baths: number; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string }) => ({
-              id: l.id,
-              title: l.title,
-              location: l.location,
-              img: l.img,
-              price: l.price,
-              beds: l.beds,
-              baths: l.baths,
-              maxGuests: l.maxGuests || 0,
-              bedrooms: l.bedrooms || 0,
-              reviewCount: l.reviewCount || 0,
-              reviewAvg: l.reviewAvg || 0,
-              availabilityStatus: l.availabilityStatus || "Available",
-            }))
-          );
+          setApiListings(data.listings.map((l: { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; featured?: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string }) => ({
+            id: l.id, title: l.title, location: l.location, beds: l.beds, baths: l.baths,
+            price: l.price, sqft: l.sqft, img: l.img, tag: l.location || "GTA", available: true, featured: l.featured === true,
+            maxGuests: l.maxGuests || 0, bedrooms: l.bedrooms || 0, reviewCount: l.reviewCount || 0, reviewAvg: l.reviewAvg || 0,
+            availabilityStatus: l.availabilityStatus || "Available",
+          })));
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setListingsLoaded(true));
   }, []);
 
-  const shown = listings.slice(0, 6);
+  const featuredListings = apiListings.filter(l => l.featured);
+  const allListings = apiListings.filter(l => !l.featured);
+  const displayedListings = allListings.slice(0, 9);
+  const hasMore = allListings.length > 9;
 
   return (
-    <section className="section">
+    <section id="listings" className="pad" style={{ background: "var(--paper)" }}>
       <div className="wrap">
-        <FadeIn>
-          <div style={{ marginBottom: 48, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 20 }}>
-            <div style={{ maxWidth: 560 }}>
-              <div className="eyebrow" style={{ marginBottom: 14 }}>The suites</div>
-              <h2 className="h-display" style={{ fontSize: "clamp(30px, 4vw, 42px)" }}>Move-in ready, down to the coffee cups.</h2>
-            </div>
-            <Link href="/listings" className="btn-ghost">View all suites</Link>
-          </div>
-        </FadeIn>
-        <div className="home-suites-grid">
-          {shown.length > 0
-            ? shown.map((l, i) => {
-                const badge = availabilityStyle(l.availabilityStatus);
-                const specs = [
-                  l.maxGuests ? `${l.maxGuests} guest${l.maxGuests !== 1 ? "s" : ""}` : null,
-                  l.bedrooms ? `${l.bedrooms} bedroom${l.bedrooms !== 1 ? "s" : ""}` : null,
-                  l.beds ? `${l.beds} bed${l.beds !== 1 ? "s" : ""}` : null,
-                  l.baths ? `${l.baths} bath${l.baths !== 1 ? "s" : ""}` : null,
-                ].filter(Boolean).join(" · ");
-                return (
-                  <FadeIn key={l.id} delay={i * 0.06}>
-                    <Link href={`/listings/${l.id}`} style={{ textDecoration: "none", color: "inherit", display: "block", height: "100%" }}>
-                      <div className="card" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                        <div style={{ position: "relative" }}>
-                          <img src={l.img} alt={l.title} style={{ width: "100%", height: 230, objectFit: "cover", display: "block" }} />
-                          <span style={{ position: "absolute", top: 14, left: 14, background: badge.bg, color: badge.color, padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                            {l.availabilityStatus}
-                          </span>
-                        </div>
-                        <div style={{ padding: "20px 22px 22px", display: "flex", flexDirection: "column", flex: 1 }}>
-                          <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 21, color: "var(--ink)", marginBottom: 4 }}>{l.title}</h3>
-                          <p style={{ fontSize: 14, color: "var(--ink-faint)", marginBottom: 8 }}>{l.location}</p>
-                          {specs && <p style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 8 }}>{specs}</p>}
-                          {l.reviewCount > 0 && (
-                            <p style={{ fontSize: 13, color: "#B98900", fontWeight: 600, marginBottom: 8 }}>
-                              ★ {l.reviewAvg.toFixed(1)} · {l.reviewCount} review{l.reviewCount !== 1 ? "s" : ""}
-                            </p>
-                          )}
-                          <div style={{ marginTop: "auto", paddingTop: 14, borderTop: "1px solid var(--line)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 20, color: "var(--ink)" }}>
-                              From ${l.price.toLocaleString()}
-                            </span>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>View suite →</span>
-                          </div>
+        {featuredListings.length > 0 && (
+          <>
+            <FadeIn>
+              <div className="sh-center" style={{ marginBottom: 32 }}>
+                <div className="sh-label" style={{ color: "var(--gold)" }}>★ Featured Suites</div>
+                <h2 className="sh-title">Hand-Picked by CareStay</h2>
+              </div>
+            </FadeIn>
+            <div className="listings-grid" style={{ marginBottom: 64 }}>
+              {featuredListings.map((l, i) => (
+                <FadeIn key={`featured-${l.id}`} delay={i * 0.06}>
+                  <Link href={`/listings/${l.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                    <div className="listing-card" style={{ border: "1px solid rgba(240,192,64,0.3)", boxShadow: "0 0 20px rgba(240,192,64,0.08)" }}>
+                      <div style={{ position: "relative", overflow: "hidden" }}>
+                        <img src={l.img} alt={l.title} className="listing-img" />
+                        <div className="listing-tags">
+                          <span style={{ background: "rgba(240,192,64,0.9)", color: "#000", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>★ FEATURED</span>
+                          <span className="listing-tag">{l.tag}</span>
+                          <span style={{ background: l.availabilityStatus === "Almost Booked" ? "rgba(255,160,0,0.9)" : l.availabilityStatus === "Waitlist Only" ? "rgba(0,112,214,0.9)" : l.availabilityStatus === "Booked" ? "rgba(196,50,50,0.9)" : "rgba(45,43,255,0.9)", color: l.availabilityStatus === "Almost Booked" ? "#1e2a32" : "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{l.availabilityStatus === "Almost Booked" ? "Almost Booked" : l.availabilityStatus === "Waitlist Only" ? "Waitlist" : l.availabilityStatus === "Booked" ? "Booked" : "Available"}</span>
                         </div>
                       </div>
-                    </Link>
-                  </FadeIn>
-                );
-              })
-            : [0, 1, 2].map((i) => (
-                <FadeIn key={i} delay={i * 0.06}>
-                  <div className="card">
-                    <div className="photo-slot" style={{ aspectRatio: "4/3", borderRadius: 0 }}>[SUITE_PHOTO]</div>
-                    <div style={{ padding: "20px 22px 22px" }}>
-                      <div style={{ height: 14, width: "60%", background: "var(--surface-warm)", borderRadius: 6, marginBottom: 10 }} />
-                      <div style={{ height: 12, width: "40%", background: "var(--surface-warm)", borderRadius: 6 }} />
+                      <div className="listing-body">
+                        <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "var(--ink)", marginBottom: 4 }}>{l.title}</h3>
+                        <p style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 12 }}>{l.location}</p>
+                        <p style={{ fontSize: 12, color: "rgba(30,42,50,0.5)", marginBottom: 14 }}>
+                          {[
+                            l.maxGuests ? `${l.maxGuests} guest${l.maxGuests !== 1 ? "s" : ""}` : null,
+                            l.bedrooms ? `${l.bedrooms} bedroom${l.bedrooms !== 1 ? "s" : ""}` : null,
+                            l.beds ? `${l.beds} bed${l.beds !== 1 ? "s" : ""}` : null,
+                            l.baths ? `${l.baths} bath${l.baths !== 1 ? "s" : ""}` : null,
+                          ].filter(Boolean).join(" · ")}
+                        </p>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(240,192,64,0.15)", paddingTop: 14 }}>
+                          <div>
+                            <span style={{ fontSize: 12, color: "var(--ink-faint)", marginRight: 5 }}>From</span>
+                            <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "var(--ink)" }}>${l.price.toLocaleString()}</span>
+                          </div>
+                          <span style={{ background: "rgba(185,130,79,0.15)", color: "var(--gold)", padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>View Suite →</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 </FadeIn>
               ))}
+            </div>
+          </>
+        )}
+        <FadeIn>
+          <div className="sh-center" style={{ marginBottom: 48 }}>
+            <div className="sh-label">All Suites</div>
+            <h2 className="sh-title">Curated Properties Near You</h2>
+            <p className="sh-sub">Professionally managed, furnished suites for work assignments, relocations, insurance placements, and extended travel.</p>
+          </div>
+        </FadeIn>
+        <div className="listings-grid">
+          {displayedListings.map((l, i) => (
+            <FadeIn key={l.id} delay={i * 0.06}>
+              <Link href={`/listings/${l.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                <div className="listing-card">
+                  <div style={{ position: "relative", overflow: "hidden" }}>
+                    <img src={l.img} alt={l.title} className="listing-img" />
+                    <div className="listing-tags">
+                      <span className="listing-tag">{l.tag}</span>
+                      <span style={{ background: l.availabilityStatus === "Almost Booked" ? "rgba(255,160,0,0.9)" : l.availabilityStatus === "Waitlist Only" ? "rgba(0,112,214,0.9)" : l.availabilityStatus === "Booked" ? "rgba(196,50,50,0.9)" : "rgba(45,43,255,0.9)", color: l.availabilityStatus === "Almost Booked" ? "#1e2a32" : "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{l.availabilityStatus === "Almost Booked" ? "Almost Booked" : l.availabilityStatus === "Waitlist Only" ? "Waitlist" : l.availabilityStatus === "Booked" ? "Booked" : "Available"}</span>
+                    </div>
+                  </div>
+                  <div className="listing-body">
+                    <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "var(--ink)", marginBottom: 4 }}>{l.title}</h3>
+                    <p style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 12 }}>{l.location}</p>
+                    <p style={{ fontSize: 12, color: "rgba(30,42,50,0.5)", marginBottom: 14 }}>
+                      {[
+                        l.maxGuests ? `${l.maxGuests} guest${l.maxGuests !== 1 ? "s" : ""}` : null,
+                        l.bedrooms ? `${l.bedrooms} bedroom${l.bedrooms !== 1 ? "s" : ""}` : null,
+                        l.beds ? `${l.beds} bed${l.beds !== 1 ? "s" : ""}` : null,
+                        l.baths ? `${l.baths} bath${l.baths !== 1 ? "s" : ""}` : null,
+                      ].filter(Boolean).join(" · ")}
+                    </p>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(30,42,50,0.06)", paddingTop: 14 }}>
+                      <div>
+                        <span style={{ fontSize: 12, color: "var(--ink-faint)", marginRight: 5 }}>From</span>
+                        <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "var(--ink)" }}>${l.price.toLocaleString()}</span>
+                      </div>
+                      <span style={{ background: "rgba(45,43,255,0.1)", color: "var(--accent)", padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>View Suite →</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </FadeIn>
+          ))}
         </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─── For companies ─── */
-function CompaniesBand() {
-  const points = [
-    "Direct booking or invoice",
-    "Multi-suite placements",
-    "One point of contact",
-    "Stays that flex with project timelines",
-  ];
-  return (
-    <section className="section" style={{ background: "var(--accent-soft)" }}>
-      <div className="wrap" style={{ textAlign: "center" }}>
-        <FadeIn>
-          <div className="eyebrow" style={{ marginBottom: 14 }}>For companies</div>
-          <h2 className="h-display" style={{ fontSize: "clamp(30px, 4vw, 44px)", maxWidth: 620, margin: "0 auto" }}>
-            Housing your team can move into tomorrow.
-          </h2>
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 12, margin: "28px auto 36px", maxWidth: 720 }}>
-            {points.map((p) => (
-              <span key={p} style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 999, padding: "9px 18px", fontSize: 14, fontWeight: 600, color: "var(--ink-soft)" }}>
-                {p}
-              </span>
-            ))}
+        {listingsLoaded && displayedListings.length === 0 && featuredListings.length === 0 && (
+          <div style={{ textAlign: "center", padding: "36px 20px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 18 }}>
+            <p style={{ color: "var(--ink-soft)", lineHeight: 1.7 }}>Current suite availability is being updated. Tell us what you need and the team will help.</p>
           </div>
-          <Link href="/corporate" className="btn-primary">Talk to us</Link>
+        )}
+        {hasMore && (
+          <FadeIn delay={0.3}>
+            <div style={{ textAlign: "center", marginTop: 36 }}>
+              <Link href="/listings" style={{ display: "inline-block", background: "rgba(45,43,255,0.1)", color: "var(--accent)", padding: "12px 28px", borderRadius: 10, fontSize: 14, fontWeight: 700, textDecoration: "none", border: "1px solid rgba(45,43,255,0.2)" }}>View All Suites →</Link>
+            </div>
+          </FadeIn>
+        )}
+        <FadeIn delay={0.3}>
+          <div style={{ textAlign: "center", marginTop: 20 }}>
+            <a href="#contact" style={{ color: "var(--accent)", fontSize: 14, fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(45,43,255,0.3)", paddingBottom: 2 }}>Don&apos;t see what you need? Tell us your requirements →</a>
+          </div>
         </FadeIn>
       </div>
     </section>
   );
 }
 
-/* ─── FAQ ─── */
-const FAQS = [
-  {
-    q: "What's included in every suite?",
-    a: "Full furniture, a full kitchen, linens and towels, fast wifi, a smart TV, a dedicated workspace, and keyless entry — with utilities included. You arrive with a suitcase; everything else is handled.",
-  },
-  {
-    q: "How does booking work?",
-    a: "Send an inquiry and we'll confirm the details with you directly. Every stay is on a signed agreement, and you'll receive self check-in instructions before arrival. Companies can also book by invoice.",
-  },
-  {
-    q: "Pets and parking?",
-    a: "It varies by property. Tell us what you need and we'll match you with a suite that works.",
-  },
-];
-
-function FaqSection() {
-  const [openIdx, setOpenIdx] = useState<number | null>(0);
+/* ─── HOSPITAL SCROLL ─── */
+function HospitalBanner() {
   return (
-    <section className="section">
-      <div className="wrap" style={{ maxWidth: 760 }}>
-        <FadeIn>
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <div className="eyebrow" style={{ marginBottom: 14 }}>Good to know</div>
-            <h2 className="h-display" style={{ fontSize: "clamp(30px, 4vw, 40px)" }}>Questions, answered.</h2>
-          </div>
-        </FadeIn>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {FAQS.map((f, i) => {
-            const open = openIdx === i;
-            return (
-              <FadeIn key={f.q} delay={i * 0.06}>
-                <div className="card" style={{ boxShadow: open ? "var(--shadow)" : "none" }}>
-                  <button
-                    onClick={() => setOpenIdx(open ? null : i)}
-                    aria-expanded={open}
-                    style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, background: "none", border: "none", cursor: "pointer", padding: "20px 24px", textAlign: "left", fontFamily: "var(--font-body)" }}
-                  >
-                    <span style={{ fontSize: 16, fontWeight: 700, color: "var(--ink)" }}>{f.q}</span>
-                    <ChevronDown size={18} strokeWidth={2} style={{ color: "var(--ink-faint)", flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
-                  </button>
-                  {open && (
-                    <p style={{ padding: "0 24px 22px", fontSize: 15, lineHeight: 1.7, color: "var(--ink-soft)" }}>{f.a}</p>
-                  )}
+    <div style={{ background: "var(--night)", padding: "32px 0", overflow: "hidden", borderTop: "1px solid rgba(255,255,255,0.08)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <div style={{ display: "flex", gap: 48, animation: "scroll 25s linear infinite", whiteSpace: "nowrap" }}>
+        {[...HOSPITALS, ...HOSPITALS].map((h, i) => <span key={i} style={{ fontSize: 14, color: "rgba(255,255,255,0.68)", fontWeight: 600 }}>{h}</span>)}
+      </div>
+    </div>
+  );
+}
+
+/* ─── CARESTAY STANDARD ─── */
+function Standard() {
+  return (
+    <>
+      <section id="about" className="pad" style={{ background: "var(--surface-blue)" }}>
+        <div className="wrap">
+          <FadeIn>
+            <div className="sh-center" style={{ marginBottom: 40 }}>
+              <div className="sh-label">The CareStay Standard</div>
+              <h2 className="sh-title">Every Suite, Thoughtfully Equipped.</h2>
+              <p className="sh-sub">Comfort comes down to the details. CareStay suites pair the everyday essentials with practical touches designed for demanding schedules.</p>
+            </div>
+          </FadeIn>
+          <div className="standard-grid">
+            {CARESTAY_STANDARD.map((item, i) => (
+              <FadeIn key={i} delay={i * 0.06}>
+                <div className="standard-card">
+                  <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", marginBottom: 6 }}>{item.name}</h3>
+                  <p style={{ fontSize: 12, color: "var(--ink-soft)", lineHeight: 1.5 }}>{item.desc}</p>
                 </div>
               </FadeIn>
-            );
-          })}
+            ))}
+          </div>
+        </div>
+      </section>
+      <div className="tub-banner">
+        <p className="tub-text"><span>Clear suite details.</span> Exact amenities are shown on each listing before you inquire.</p>
+      </div>
+    </>
+  );
+}
+
+/* ─── HEALTHCARE ─── */
+function Healthcare() {
+  const points: { icon: ReactNode; title: string; desc: string }[] = [
+    { icon: <ShieldCheck size={28} strokeWidth={1.5} style={{ color: "var(--accent)" }} />, title: "Verified & Scam-Free", desc: "Every property personally inspected. No fake listings." },
+    { icon: <MapPin size={28} strokeWidth={1.5} style={{ color: "var(--accent)" }} />, title: "Well Located", desc: "Convenient options near major hospitals and Toronto neighbourhoods." },
+    { icon: <ClipboardList size={28} strokeWidth={1.5} style={{ color: "var(--accent)" }} />, title: "Move-In Ready", desc: "Fully furnished with everything from day one." },
+    { icon: <CalendarDays size={28} strokeWidth={1.5} style={{ color: "var(--accent)" }} />, title: "Flexible Terms", desc: "Stay arrangements built around your assignment." },
+  ];
+  return (
+    <section id="healthcare" className="pad" style={{ background: "var(--paper-alt)" }}>
+      <div className="wrap">
+        <div className="health-grid">
+          <FadeIn>
+            <div>
+              <div className="sh-label">For Healthcare Professionals</div>
+              <h2 className="sh-title">Housing That Understands Your Assignment</h2>
+              <p className="sh-sub" style={{ maxWidth: 460 }}>We know the frustration — fake listings, unresponsive hosts, deposits that vanish. CareStay exists because healthcare professionals deserve better.</p>
+              <div style={{ marginTop: 28 }}>
+                <a href="#contact" className="cta-primary" style={{ display: "inline-block", padding: "14px 32px", borderRadius: 10, fontWeight: 700, fontSize: 15, textDecoration: "none" }}>Join the Waitlist</a>
+              </div>
+            </div>
+          </FadeIn>
+          <div className="pain-grid">
+            {points.map((p, i) => (
+              <FadeIn key={i} delay={i * 0.08}>
+                <div className="pain-card">
+                  <div style={{ fontSize: 28, marginBottom: 10 }}>{p.icon}</div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", marginBottom: 6 }}>{p.title}</h3>
+                  <p style={{ fontSize: 13, color: "var(--ink-soft)", lineHeight: 1.5 }}>{p.desc}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-/* ─── Contact / inquiry ─── */
-function ContactSection() {
+/* ─── HOW IT WORKS ─── */
+function HowItWorks() {
+  const steps = [
+    { n: "01", t: "Tell Us Your Needs", d: "Share your dates, destination, budget, and preferences." },
+    { n: "02", t: "Browse & Tour Virtually", d: "Browse verified suites and take virtual video tours from anywhere." },
+    { n: "03", t: "Book & Move In", d: "Sign digitally. Fully furnished suite waiting for you." },
+  ];
+  return (
+    <section id="how-it-works" className="pad" style={{ background: "var(--surface)" }}>
+      <div className="wrap">
+        <FadeIn>
+          <div className="sh-center" style={{ marginBottom: 48 }}>
+            <div className="sh-label">How It Works</div>
+            <h2 className="sh-title">Move In, Not Stressed Out</h2>
+          </div>
+        </FadeIn>
+        <div className="steps-grid">
+          {steps.map((s, i) => (
+            <FadeIn key={i} delay={i * 0.1}>
+              <div className="step-card">
+                <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 800, fontSize: 48, color: "rgba(45,43,255,0.08)", position: "absolute", top: 14, right: 18 }}>{s.n}</div>
+                <div style={{ width: 46, height: 46, borderRadius: 12, background: "linear-gradient(135deg,rgba(45,43,255,0.1),rgba(94,129,148,0.1))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: 16, color: "var(--accent)", fontWeight: 800 }}>{s.n}</div>
+                <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 22, color: "var(--ink)", marginBottom: 8 }}>{s.t}</h3>
+                <p style={{ fontSize: 14, color: "var(--ink-soft)", lineHeight: 1.6 }}>{s.d}</p>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── CONTACT / WAITLIST ─── */
+const HOSPITAL_OPTIONS = ["Toronto General / UHN", "Sunnybrook", "SickKids", "Mount Sinai", "St. Michael's", "Humber River", "Scarborough Health", "North York General", "Credit Valley", "Trillium Health", "Other", "Not Sure Yet"];
+
+function Contact() {
+  const [done, setDone] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [company, setCompany] = useState("");
-  const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState("");
-
+  const [hospital, setHospital] = useState("");
   const handleSubmit = async () => {
-    if (!email) { setError("Please enter your email so we can reach you."); return; }
-    setError("");
-    setSending(true);
-    try {
-      const fullMessage = company ? `Company: ${company} — ${message}` : message;
-      const res = await fetch("/api/inquiry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, message: fullMessage, tags: ["carestay-inquiry", "homepage"] }),
-      });
-      if (!res.ok) throw new Error("Request failed");
-      if (typeof window !== "undefined" && window.fbq) { window.fbq("track", "Lead"); }
-      setDone(true);
-    } catch {
-      setError("Something went wrong — please try again or email us directly.");
-    } finally {
-      setSending(false);
-    }
+    if (!email) return;
+    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, hospital, tags: ["carestay-waitlist", "homepage-signup"] }) });
+    if (typeof window !== "undefined" && window.fbq) { window.fbq("track", "Lead"); }
+    setDone(true);
   };
-
   return (
-    <section id="contact" className="section" style={{ background: "var(--surface)", borderTop: "1px solid var(--line)" }}>
-      <div className="wrap" style={{ maxWidth: 680 }}>
+    <section id="contact" className="pad" style={{ background: "var(--surface-blue)" }}>
+      <div style={{ maxWidth: 560, margin: "0 auto" }}>
         <FadeIn>
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <div className="eyebrow" style={{ marginBottom: 14 }}>Get in touch</div>
-            <h2 className="h-display" style={{ fontSize: "clamp(30px, 4vw, 40px)" }}>Tell us what you need.</h2>
-            <p className="lede" style={{ marginTop: 14 }}>We&apos;ll come back with options that fit — usually within 24 hours.</p>
+          <div className="sh-center" style={{ marginBottom: 36 }}>
+            <div className="sh-label">Stay Updated</div>
+            <h2 className="sh-title">Be the First to Know When New Suites Drop</h2>
+            <p className="sh-sub" style={{ marginLeft: "auto", marginRight: "auto" }}>Join healthcare professionals across Canada on our waitlist.</p>
           </div>
         </FadeIn>
         {!done ? (
           <FadeIn delay={0.1}>
-            <div className="card" style={{ padding: 32 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <div className="home-form-row">
-                  <div>
-                    <label className="form-label" htmlFor="inq-name">Name</label>
-                    <input id="inq-name" type="text" className="form-input" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="form-label" htmlFor="inq-email">Email *</label>
-                    <input id="inq-email" type="email" className="form-input" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  </div>
-                </div>
-                <div className="home-form-row">
-                  <div>
-                    <label className="form-label" htmlFor="inq-phone">Phone</label>
-                    <input id="inq-phone" type="tel" className="form-input" placeholder="(416) 555-0100" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="form-label" htmlFor="inq-company">Company (optional)</label>
-                    <input id="inq-company" type="text" className="form-input" placeholder="Company name" value={company} onChange={(e) => setCompany(e.target.value)} />
-                  </div>
-                </div>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 20, padding: "28px 22px", boxShadow: "var(--shadow)" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div><label className="form-label">Name (optional)</label><input type="text" placeholder="Jane Smith" className="form-input" value={name} onChange={e => setName(e.target.value)} /></div>
+                <div><label className="form-label">Email *</label><input type="email" placeholder="jane@hospital.ca" className="form-input" value={email} onChange={e => setEmail(e.target.value)} /></div>
                 <div>
-                  <label className="form-label" htmlFor="inq-message">Message</label>
-                  <textarea id="inq-message" className="form-input" rows={4} style={{ resize: "vertical" }} placeholder="Who's staying, where you need to be, and anything else we should know." value={message} onChange={(e) => setMessage(e.target.value)} />
+                  <label className="form-label">Hospital / Facility</label>
+                  <select className="form-input" value={hospital} onChange={e => setHospital(e.target.value)} style={{ appearance: "none", WebkitAppearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(30,42,50,0.4)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 32, cursor: "pointer" }}>
+                    <option value="">Select hospital...</option>
+                    {HOSPITAL_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
                 </div>
-                {error && <p style={{ fontSize: 14, color: "#B91C1C" }}>{error}</p>}
-                <button onClick={handleSubmit} disabled={sending} className="btn-primary" style={{ width: "100%", opacity: sending ? 0.7 : 1 }}>
-                  {sending ? "Sending..." : "Send inquiry"}
-                </button>
               </div>
+              <button onClick={handleSubmit} style={{ width: "100%", background: "var(--accent)", color: "#fff", padding: 16, borderRadius: 10, fontWeight: 800, fontSize: 16, border: "none", cursor: "pointer", fontFamily: "inherit", marginTop: 16 }}>Join the Waitlist</button>
+              <p style={{ fontSize: 11, color: "rgba(30,42,50,0.25)", textAlign: "center", marginTop: 12 }}>No spam, ever. Just new suite alerts.</p>
             </div>
           </FadeIn>
         ) : (
           <FadeIn>
-            <div className="card" style={{ padding: 48, textAlign: "center" }}>
-              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#E7F5EE", color: "#0E7C4A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, margin: "0 auto 18px" }}>✓</div>
-              <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 26, color: "var(--ink)", marginBottom: 8 }}>Inquiry received.</h3>
-              <p style={{ fontSize: 15, color: "var(--ink-soft)", lineHeight: 1.6 }}>Thanks — a member of our team will be in touch within 24 hours.</p>
+            <div style={{ textAlign: "center", padding: 60, background: "rgba(45,43,255,0.04)", border: "1px solid rgba(45,43,255,0.15)", borderRadius: 20 }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
+              <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 28, color: "var(--ink)", marginBottom: 8 }}>You&apos;re on the list!</h3>
+              <p style={{ fontSize: 15, color: "rgba(30,42,50,0.5)" }}>We&apos;ll notify you when new suites drop.</p>
             </div>
           </FadeIn>
         )}
@@ -521,34 +575,68 @@ function ContactSection() {
   );
 }
 
-/* ─── Page ─── */
+/* ─── FOOTER ─── */
+function Footer({ address }: { address?: string }) {
+  return (
+    <footer style={{ background: "var(--night)", borderTop: "1px solid rgba(255,255,255,0.08)", padding: "48px 24px 32px" }}>
+      <div className="wrap">
+        <div className="footer-grid">
+          <div style={{ maxWidth: 280 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,var(--accent),var(--accent2))", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: "#fff" }}>CS</div>
+              <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>CareStay Suites</span>
+            </div>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.58)", lineHeight: 1.6 }}>Professionally managed furnished stays for professionals and organizations across the Greater Toronto Area.</p>
+          </div>
+          <div className="footer-links">
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.82)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Quick Links</div>
+              {[{ label: "Listings", href: "/listings" }, { label: "Healthcare", href: "/healthcare" }, { label: "Corporate", href: "/corporate" }, { label: "About", href: "/about" }, { label: "Contact", href: "#contact" }].map(l => <a key={l.label} href={l.href} style={{ display: "block", fontSize: 13, color: "rgba(255,255,255,0.58)", textDecoration: "none", marginBottom: 8 }}>{l.label}</a>)}
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.82)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Contact</div>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.58)", marginBottom: 8 }}>info@carestaysuites.com</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.58)", marginBottom: 8 }}>{address || "35 Mariner Terrace, Toronto, ON M5V 3V9"}</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.58)" }}>Toronto, Ontario</p>
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.42)" }}>© 2026 CareStay Suites. All rights reserved.</span>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.42)" }}>Operated by BookedHosts</span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+/* ─── PAGE ─── */
 export default function Home() {
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
-
+  const [scrolled, setScrolled] = useState(false);
+  const [siteSettings, setSiteSettings] = useState<{ heroTagline?: string; companyAddress?: string; statProperties?: string; statHealthcarePros?: string; statHospitalPartnerships?: string; statAverageRating?: string } | null>(null);
   useEffect(() => {
-    document.title = "CareStay Suites — Furnished Stays for Professionals in Toronto";
+    const h = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", h);
+    return () => window.removeEventListener("scroll", h);
   }, []);
-
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then((d) => { if (d.status === "success") setSettings(d.settings); })
-      .catch(() => {});
+    fetch("/api/settings").then(r => r.json()).then(d => {
+      if (d.status === "success") setSiteSettings(d.settings);
+    }).catch(() => {});
   }, []);
-
   return (
     <>
-      <PageStyles />
-      <SiteNav />
-      <Hero />
-      <TrustBand />
-      <StatsStrip settings={settings} />
-      <WhoStays />
-      <SuitesSection />
-      <CompaniesBand />
-      <FaqSection />
-      <ContactSection />
-      <SiteFooter />
+      <Styles />
+      <Nav scrolled={scrolled} />
+      <Hero tagline={siteSettings?.heroTagline} />
+      <Stats />
+      <ListingsSection />
+      <HospitalBanner />
+      <Standard />
+      <Healthcare />
+      <HowItWorks />
+      <Contact />
+      <Footer address={siteSettings?.companyAddress} />
     </>
   );
 }

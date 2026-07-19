@@ -2,18 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { Search } from "lucide-react";
-import SiteNav from "@/app/components/SiteNav";
-import SiteFooter from "@/app/components/SiteFooter";
 
 interface Listing { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; available: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string }
-
-function availabilityBadge(status?: string): { label: string; color: string; bg: string } {
-  if (status === "Almost Booked") return { label: "Almost Booked", color: "#B45309", bg: "#FDF0E0" };
-  if (status === "Waitlist Only") return { label: "Waitlist", color: "#1D4ED8", bg: "#E8EEFC" };
-  if (status === "Booked") return { label: "Booked", color: "#B91C1C", bg: "#FBE9E9" };
-  return { label: "Available", color: "#0E7C4A", bg: "#E7F5EE" };
-}
 
 export default function AllListingsPage() {
   const [listings, setListings] = useState<Listing[]>([]);
@@ -22,11 +12,7 @@ export default function AllListingsPage() {
   const [bedFilter, setBedFilter] = useState("all");
   const [priceFilter, setPriceFilter] = useState("all");
   const [areaFilter, setAreaFilter] = useState("all");
-
-  useEffect(() => {
-    document.title = "Suites & Locations | CareStay Suites — Corporate Housing Toronto";
-  }, []);
-
+  const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
     fetch("/api/listings")
       .then(r => r.json())
@@ -46,163 +32,152 @@ export default function AllListingsPage() {
 
   return (
     <>
-      <style>{`
-        .suites-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-        .filter-selects{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-        .city-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-ms-overflow-style:none;scrollbar-width:none}
+      <style dangerouslySetInnerHTML={{ __html: `
+        *{box-sizing:border-box;margin:0;padding:0}
+        html{scroll-behavior:smooth}
+        body{font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased}
+        .wrap{max-width:1200px;margin:0 auto;width:100%;padding:0 24px}
+        .nav-links{display:flex;align-items:center;gap:28px}
+        .nav-mobile{display:none}
+        .nav-link{color:var(--ink-soft);text-decoration:none;font-size:14px;font-weight:600}
+        .nav-link:hover{color:var(--accent)}
+        .nav-cta{background:var(--accent);color:#fff;padding:10px 22px;border-radius:999px;font-weight:700;font-size:13px;text-decoration:none}
+        .listings-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+        .listing-card{background:var(--surface);border-radius:18px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);transition:transform 0.2s,box-shadow 0.2s}
+        .listing-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lift)}
+        .listing-img{width:100%;height:220px;object-fit:cover;display:block}
+        .listing-body{padding:16px 18px}
+        .listing-tag{background:rgba(23,38,48,0.82);backdrop-filter:blur(10px);color:#fff;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
+        .listing-avail{background:rgba(45,43,255,0.15);color:var(--accent);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
+        .filter-input{background:rgba(30,42,50,0.04);border:1px solid rgba(30,42,50,0.08);border-radius:10px;padding:10px 16px;color:var(--ink);font-size:14px;outline:none;font-family:inherit;height:42px;line-height:1}
+        .filter-input:focus{border-color:rgba(45,43,255,0.4)}
+        .filter-select{background:rgba(30,42,50,0.04);border:1px solid rgba(30,42,50,0.08);border-radius:10px;padding:10px 14px;color:var(--ink);font-size:13px;outline:none;font-family:inherit;cursor:pointer;appearance:none;-webkit-appearance:none;height:42px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(30,42,50,0.4)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+        .filter-select option{background:var(--surface);color:var(--ink)}
+        .filter-dropdowns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%}
+        .city-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;-ms-overflow-style:none;scrollbar-width:none}
         .city-scroll::-webkit-scrollbar{display:none}
-        .suite-select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%235C5853' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px;cursor:pointer}
-        @media(max-width:980px){.suites-grid{grid-template-columns:repeat(2,1fr)}}
-        @media(max-width:760px){.suites-grid{grid-template-columns:1fr}.filter-selects{grid-template-columns:1fr}}
-      `}</style>
+        @media(max-width:900px){.listings-grid{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:600px){.listings-grid{grid-template-columns:1fr}.nav-links{display:none!important}.nav-mobile{display:block!important}.filter-dropdowns{grid-template-columns:1fr}}
+      ` }} />
 
-      <SiteNav />
-
-      <main>
-        {/* ── Page header ── */}
-        <section className="section-tight" style={{ paddingBottom: 36 }}>
-          <div className="wrap">
-            <div className="eyebrow" style={{ marginBottom: 14 }}>Suites &amp; locations</div>
-            <h1 className="h-display" style={{ fontSize: "clamp(34px, 5vw, 52px)", marginBottom: 14 }}>Find your suite in Toronto.</h1>
-            <p className="lede" style={{ maxWidth: 560 }}>Fully equipped, professionally managed, ready when you are.</p>
+      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(255,253,249,0.95)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(30,42,50,0.06)" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 72 }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: "linear-gradient(135deg,var(--accent),var(--accent2))", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#fff" }}>CS</div>
+            <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "var(--ink)" }}>CareStay <span style={{ fontWeight: 400, color: "rgba(30,42,50,0.6)" }}>Suites</span></span>
+          </Link>
+          <div className="nav-links">
+            {[{ label: "Listings", href: "/listings" }, { label: "Healthcare", href: "/healthcare" }, { label: "Corporate", href: "/corporate" }, { label: "About", href: "/about" }, { label: "Contact", href: "/#contact" }].map(i => <a key={i.label} href={i.href} className="nav-link">{i.label}</a>)}
+            <a href="/#contact" className="nav-cta">Inquire Now</a>
           </div>
-        </section>
-
-        {/* ── Filters ── */}
-        <section>
-          <div className="wrap">
-            <div style={{ position: "relative", marginBottom: 12 }}>
-              <Search size={17} style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", color: "var(--ink-faint)", pointerEvents: "none" }} />
-              <input
-                type="text"
-                placeholder="Search by name or location..."
-                className="form-input"
-                style={{ paddingLeft: 44 }}
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-
-            <div className="filter-selects" style={{ marginBottom: 16 }}>
-              <select className="form-input suite-select" value={bedFilter} onChange={e => setBedFilter(e.target.value)}>
-                <option value="all">All Beds</option>
-                <option value="1">1 Bedroom</option>
-                <option value="2">2 Bedrooms</option>
-                <option value="3">3+ Bedrooms</option>
-              </select>
-              <select className="form-input suite-select" value={priceFilter} onChange={e => setPriceFilter(e.target.value)}>
-                <option value="all">Any Price</option>
-                <option value="under2500">Under $2,500</option>
-                <option value="2500-3500">$2,500–$3,500</option>
-                <option value="over3500">Over $3,500</option>
-              </select>
-              <select className="form-input suite-select" value={areaFilter} onChange={e => setAreaFilter(e.target.value)}>
-                <option value="all">All Areas</option>
-                {cities.map(city => <option key={city} value={city}>{city}</option>)}
-              </select>
-            </div>
-
-            {/* City pills — horizontal scroll */}
-            <div className="city-scroll" style={{ marginBottom: 36 }}>
-              {["All", ...cities].map(city => {
-                const isActive = city === "All" ? areaFilter === "all" : areaFilter === city;
-                return (
-                  <button
-                    key={city}
-                    onClick={() => setAreaFilter(city === "All" ? "all" : city)}
-                    style={{
-                      padding: "8px 18px",
-                      borderRadius: 999,
-                      border: isActive ? "1px solid var(--accent)" : "1px solid var(--line)",
-                      background: isActive ? "var(--accent)" : "var(--surface)",
-                      color: isActive ? "#fff" : "var(--ink-soft)",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      fontFamily: "var(--font-body)",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {city}
-                  </button>
-                );
-              })}
-            </div>
+          <button className="nav-mobile" aria-label="Toggle navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", fontSize: 28, color: "var(--ink)", cursor: "pointer" }}>{menuOpen ? "✕" : "☰"}</button>
+        </div>
+        {menuOpen && (
+          <div style={{ background: "rgba(255,253,249,0.98)", padding: "16px 24px 24px", borderTop: "1px solid var(--line)" }}>
+            {[{ label: "Listings", href: "/listings" }, { label: "Healthcare", href: "/healthcare" }, { label: "Corporate", href: "/corporate" }, { label: "About", href: "/about" }, { label: "Contact", href: "/#contact" }].map(i => <a key={i.label} href={i.href} onClick={() => setMenuOpen(false)} style={{ display: "block", color: "var(--ink)", textDecoration: "none", fontSize: 17, padding: "14px 0", borderBottom: "1px solid var(--line)" }}>{i.label}</a>)}
+            <a href="/#contact" onClick={() => setMenuOpen(false)} style={{ display: "block", background: "var(--accent)", color: "#fff", textAlign: "center", padding: 16, borderRadius: 999, fontWeight: 700, fontSize: 16, marginTop: 16, textDecoration: "none" }}>Inquire Now</a>
           </div>
-        </section>
+        )}
+      </nav>
 
-        {/* ── Results ── */}
-        <section style={{ paddingBottom: 96 }}>
-          <div className="wrap">
-            {loading ? (
-              <div style={{ textAlign: "center", padding: "72px 0", color: "var(--ink-faint)", fontSize: 15 }}>Loading suites...</div>
-            ) : (() => {
-              const filtered = listings.filter(l => {
-                const q = search.toLowerCase();
-                if (q && !l.title.toLowerCase().includes(q) && !l.location.toLowerCase().includes(q)) return false;
-                if (bedFilter === "1" && l.beds !== 1) return false;
-                if (bedFilter === "2" && l.beds !== 2) return false;
-                if (bedFilter === "3" && l.beds < 3) return false;
-                if (priceFilter === "under2500" && l.price >= 2500) return false;
-                if (priceFilter === "2500-3500" && (l.price < 2500 || l.price > 3500)) return false;
-                if (priceFilter === "over3500" && l.price <= 3500) return false;
-                if (areaFilter !== "all" && !l.location.toLowerCase().includes(areaFilter.toLowerCase())) return false;
-                return true;
-              });
-              return filtered.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "72px 0", color: "var(--ink-faint)", fontSize: 15 }}>
-                  No suites match your filters. Try broadening your search.
-                </div>
-              ) : (
-                <div className="suites-grid">
-                  {filtered.map((l) => {
-                    const badge = availabilityBadge(l.availabilityStatus);
-                    return (
-                      <Link key={l.id} href={`/listings/${l.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                        <article className="card" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                          {l.img ? (
-                            <img src={l.img} alt={l.title} style={{ width: "100%", height: 220, objectFit: "cover", display: "block" }} />
-                          ) : (
-                            <div className="photo-slot" style={{ height: 220, borderRadius: 0 }}>[SUITE_PHOTO]</div>
-                          )}
-                          <div style={{ padding: "18px 20px 20px", display: "flex", flexDirection: "column", flex: 1 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 6 }}>
-                              <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 20, color: "var(--ink)", lineHeight: 1.25 }}>{l.title}</h3>
-                              <span style={{ background: badge.bg, color: badge.color, padding: "4px 11px", borderRadius: 999, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, marginTop: 2 }}>{badge.label}</span>
-                            </div>
-                            <p style={{ fontSize: 13.5, color: "var(--ink-soft)", marginBottom: l.reviewCount ? 6 : 12 }}>{l.location}</p>
-                            {l.reviewCount ? (
-                              <p style={{ fontSize: 12.5, color: "#B98900", marginBottom: 10, fontWeight: 600 }}>
-                                ★ {l.reviewAvg?.toFixed(1)} · {l.reviewCount} review{l.reviewCount !== 1 ? "s" : ""}
-                              </p>
-                            ) : null}
-                            <p style={{ fontSize: 13, color: "var(--ink-faint)", marginBottom: 16 }}>
-                              {[
-                                l.maxGuests ? `${l.maxGuests} guest${l.maxGuests !== 1 ? "s" : ""}` : null,
-                                l.bedrooms ? `${l.bedrooms} bedroom${l.bedrooms !== 1 ? "s" : ""}` : null,
-                                l.beds ? `${l.beds} bed${l.beds !== 1 ? "s" : ""}` : null,
-                                l.baths ? `${l.baths} bath${l.baths !== 1 ? "s" : ""}` : null,
-                              ].filter(Boolean).join(" · ")}
-                            </p>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--line)", paddingTop: 14, marginTop: "auto" }}>
-                              <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 21, color: "var(--ink)" }}>From ${l.price.toLocaleString()}</span>
-                              <span style={{ color: "var(--accent)", fontSize: 14, fontWeight: 700 }}>View suite →</span>
-                            </div>
-                          </div>
-                        </article>
-                      </Link>
-                    );
-                  })}
-                </div>
+      <main style={{ paddingTop: 72 }}>
+        <div className="wrap" style={{ padding: "60px 24px 80px" }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, marginBottom: 8 }}>All Suites</h1>
+          <p style={{ fontSize: 15, color: "var(--ink-soft)", marginBottom: 20 }}>{listings.length} furnished properties currently available</p>
+
+          {/* Search */}
+          <div style={{ marginBottom: 12 }}>
+            <input type="text" placeholder="Search by name or location..." className="filter-input" style={{ width: "100%" }} value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+
+          {/* Filter Dropdowns */}
+          <div className="filter-dropdowns" style={{ marginBottom: 14 }}>
+            <select className="filter-select" style={{ width: "100%" }} value={bedFilter} onChange={e => setBedFilter(e.target.value)}>
+              <option value="all">All Beds</option>
+              <option value="1">1 Bedroom</option>
+              <option value="2">2 Bedrooms</option>
+              <option value="3">3+ Bedrooms</option>
+            </select>
+            <select className="filter-select" style={{ width: "100%" }} value={priceFilter} onChange={e => setPriceFilter(e.target.value)}>
+              <option value="all">Any Price</option>
+              <option value="under2500">Under $2,500</option>
+              <option value="2500-3500">$2,500 - $3,500</option>
+              <option value="over3500">$3,500+</option>
+            </select>
+            <select className="filter-select" style={{ width: "100%" }} value={areaFilter} onChange={e => setAreaFilter(e.target.value)}>
+              <option value="all">All Areas</option>
+              {cities.map(city => <option key={city} value={city}>{city}</option>)}
+            </select>
+          </div>
+
+          {/* City Buttons — horizontal scroll */}
+          <div className="city-scroll">
+            {["All", ...cities].map(city => {
+              const isActive = city === "All" ? areaFilter === "all" : areaFilter === city;
+              return (
+                <button key={city} onClick={() => setAreaFilter(city === "All" ? "all" : city)} style={{ padding: "7px 16px", borderRadius: 20, border: isActive ? "1px solid var(--accent)" : "1px solid rgba(30,42,50,0.12)", background: isActive ? "rgba(45,43,255,0.15)" : "rgba(30,42,50,0.04)", color: isActive ? "var(--accent)" : "rgba(30,42,50,0.6)", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s", whiteSpace: "nowrap", flexShrink: 0 }}>
+                  {city}
+                </button>
               );
-            })()}
+            })}
           </div>
-        </section>
-      </main>
 
-      <SiteFooter />
+          {loading ? (
+            <div style={{ textAlign: "center", padding: 60, color: "var(--ink-soft)" }}>Loading listings...</div>
+          ) : (() => {
+            const filtered = listings.filter(l => {
+              const q = search.toLowerCase();
+              if (q && !l.title.toLowerCase().includes(q) && !l.location.toLowerCase().includes(q)) return false;
+              if (bedFilter === "1" && l.beds !== 1) return false;
+              if (bedFilter === "2" && l.beds !== 2) return false;
+              if (bedFilter === "3" && l.beds < 3) return false;
+              if (priceFilter === "under2500" && l.price >= 2500) return false;
+              if (priceFilter === "2500-3500" && (l.price < 2500 || l.price > 3500)) return false;
+              if (priceFilter === "over3500" && l.price <= 3500) return false;
+              if (areaFilter !== "all" && !l.location.toLowerCase().includes(areaFilter.toLowerCase())) return false;
+              return true;
+            });
+            return filtered.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 60, color: "var(--ink-soft)" }}>No listings match your filters. Try broadening your search.</div>
+            ) : (
+            <div className="listings-grid">
+              {filtered.map((l) => (
+                <Link key={l.id} href={`/listings/${l.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                  <div className="listing-card">
+                    <div style={{ position: "relative", overflow: "hidden" }}>
+                      <img src={l.img} alt={l.title} className="listing-img" />
+                      <div style={{ position: "absolute", bottom: 10, left: 10, display: "flex", gap: 6 }}>
+                        <span className="listing-tag">{l.location}</span>
+                        <span style={{ background: l.availabilityStatus === "Almost Booked" ? "rgba(255,160,0,0.9)" : l.availabilityStatus === "Waitlist Only" ? "rgba(0,112,214,0.9)" : l.availabilityStatus === "Booked" ? "rgba(196,50,50,0.9)" : "rgba(45,43,255,0.9)", color: l.availabilityStatus === "Almost Booked" ? "#1e2a32" : "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{l.availabilityStatus === "Almost Booked" ? "Almost Booked" : l.availabilityStatus === "Waitlist Only" ? "Waitlist" : l.availabilityStatus === "Booked" ? "Booked" : "Available"}</span>
+                      </div>
+                    </div>
+                    <div className="listing-body">
+                      <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "var(--ink)", marginBottom: 4 }}>{l.title}</h3>
+                      <p style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 12 }}>{l.location}</p>
+                      <p style={{ fontSize: 12, color: "rgba(30,42,50,0.5)", marginBottom: 14 }}>
+                        {[
+                          l.maxGuests ? `${l.maxGuests} guest${l.maxGuests !== 1 ? "s" : ""}` : null,
+                          l.bedrooms ? `${l.bedrooms} bedroom${l.bedrooms !== 1 ? "s" : ""}` : null,
+                          l.beds ? `${l.beds} bed${l.beds !== 1 ? "s" : ""}` : null,
+                          l.baths ? `${l.baths} bath${l.baths !== 1 ? "s" : ""}` : null,
+                        ].filter(Boolean).join(" · ")}
+                      </p>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(30,42,50,0.06)", paddingTop: 14 }}>
+                        <div>
+                          <span style={{ fontSize: 12, color: "var(--ink-faint)", marginRight: 5 }}>From</span>
+                          <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "var(--ink)" }}>${l.price.toLocaleString()}</span>
+                        </div>
+                        <span style={{ background: "rgba(45,43,255,0.1)", color: "var(--accent)", padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>View Suite →</span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            );
+          })()}
+        </div>
+      </main>
     </>
   );
 }
