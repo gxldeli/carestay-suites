@@ -8,7 +8,7 @@ interface ListingCopyInput {
 
 const COUNT_WORD = String.raw`(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|(?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[-\s](?:one|two|three|four|five|six|seven|eight|nine))?|(?:one\s+)?hundred)`;
 const RESTRICTED_DURATION_COPY = new RegExp(
-  String.raw`\b(?:minimum(?:\s+stay)?|short[-\s]?term|month[-\s]?to[-\s]?month|monthly|weekly|daily|nightly|long[-\s]?term|long stays?|per\s+(?:day|night|week|month))\b|\b${COUNT_WORD}\+?(?:\s*[-–—]\s*|\s+)(?:day|days|night|nights|week|weeks|month|months)\b`,
+  String.raw`\b(?:minimum(?:\s+stay)?|short[-\s]?term|month[-\s]?to[-\s]?month|monthly|weekly|daily|nightly|long[-\s]?term|long(?:er)?\s+stays?|per\s+(?:day|night|week|month))\b|\b${COUNT_WORD}\+?(?:\s*[-–—]\s*|\s+)(?:day|days|night|nights|week|weeks|month|months)\b`,
   "i",
 );
 const LEGACY_HEALTHCARE_COPY = /designed for healthcare professionals|spare scrubs \(s\/m\/l\)/i;
