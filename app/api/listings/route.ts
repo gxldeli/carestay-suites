@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getListings, extractAmenityNames, extractBedroomCount } from "@/app/lib/hostaway";
 import { redis } from "@/app/lib/redis";
 import { filterPublicAmenities, getPublicListingDescription, hasRestrictedDurationLanguage } from "@/app/lib/public-listing-copy";
-import { getPublicAreaLabel, getPublicShowcaseDescription } from "@/app/lib/public-location";
+import { getPublicAreaLabel, getPublicShowcaseDescription, getPublicShowcaseImages } from "@/app/lib/public-location";
 
 // Upstash Redis overrides store
 interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string; sortOrder?: number; featured?: boolean; videoUrl?: string; availabilityStatus?: string }
@@ -109,6 +109,7 @@ export async function GET(_request: Request) {
     // Append custom listings
     const custom = overrides.customListings.map((cl) => {
       const publicLocation = getPublicAreaLabel(cl.location);
+      const publicImages = getPublicShowcaseImages(cl.title, cl.images?.length ? cl.images : (cl.img ? [cl.img] : []));
       return {
         id: cl.id,
         title: `Example · ${cl.title}`,
@@ -117,8 +118,8 @@ export async function GET(_request: Request) {
         baths: cl.baths,
         price: 0,
         sqft: cl.sqft,
-        img: cl.images?.[0] || cl.img,
-        images: cl.images?.length ? cl.images : (cl.img ? [cl.img] : []),
+        img: publicImages[0] || "",
+        images: publicImages,
         description: getPublicShowcaseDescription(cl.title, publicLocation),
         available: false,
         amenities: [] as string[],

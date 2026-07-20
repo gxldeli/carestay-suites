@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getListing, extractAmenityNames, extractBedroomCount } from "@/app/lib/hostaway";
 import { redis } from "@/app/lib/redis";
 import { filterPublicAmenities, getPublicListingDescription } from "@/app/lib/public-listing-copy";
-import { getPublicAreaLabel, getPublicShowcaseDescription } from "@/app/lib/public-location";
+import { getPublicAreaLabel, getPublicShowcaseDescription, getPublicShowcaseImages } from "@/app/lib/public-location";
 
 interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string; sortOrder?: number; featured?: boolean; videoUrl?: string; availabilityStatus?: string }
 interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean; sortOrder?: number; featured?: boolean; videoUrl?: string; hidden?: boolean }
@@ -23,12 +23,13 @@ export async function GET(
         return NextResponse.json({ status: "error", message: "Listing not found" }, { status: 404 });
       }
       const publicLocation = getPublicAreaLabel(cl.location);
+      const publicImages = getPublicShowcaseImages(cl.title, cl.images?.length ? cl.images : (cl.img ? [cl.img] : []));
       return NextResponse.json({
         status: "success",
         listing: {
           id: cl.id, title: `Example · ${cl.title}`, location: publicLocation, beds: cl.beds, baths: cl.baths,
-          price: 0, sqft: cl.sqft, img: cl.images?.[0] || cl.img,
-          images: cl.images?.length ? cl.images : (cl.img ? [cl.img] : []),
+          price: 0, sqft: cl.sqft, img: publicImages[0] || "",
+          images: publicImages,
           description: getPublicShowcaseDescription(cl.title, publicLocation), available: false, amenities: [],
           maxGuests: 0, bedrooms: cl.beds || 1,
           soakingTub: cl.soakingTub, carestayStandard: cl.carestayStandard,
