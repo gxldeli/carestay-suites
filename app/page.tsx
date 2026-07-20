@@ -4,7 +4,8 @@ declare global { interface Window { fbq: (...args: unknown[]) => void; } }
 
 import { useState, useEffect, useRef, ReactNode } from "react";
 import Link from "next/link";
-import { BriefcaseBusiness, Building2, HeartPulse, ShieldCheck } from "lucide-react";
+import { BriefcaseBusiness, Building2, CalendarDays, HeartPulse, MapPin, Search, ShieldCheck, Users } from "lucide-react";
+import { getNextDateInput, getTorontoToday } from "@/app/lib/date-input";
 
 /* ─── DATA ─── */
 const PROFESSIONAL_STAYS = ["Business travel", "Relocations", "Healthcare assignments", "Insurance placements", "Consultants", "Film & project crews"];
@@ -31,10 +32,10 @@ function useInView(threshold = 0.15) {
   return [ref, inView] as const;
 }
 
-function FadeIn({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
+function FadeIn({ children, delay = 0, className }: { children: ReactNode; delay?: number; className?: string }) {
   const [ref, inView] = useInView();
   return (
-    <div ref={ref} style={{ opacity: inView ? 1 : 0, transform: inView ? "translateY(0)" : "translateY(24px)", transition: `opacity 0.6s ease ${delay}s, transform 0.6s ease ${delay}s` }}>{children}</div>
+    <div ref={ref} className={className} style={{ opacity: inView ? 1 : 0, transform: inView ? "translateY(0)" : "translateY(24px)", transition: `opacity 0.6s ease ${delay}s, transform 0.6s ease ${delay}s` }}>{children}</div>
   );
 }
 
@@ -52,7 +53,7 @@ function Styles() {
 
     /* Hero */
     .hero-pad{padding-top:112px;padding-bottom:56px}
-    .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+    .hero-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:38px;align-items:center}
     .hero-img-wrap{position:relative}
     .hero-h1{font-family:'Cormorant Garamond',serif;font-size:54px;font-weight:700;line-height:1.04;color:var(--ink);letter-spacing:-0.03em}
     .hero-ctas{display:flex;gap:12px;flex-wrap:wrap}
@@ -60,6 +61,21 @@ function Styles() {
     .hero-ctas a:hover{transform:translateY(-2px)}
     .cta-primary{background:var(--accent);color:#fff;box-shadow:0 12px 24px rgba(45,43,255,.2)}
     .cta-secondary{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+    .stay-search{grid-column:1/-1;display:grid;grid-template-columns:1.35fr 1fr 1fr .75fr auto;align-items:stretch;background:rgba(255,255,255,.96);border:1px solid rgba(30,42,50,.1);border-radius:20px;padding:8px;box-shadow:0 22px 48px rgba(30,42,50,.15);margin-top:2px}
+    .hero-search-span{grid-column:1/-1}
+    .stay-field{position:relative;display:flex;align-items:center;gap:11px;min-width:0;padding:10px 16px;border-right:1px solid var(--line)}
+    .stay-field svg{color:var(--accent);flex:0 0 auto}
+    .stay-field label{display:block;font-size:10px;line-height:1.2;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px}
+    .stay-field input,.stay-field select{display:block;width:100%;min-width:0;border:0;background:transparent;color:var(--ink);font:600 14px/1.3 'DM Sans',system-ui,sans-serif;outline:none;padding:0}
+    .stay-field input::placeholder{color:var(--ink-faint)}
+    .stay-field select{appearance:none;-webkit-appearance:none;cursor:pointer}
+    .stay-submit{border:0;border-radius:14px;background:var(--accent);color:#fff;padding:0 22px;min-height:58px;font:800 14px/1 'DM Sans',system-ui,sans-serif;cursor:pointer;box-shadow:0 10px 22px rgba(45,43,255,.22);display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;transition:transform .2s ease,box-shadow .2s ease}
+    .stay-submit:hover{transform:translateY(-1px);box-shadow:0 13px 26px rgba(45,43,255,.27)}
+    .search-error{grid-column:1/-1;color:#a13c34;font-size:12px;font-weight:700;padding:8px 12px 2px}
+    .hero-utility-note{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:15px;color:var(--ink-soft);font-size:12px}
+    .hero-trust{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+    .hero-trust span{display:inline-flex;align-items:center;gap:5px}
+    .hero-trust span+span:before{content:'·';color:var(--accent);font-weight:900;margin-right:9px}
 
     /* Stats */
     .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
@@ -128,6 +144,7 @@ function Styles() {
       .listings-grid{grid-template-columns:repeat(2,1fr)}
       .standard-grid{grid-template-columns:repeat(3,1fr)}
       .hero-h1{font-size:42px}
+      .stay-search{grid-template-columns:1.3fr 1fr 1fr .75fr}.stay-submit{grid-column:1/-1;margin-top:6px;min-height:52px}.stay-field:nth-of-type(4){border-right:0}
     }
     @media(max-width:768px){
       .hero-grid{grid-template-columns:1fr;gap:24px}
@@ -148,11 +165,14 @@ function Styles() {
       .pad{padding:34px 18px}
       .hero-pad{padding-top:86px;padding-bottom:34px}
       .sh-title{font-size:28px}
+      .stay-search{grid-template-columns:1fr 1fr;margin-top:4px;padding:7px;border-radius:17px}.stay-field{min-height:62px;border-bottom:1px solid var(--line)}.stay-field:nth-of-type(odd){border-right:1px solid var(--line)}.stay-field:nth-of-type(even){border-right:0}.stay-field:first-child{grid-column:1/-1;border-right:0}.stay-field:nth-of-type(4){border-bottom:0}.stay-submit{grid-column:1/-1;margin-top:7px;min-height:52px}.hero-utility-note{justify-content:center;text-align:center}.hero-trust{justify-content:center}
     }
     @media(max-width:480px){
       .hero-h1{font-size:30px}
+      .stay-field{padding:9px 11px}.stay-field:first-child,.stay-field:nth-of-type(4){grid-column:1/-1}.stay-field:nth-of-type(4){border-right:0}.hero-trust{gap:8px}.hero-trust span{width:100%;justify-content:center}.hero-trust span+span:before{display:none}
     }
     @media(max-width:360px){.standard-grid,.pain-grid{grid-template-columns:1fr}.standard-grid>div:last-child:nth-child(odd){grid-column:auto;width:auto}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
   ` }} />;
 }
 
@@ -184,10 +204,32 @@ function Nav({ scrolled }: { scrolled: boolean }) {
 
 /* ─── HERO ─── */
 function Hero({ tagline }: { tagline?: string }) {
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
+  const [dateError, setDateError] = useState("");
+  const today = getTorontoToday();
   const legacyTagline = "Move-in ready suites primarily across the Greater Toronto Area and beyond. Verified properties. No scams, no deposits lost, no bait-and-switch. Trusted by nurses, physicians, and medical staff.";
-  const heroTagline = !tagline || tagline === legacyTagline
-    ? "Comfortable, fully equipped suites with flexible stays, easy self check-in, and responsive local support from arrival to departure."
+  const previousDefaultTagline = "Comfortable, fully equipped suites with flexible stays, easy self check-in, and responsive local support from arrival to departure.";
+  const heroTagline = !tagline || tagline === legacyTagline || tagline === previousDefaultTagline
+    ? "Enter your destination, dates, and group size to find a professionally managed suite that fits your stay."
     : tagline;
+
+  const validateDates = (event: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(event.currentTarget);
+    const submittedCheckIn = String(formData.get("checkIn") || "");
+    const submittedCheckOut = String(formData.get("checkOut") || "");
+    if ((submittedCheckIn && !submittedCheckOut) || (!submittedCheckIn && submittedCheckOut)) {
+      event.preventDefault();
+      setDateError("Add both dates, or leave both open.");
+      return;
+    }
+    if (submittedCheckIn && submittedCheckOut && submittedCheckOut <= submittedCheckIn) {
+      event.preventDefault();
+      setDateError("Check-out must be after check-in.");
+      return;
+    }
+    setDateError("");
+  };
 
   return (
     <section style={{ display: "flex", alignItems: "center", position: "relative", overflow: "hidden", background: "linear-gradient(155deg,#f7f3ed 0%,#fffdf9 48%,#e8eff3 100%)" }}>
@@ -203,9 +245,9 @@ function Hero({ tagline }: { tagline?: string }) {
               </div>
             </FadeIn>
             <FadeIn delay={0.1}>
-              <h1 className="hero-h1">
-                Furnished stays for{" "}
-                <span style={{ background: "linear-gradient(135deg,var(--accent),var(--accent2))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>professionals in Toronto.</span>
+              <h1 id="search-heading" className="hero-h1">
+                Find your furnished stay{" "}
+                <span style={{ background: "linear-gradient(135deg,var(--accent),var(--accent2))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>in Toronto.</span>
               </h1>
             </FadeIn>
             <FadeIn delay={0.2}>
@@ -213,45 +255,41 @@ function Hero({ tagline }: { tagline?: string }) {
                 {heroTagline}
               </p>
             </FadeIn>
-            <FadeIn delay={0.3}>
-              <div className="hero-ctas">
-                <a href="#listings" className="cta-primary">Browse Suites</a>
-                <a href="/corporate" className="cta-secondary">For Companies</a>
-              </div>
-            </FadeIn>
+            <FadeIn delay={0.3}><a href="/corporate" style={{ color: "var(--accent)", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>Planning for a company or team? Corporate stays →</a></FadeIn>
           </div>
           <FadeIn delay={0.2}>
             <div className="hero-img-wrap">
               <div style={{ borderRadius: 20, overflow: "hidden", boxShadow: "0 22px 52px rgba(30,42,50,0.18)", border: "1px solid rgba(30,42,50,0.08)" }}>
-                <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80" alt="Luxury furnished suite" style={{ width: "100%", height: 400, objectFit: "cover", display: "block" }} />
+                <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80" alt="Bright furnished CareStay-style suite" style={{ width: "100%", height: 330, objectFit: "cover", display: "block" }} />
               </div>
             </div>
           </FadeIn>
+          <FadeIn delay={0.25} className="hero-search-span">
+            <form action="/listings" method="get" role="search" aria-labelledby="search-heading" className="stay-search" onSubmit={validateDates}>
+              <div className="stay-field">
+                <MapPin size={19} strokeWidth={1.8} aria-hidden="true" />
+                <div style={{ minWidth: 0, width: "100%" }}><label htmlFor="hero-where">Where</label><input id="hero-where" name="where" type="text" placeholder="Toronto or a neighbourhood" autoComplete="address-level2" /></div>
+              </div>
+              <div className="stay-field">
+                <CalendarDays size={19} strokeWidth={1.8} aria-hidden="true" />
+                <div style={{ minWidth: 0, width: "100%" }}><label htmlFor="hero-check-in">Check in</label><input id="hero-check-in" name="checkIn" type="date" min={today} value={checkIn} onChange={(event) => { setCheckIn(event.target.value); setDateError(""); }} aria-invalid={!!dateError} /></div>
+              </div>
+              <div className="stay-field">
+                <CalendarDays size={19} strokeWidth={1.8} aria-hidden="true" />
+                <div style={{ minWidth: 0, width: "100%" }}><label htmlFor="hero-check-out">Check out</label><input id="hero-check-out" name="checkOut" type="date" min={getNextDateInput(checkIn) || today} value={checkOut} onChange={(event) => { setCheckOut(event.target.value); setDateError(""); }} aria-invalid={!!dateError} aria-describedby={dateError ? "hero-date-error" : undefined} /></div>
+              </div>
+              <div className="stay-field">
+                <Users size={19} strokeWidth={1.8} aria-hidden="true" />
+                <div style={{ minWidth: 0, width: "100%" }}><label htmlFor="hero-guests">Guests</label><select id="hero-guests" name="guests" defaultValue="1">{Array.from({ length: 10 }, (_, index) => index + 1).map((count) => <option key={count} value={count}>{count} guest{count === 1 ? "" : "s"}</option>)}</select></div>
+              </div>
+              <button className="stay-submit" type="submit"><Search size={18} strokeWidth={2.2} aria-hidden="true" /> Search suites</button>
+              {dateError && <p id="hero-date-error" className="search-error" role="alert">{dateError}</p>}
+            </form>
+          </FadeIn>
         </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─── STATS ─── */
-function Stats() {
-  const [ref, inView] = useInView();
-  const trustPoints = [
-    { icon: "🛎️", label: "Professionally Managed" },
-    { icon: "🏡", label: "Fully Equipped Suites" },
-    { icon: "📅", label: "Flexible Arrangements" },
-    { icon: "💬", label: "Responsive Local Support" },
-  ];
-  return (
-    <section ref={ref} style={{ background: "var(--paper-alt)", borderTop: "1px solid rgba(30,42,50,0.05)", borderBottom: "1px solid rgba(30,42,50,0.05)" }}>
-      <div className="pad" style={{ maxWidth: 1200, margin: "0 auto", paddingTop: 24, paddingBottom: 24 }}>
-        <div className="stats-grid">
-          {trustPoints.map((s, i) => (
-            <div key={s.label} className="stat-card" style={{ opacity: inView ? 1 : 0, transform: inView ? "translateY(0)" : "translateY(14px)", transition: `all 0.45s ease ${i * 0.06}s` }}>
-              <div className="stat-icon" aria-hidden="true">{s.icon}</div>
-              <div className="stat-label">{s.label}</div>
-            </div>
-          ))}
+        <div className="hero-utility-note">
+          <div className="hero-trust"><span>🛎️ Professionally managed</span><span>🏠 Fully furnished</span><span>💬 Responsive local support</span></div>
+          <span>Live date matches are checked against connected inventory.</span>
         </div>
       </div>
     </section>
@@ -259,12 +297,24 @@ function Stats() {
 }
 
 /* ─── LISTINGS ─── */
-interface ListingCard { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; featured?: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string }
+interface ListingCard { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; featured?: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string; isCustom?: boolean; bookable?: boolean }
 
 function ListingPhoto({ src, alt }: { src: string; alt: string }) {
   const [failed, setFailed] = useState(!src);
   if (failed) return <div className="listing-media-fallback"><strong>CareStay Suites</strong><span>Photo unavailable</span></div>;
   return <img src={src} alt={alt} className="listing-img" onError={() => setFailed(true)} />;
+}
+
+function AvailabilityBadge({ listing }: { listing: ListingCard }) {
+  const status = listing.isCustom ? "Booked" : listing.availabilityStatus || "Available";
+  const label = status === "Almost Booked" ? "Almost booked" : status === "Waitlist Only" || status === "Booked" ? "Fully booked" : "Check dates";
+  const background = status === "Almost Booked" ? "rgba(205,119,20,.94)" : status === "Waitlist Only" || status === "Booked" ? "rgba(30,42,50,.9)" : "rgba(45,43,255,.92)";
+  return <span style={{ background, color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{label}</span>;
+}
+
+function ListingRate({ price }: { price: number }) {
+  if (!price) return <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>Rate on request</span>;
+  return <><span style={{ fontSize: 12, color: "var(--ink-faint)", marginRight: 5 }}>From</span><span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "var(--ink)" }}>${price.toLocaleString()}</span></>;
 }
 
 function ListingsSection() {
@@ -275,11 +325,11 @@ function ListingsSection() {
       .then(r => r.json())
       .then(data => {
         if (data.status === "success" && data.listings) {
-          setApiListings(data.listings.map((l: { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; featured?: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string }) => ({
+          setApiListings(data.listings.map((l: { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; available?: boolean; featured?: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string; isCustom?: boolean; bookable?: boolean }) => ({
             id: l.id, title: l.title, location: l.location, beds: l.beds, baths: l.baths,
-            price: l.price, sqft: l.sqft, img: l.img, tag: l.location || "GTA", available: true, featured: l.featured === true,
+            price: l.price, sqft: l.sqft, img: l.img, tag: l.location || "Toronto", available: l.available !== false, featured: l.featured === true,
             maxGuests: l.maxGuests || 0, bedrooms: l.bedrooms || 0, reviewCount: l.reviewCount || 0, reviewAvg: l.reviewAvg || 0,
-            availabilityStatus: l.availabilityStatus || "Available",
+            availabilityStatus: l.availabilityStatus || "Available", isCustom: l.isCustom === true, bookable: l.bookable !== false,
           })));
         }
       })
@@ -287,19 +337,20 @@ function ListingsSection() {
       .finally(() => setListingsLoaded(true));
   }, []);
 
-  const featuredListings = apiListings.filter(l => l.featured);
-  const allListings = apiListings.filter(l => !l.featured);
-  const displayedListings = allListings.slice(0, 9);
-  const hasMore = allListings.length > 9;
+  const activeListings = apiListings.filter((listing) => !listing.isCustom && listing.bookable !== false);
+  const featuredListings = activeListings.filter(l => l.featured);
+  const allListings = activeListings.filter(l => !l.featured);
+  const displayedListings = allListings.slice(0, 6);
+  const hasMore = apiListings.length > featuredListings.length + displayedListings.length;
 
   return (
     <section id="listings" className="pad" style={{ background: "var(--paper)" }}>
       <div className="wrap">
         <FadeIn>
           <div className="sh-center" style={{ marginBottom: 30 }}>
-            <div className="sh-label">Explore Our Suites</div>
+            <div className="sh-label">Start With a Suite</div>
             <h2 className="sh-title">Hand-picked suites by CareStay</h2>
-            <p className="sh-sub">Professionally managed, furnished suites for work assignments, relocations, insurance placements, and extended travel.</p>
+            <p className="sh-sub">Browse connected inventory here, or use the search above to match your dates and group size.</p>
           </div>
         </FadeIn>
         {featuredListings.length > 0 && (
@@ -313,7 +364,7 @@ function ListingsSection() {
                         <div className="listing-tags">
                           <span style={{ background: "rgba(240,192,64,0.9)", color: "#000", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, letterSpacing: "0.025em" }}>★ FEATURED</span>
                           <span className="listing-tag">{l.tag}</span>
-                          <span style={{ background: l.availabilityStatus === "Almost Booked" ? "rgba(255,160,0,0.9)" : l.availabilityStatus === "Waitlist Only" ? "rgba(0,112,214,0.9)" : l.availabilityStatus === "Booked" ? "rgba(196,50,50,0.9)" : "rgba(45,43,255,0.9)", color: l.availabilityStatus === "Almost Booked" ? "#1e2a32" : "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{l.availabilityStatus === "Almost Booked" ? "Almost Booked" : l.availabilityStatus === "Waitlist Only" ? "Waitlist" : l.availabilityStatus === "Booked" ? "Booked" : "Available"}</span>
+                          <AvailabilityBadge listing={l} />
                         </div>
                       </div>
                       <div className="listing-body">
@@ -328,10 +379,7 @@ function ListingsSection() {
                           ].filter(Boolean).join(" · ")}
                         </p>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(240,192,64,0.15)", paddingTop: 14 }}>
-                          <div>
-                            <span style={{ fontSize: 12, color: "var(--ink-faint)", marginRight: 5 }}>From</span>
-                            <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "var(--ink)" }}>${l.price.toLocaleString()}</span>
-                          </div>
+                          <div><ListingRate price={l.price} /></div>
                           <span style={{ background: "rgba(185,130,79,0.15)", color: "var(--gold)", padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>View Suite →</span>
                         </div>
                       </div>
@@ -350,7 +398,7 @@ function ListingsSection() {
                     <ListingPhoto src={l.img} alt={l.title} />
                     <div className="listing-tags">
                       <span className="listing-tag">{l.tag}</span>
-                      <span style={{ background: l.availabilityStatus === "Almost Booked" ? "rgba(255,160,0,0.9)" : l.availabilityStatus === "Waitlist Only" ? "rgba(0,112,214,0.9)" : l.availabilityStatus === "Booked" ? "rgba(196,50,50,0.9)" : "rgba(45,43,255,0.9)", color: l.availabilityStatus === "Almost Booked" ? "#1e2a32" : "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{l.availabilityStatus === "Almost Booked" ? "Almost Booked" : l.availabilityStatus === "Waitlist Only" ? "Waitlist" : l.availabilityStatus === "Booked" ? "Booked" : "Available"}</span>
+                      <AvailabilityBadge listing={l} />
                     </div>
                   </div>
                   <div className="listing-body">
@@ -365,10 +413,7 @@ function ListingsSection() {
                       ].filter(Boolean).join(" · ")}
                     </p>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(30,42,50,0.06)", paddingTop: 14 }}>
-                      <div>
-                        <span style={{ fontSize: 12, color: "var(--ink-faint)", marginRight: 5 }}>From</span>
-                        <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "var(--ink)" }}>${l.price.toLocaleString()}</span>
-                      </div>
+                      <div><ListingRate price={l.price} /></div>
                       <span style={{ background: "rgba(45,43,255,0.1)", color: "var(--accent)", padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>View Suite →</span>
                     </div>
                   </div>
@@ -522,14 +567,25 @@ const STAY_TYPE_OPTIONS = ["Business travel", "Relocation", "Healthcare assignme
 
 function Contact() {
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [stayType, setStayType] = useState("");
   const handleSubmit = async () => {
-    if (!email) return;
-    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, message: stayType ? `Stay type: ${stayType}` : "", tags: ["carestay-waitlist", "homepage-signup", "professional-stays"] }) });
-    if (typeof window !== "undefined" && window.fbq) { window.fbq("track", "Lead"); }
-    setDone(true);
+    if (!email) { setSubmitError("Please add your email address."); return; }
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const response = await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, message: stayType ? `Stay type: ${stayType}` : "", tags: ["carestay-waitlist", "homepage-signup", "professional-stays"] }) });
+      if (!response.ok) throw new Error("Inquiry could not be sent");
+      if (typeof window !== "undefined" && window.fbq) { window.fbq("track", "Lead"); }
+      setDone(true);
+    } catch {
+      setSubmitError("We couldn’t add you right now. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
   return (
     <section id="contact" className="pad" style={{ background: "var(--surface-blue)" }}>
@@ -555,7 +611,8 @@ function Contact() {
                   </select>
                 </div>
               </div>
-              <button onClick={handleSubmit} style={{ width: "100%", background: "var(--accent)", color: "#fff", padding: 16, borderRadius: 10, fontWeight: 800, fontSize: 16, border: "none", cursor: "pointer", fontFamily: "inherit", marginTop: 16 }}>Join the Waitlist</button>
+              {submitError && <p role="alert" style={{ color: "#a13c34", fontSize: 13, fontWeight: 600, marginTop: 12 }}>{submitError}</p>}
+              <button onClick={handleSubmit} disabled={submitting} style={{ width: "100%", background: "var(--accent)", color: "#fff", padding: 16, borderRadius: 10, fontWeight: 800, fontSize: 16, border: "none", cursor: submitting ? "wait" : "pointer", opacity: submitting ? .7 : 1, fontFamily: "inherit", marginTop: 16 }}>{submitting ? "Joining…" : "Join the Waitlist"}</button>
               <p style={{ fontSize: 11, color: "rgba(30,42,50,0.25)", textAlign: "center", marginTop: 12 }}>No spam, ever. Just new suite alerts.</p>
             </div>
           </FadeIn>
@@ -627,7 +684,6 @@ export default function Home() {
       <Styles />
       <Nav scrolled={scrolled} />
       <Hero tagline={siteSettings?.heroTagline} />
-      <Stats />
       <ListingsSection />
       <ProfessionalBanner />
       <Standard />

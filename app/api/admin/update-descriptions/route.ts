@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { redis } from "@/app/lib/redis";
 import { buildProfessionalListingDescription } from "@/app/lib/public-listing-copy";
+import { isAdminRequestAuthorized } from "@/app/lib/admin-auth";
 
 interface CustomListing {
   id: string;
@@ -34,13 +35,12 @@ function generateDescription(cl: CustomListing): string {
 }
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const password = searchParams.get("password");
-  const force = searchParams.get("force") !== "false";
-
-  if (password !== "carestay2026") {
+  if (!await isAdminRequestAuthorized(request)) {
     return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
   }
+
+  const { searchParams } = new URL(request.url);
+  const force = searchParams.get("force") !== "false";
 
   try {
     const data = await redis.get<OverridesData>("admin:overrides");

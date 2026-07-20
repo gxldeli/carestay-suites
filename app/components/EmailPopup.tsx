@@ -25,6 +25,8 @@ export default function EmailPopup() {
   } | null>(null);
   const [show, setShow] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [stayType, setStayType] = useState("");
@@ -70,14 +72,23 @@ export default function EmailPopup() {
   }, [settings]);
 
   const handleSubmit = async () => {
-    if (!email) return;
-    await fetch("/api/inquiry", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, message: stayType ? `Stay type: ${stayType}` : "", tags: ["carestay-waitlist", "email-popup", "professional-stays"] }),
-    });
-    setSubmitted(true);
-    setTimeout(() => setShow(false), 2000);
+    if (!email) { setSubmitError("Please add your email address."); return; }
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const response = await fetch("/api/inquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, message: stayType ? `Stay type: ${stayType}` : "", tags: ["carestay-waitlist", "email-popup", "professional-stays"] }),
+      });
+      if (!response.ok) throw new Error("Inquiry could not be sent");
+      setSubmitted(true);
+      setTimeout(() => setShow(false), 2000);
+    } catch {
+      setSubmitError("We couldn’t add you right now. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const close = () => setShow(false);
@@ -140,8 +151,9 @@ export default function EmailPopup() {
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
-                <button onClick={handleSubmit} style={{ width: "100%", padding: 14, background: "var(--accent)", color: "#fff", borderRadius: 10, fontWeight: 700, fontSize: 15, border: "none", cursor: "pointer", fontFamily: "inherit" }}>
-                  Join the Waitlist
+                {submitError && <p role="alert" style={{ color: "#a13c34", fontSize: 12, fontWeight: 600 }}>{submitError}</p>}
+                <button onClick={handleSubmit} disabled={submitting} style={{ width: "100%", padding: 14, background: "var(--accent)", color: "#fff", borderRadius: 10, fontWeight: 700, fontSize: 15, border: "none", cursor: submitting ? "wait" : "pointer", opacity: submitting ? .7 : 1, fontFamily: "inherit" }}>
+                  {submitting ? "Joining…" : "Join the Waitlist"}
                 </button>
               </div>
             </>
@@ -162,10 +174,11 @@ export default function EmailPopup() {
             <div style={{ fontSize: 16, fontWeight: 700, color: "var(--ink)", marginBottom: 10 }}>{heading}</div>
             <div style={{ display: "flex", gap: 8 }}>
               <input type="email" placeholder="Email *" value={email} onChange={(e) => setEmail(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
-              <button onClick={handleSubmit} style={{ padding: "12px 20px", background: "var(--accent)", color: "#fff", borderRadius: 10, fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-                Join
+              <button onClick={handleSubmit} disabled={submitting} style={{ padding: "12px 20px", background: "var(--accent)", color: "#fff", borderRadius: 10, fontWeight: 700, fontSize: 14, border: "none", cursor: submitting ? "wait" : "pointer", opacity: submitting ? .7 : 1, fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                {submitting ? "Joining…" : "Join"}
               </button>
             </div>
+            {submitError && <p role="alert" style={{ color: "#a13c34", fontSize: 12, fontWeight: 600, marginTop: 8 }}>{submitError}</p>}
           </>
         ) : (
           <div style={{ textAlign: "center", padding: "8px 0", fontSize: 15, fontWeight: 700, color: "var(--accent)" }}>✓ You&apos;re on the list!</div>

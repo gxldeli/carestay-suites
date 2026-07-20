@@ -74,6 +74,17 @@ interface OverridesData {
 
 const PW_KEY = "carestay_admin_pw";
 
+function getStoredAdminPassword(fallback = ""): string {
+  return sessionStorage.getItem(PW_KEY) || fallback;
+}
+
+function adminHeaders(adminPassword: string, includeJson = false): HeadersInit {
+  return {
+    ...(includeJson ? { "Content-Type": "application/json" } : {}),
+    "x-admin-password": adminPassword,
+  };
+}
+
 /* ─── Styles ─── */
 const inputStyle: React.CSSProperties = { width: "100%", background: "rgba(255,255,255,0.055)", border: "1px solid rgba(255,255,255,0.11)", borderRadius: 10, padding: "10px 14px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit", transition: "border-color .18s ease, background .18s ease, box-shadow .18s ease" };
 const btnStyle: React.CSSProperties = { padding: "10px 20px", background: "linear-gradient(135deg,#5b5cff,#7778ff)", color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 10px 24px rgba(91,92,255,.22)", transition: "transform .18s ease, opacity .18s ease, box-shadow .18s ease" };
@@ -191,6 +202,8 @@ type TabKey = (typeof TABS)[number]["key"];
 export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
+  const [loginPending, setLoginPending] = useState(false);
+  const [loginError, setLoginError] = useState("");
   const [activeTab, setActiveTab] = useState<TabKey>("settings");
   const switchTab = (tab: TabKey) => { setActiveTab(tab); localStorage.setItem("adminActiveTab", tab); };
   const [listings, setListings] = useState<ApiListing[]>([]);
@@ -346,7 +359,28 @@ export default function AdminPage() {
   useEffect(() => {
     const storedTab = localStorage.getItem("adminActiveTab");
     if (TABS.some((tab) => tab.key === storedTab)) setActiveTab(storedTab as TabKey);
-    if (sessionStorage.getItem(PW_KEY) === "carestay2026") setAuthed(true);
+
+    const storedPassword = sessionStorage.getItem(PW_KEY);
+    if (!storedPassword) return;
+
+    const restoreSession = async () => {
+      try {
+        const response = await fetch("/api/admin", {
+          cache: "no-store",
+          headers: adminHeaders(storedPassword),
+        });
+        const data = await response.json();
+        if (!response.ok || data.status !== "success" || !data.data) throw new Error("Session expired");
+        setOverrides(data.data);
+        loadedResources.current.admin = true;
+        setLoadStatus((current) => ({ ...current, admin: "loaded" }));
+        setAuthed(true);
+      } catch {
+        sessionStorage.removeItem(PW_KEY);
+      }
+    };
+
+    void restoreSession();
   }, []);
 
   const beginLoad = useCallback((resource: LoadResource, loader: () => Promise<void>): Promise<void> => {
@@ -376,7 +410,10 @@ export default function AdminPage() {
   }, []);
 
   const loadSettings = useCallback(() => beginLoad("settings", async () => {
-    const response = await fetch("/api/settings", { cache: "no-store" });
+    const response = await fetch("/api/settings", {
+      cache: "no-store",
+      headers: adminHeaders(getStoredAdminPassword(password)),
+    });
     const data = await response.json();
     if (!response.ok || data.status !== "success" || !data.settings) throw new Error(data.message || "Settings could not be loaded.");
     const s = data.settings;
@@ -391,17 +428,20 @@ export default function AdminPage() {
     setBannerText(s.bannerText || "New furnished suites are added regularly");
     setBannerButtonText(s.bannerButtonText || "Join");
     setBannerLinkUrl(s.bannerLinkUrl || "/#contact");
-  }), [beginLoad]);
+  }), [beginLoad, password]);
 
   const loadAdminData = useCallback(() => beginLoad("admin", async () => {
-    const response = await fetch("/api/admin", { cache: "no-store" });
+    const response = await fetch("/api/admin", {
+      cache: "no-store",
+      headers: adminHeaders(getStoredAdminPassword(password)),
+    });
     const data = await response.json();
     if (!response.ok || data.status !== "success" || !data.data) throw new Error(data.message || "Listing controls could not be loaded.");
     setOverrides(data.data);
-  }), [beginLoad]);
+  }), [beginLoad, password]);
 
   const loadListings = useCallback(() => beginLoad("listings", async () => {
-    const adminPassword = sessionStorage.getItem(PW_KEY) || password;
+    const adminPassword = getStoredAdminPassword(password);
     const response = await fetch("/api/admin/listings", {
       cache: "no-store",
       headers: { "x-admin-password": adminPassword },
@@ -437,12 +477,12 @@ export default function AdminPage() {
     pendingMutationCount.current += 1;
     setMutationPending((current) => current + 1);
     const request = mutationQueue.current.then(async () => {
-      const pw = sessionStorage.getItem(PW_KEY) || password;
+      const pw = getStoredAdminPassword(password);
       const res = await fetch("/api/admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: adminHeaders(pw, true),
         cache: "no-store",
-        body: JSON.stringify({ password: pw, action, payload }),
+        body: JSON.stringify({ action, payload }),
       });
       const data = await res.json();
       if (!res.ok || data.status !== "success") {
@@ -484,12 +524,34 @@ export default function AdminPage() {
     setPassword("");
   };
 
-  const handleLogin = () => {
-    if (password === "carestay2026") {
+  const handleLogin = async () => {
+    if (!password) {
+      setLoginError("Enter the admin password.");
+      return;
+    }
+
+    setLoginPending(true);
+    setLoginError("");
+    try {
+      const response = await fetch("/api/admin", {
+        cache: "no-store",
+        headers: adminHeaders(password),
+      });
+      const data = await response.json();
+      if (!response.ok || data.status !== "success" || !data.data) {
+        throw new Error(data.message || "Wrong password");
+      }
+
       sessionStorage.setItem(PW_KEY, password);
+      setOverrides(data.data);
+      loadedResources.current.admin = true;
+      setLoadStatus((current) => ({ ...current, admin: "loaded" }));
       setAuthed(true);
-    } else {
-      alert("Wrong password");
+      setPassword("");
+    } catch (error: unknown) {
+      setLoginError(error instanceof Error ? error.message : "Unable to log in.");
+    } finally {
+      setLoginPending(false);
     }
   };
 
@@ -628,9 +690,11 @@ export default function AdminPage() {
   const loadReservations = async (propertyId?: string) => {
     setResLoading(true);
     try {
-      let url = "/api/reservations?password=" + (sessionStorage.getItem(PW_KEY) || "");
-      if (propertyId) url += "&listingId=" + propertyId;
-      const res = await fetch(url);
+      const url = propertyId ? `/api/reservations?listingId=${encodeURIComponent(propertyId)}` : "/api/reservations";
+      const res = await fetch(url, {
+        cache: "no-store",
+        headers: adminHeaders(getStoredAdminPassword(password)),
+      });
       const data = await res.json();
       if (data.status === "success") setReservations(data.reservations || []);
     } catch { /* ignore */ }
@@ -669,11 +733,14 @@ export default function AdminPage() {
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 24 }}>Enter password to continue</p>
           <input
             type="password" placeholder="Password" value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+            onChange={(e) => { setPassword(e.target.value); setLoginError(""); }}
+            onKeyDown={(e) => { if (e.key === "Enter") void handleLogin(); }}
             style={{ ...inputStyle, marginBottom: 16 }}
           />
-          <button onClick={handleLogin} style={{ ...btnStyle, width: "100%" }}>Log In</button>
+          {loginError && <p role="alert" style={{ fontSize: 12, color: "#f66", margin: "-4px 0 12px" }}>{loginError}</p>}
+          <button onClick={() => void handleLogin()} disabled={loginPending} style={{ ...btnStyle, width: "100%", opacity: loginPending ? 0.65 : 1 }}>
+            {loginPending ? "Checking…" : "Log In"}
+          </button>
         </div>
       </div>
     );
@@ -786,9 +853,9 @@ export default function AdminPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button onClick={async () => {
               setSaving("settings");
-              const pw = sessionStorage.getItem(PW_KEY) || password;
+              const pw = getStoredAdminPassword(password);
               try {
-                const response = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw, settings: { contactEmail: siteEmail, companyAddress: siteAddress, heroTagline: siteHeroTagline, statProperties: siteStatProps, statHealthcarePros: siteStatPros, statHospitalPartnerships: siteStatHospitals, statAverageRating: siteStatRating, bannerEnabled: bannerEnabled, bannerText: bannerText, bannerButtonText: bannerButtonText, bannerLinkUrl: bannerLinkUrl } }) });
+                const response = await fetch("/api/settings", { method: "POST", headers: adminHeaders(pw, true), body: JSON.stringify({ settings: { contactEmail: siteEmail, companyAddress: siteAddress, heroTagline: siteHeroTagline, statProperties: siteStatProps, statHealthcarePros: siteStatPros, statHospitalPartnerships: siteStatHospitals, statAverageRating: siteStatRating, bannerEnabled: bannerEnabled, bannerText: bannerText, bannerButtonText: bannerButtonText, bannerLinkUrl: bannerLinkUrl } }) });
                 const result = await response.json();
                 if (!response.ok || result.status !== "success") throw new Error(result.message || "Settings could not be saved.");
                 setSettingsSaved(true);
@@ -1454,8 +1521,6 @@ export default function AdminPage() {
               showToast("Summary copied to clipboard");
             };
 
-            const showRaw = () => { console.log("Raw finance data:", JSON.stringify(r.rawFinance, null, 2)); showToast("Raw data logged to console (F12)"); };
-
             return (
               <Modal open={true} onClose={() => setPayoutRes(null)} title={`Payout — ${r.guestName}`}>
                 <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
@@ -1537,7 +1602,6 @@ export default function AdminPage() {
                 )}
                 <div style={{ display: "flex", gap: 12 }}>
                   <button onClick={copySummary} style={{ ...btnStyle, padding: "10px 20px", fontSize: 13 }}>Copy Summary</button>
-                  <button onClick={showRaw} style={{ padding: "10px 20px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Debug Raw Data</button>
                   <button onClick={() => setPayoutRes(null)} style={{ padding: "10px 20px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Close</button>
                 </div>
               </Modal>

@@ -62,6 +62,8 @@ const STEPS = [
 export default function HealthcarePage() {
   const [scrolled, setScrolled] = useState(false);
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -75,8 +77,18 @@ export default function HealthcarePage() {
   }, []);
 
   const handleSubmit = async () => {
-    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, hospital, moveIn, source: "healthcare" }) });
-    setDone(true);
+    if (!email) { setSubmitError("Please add your email address."); return; }
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const response = await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, hospital, moveIn, source: "healthcare" }) });
+      if (!response.ok) throw new Error("Inquiry could not be sent");
+      setDone(true);
+    } catch {
+      setSubmitError("We couldn’t send that inquiry. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -235,7 +247,8 @@ export default function HealthcarePage() {
                   <div><label className="form-label">Hospital / Facility</label><input type="text" placeholder="Toronto General" className="form-input" value={hospital} onChange={e => setHospital(e.target.value)} /></div>
                 </div>
                 <div style={{ marginBottom: 14 }}><label className="form-label">Preferred Move-in Date</label><input type="text" placeholder="e.g., April 15" className="form-input" value={moveIn} onChange={e => setMoveIn(e.target.value)} /></div>
-                <button onClick={handleSubmit} style={{ width: "100%", background: "var(--accent)", color: "#fff", padding: 16, borderRadius: 999, fontWeight: 800, fontSize: 16, border: "none", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 10px 24px rgba(45,43,255,0.2)" }}>Submit Inquiry</button>
+                {submitError && <p role="alert" style={{ color: "#a13c34", fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{submitError}</p>}
+                <button onClick={handleSubmit} disabled={submitting} style={{ width: "100%", background: "var(--accent)", color: "#fff", padding: 16, borderRadius: 999, fontWeight: 800, fontSize: 16, border: "none", cursor: submitting ? "wait" : "pointer", opacity: submitting ? .7 : 1, fontFamily: "inherit", boxShadow: "0 10px 24px rgba(45,43,255,0.2)" }}>{submitting ? "Sending…" : "Submit Inquiry"}</button>
                 <p style={{ fontSize: 11, color: "rgba(30,42,50,0.38)", textAlign: "center", marginTop: 12 }}>We&apos;ll be in touch. No spam, ever.</p>
               </div>
             ) : (

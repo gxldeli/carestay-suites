@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { redis } from "@/app/lib/redis";
+import { isAdminRequestAuthorized } from "@/app/lib/admin-auth";
 
 /* ─── Upstash Redis overrides store ─── */
 
@@ -72,19 +73,26 @@ async function setOverrides(data: OverridesData) {
   await redis.set(REDIS_KEY, data);
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!await isAdminRequestAuthorized(request)) {
+    return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+  }
+
   const overrides = await getOverrides();
-  return NextResponse.json({ status: "success", data: overrides });
+  return NextResponse.json(
+    { status: "success", data: overrides },
+    { headers: { "Cache-Control": "private, no-store" } }
+  );
 }
 
 export async function POST(request: Request) {
+  if (!await isAdminRequestAuthorized(request)) {
+    return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
-    const { password, action, payload } = body;
-
-    if (password !== "carestay2026") {
-      return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
-    }
+    const { action, payload } = body;
 
     const overrides = await getOverrides();
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { redis } from "@/app/lib/redis";
+import { isAdminRequestAuthorized } from "@/app/lib/admin-auth";
 
 export interface SiteSettings {
   contactEmail: string;
@@ -39,14 +40,14 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!await isAdminRequestAuthorized(request)) {
+    return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
-    if (body.password !== "carestay2026") {
-      return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
-    }
     const current = await redis.get<SiteSettings>("admin:siteSettings") || {};
     const updated = { ...DEFAULTS, ...current, ...body.settings };
-    delete (updated as Record<string, unknown>).password;
     await redis.set("admin:siteSettings", updated);
     return NextResponse.json({ status: "success", settings: updated });
   } catch (error) {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { redis } from "@/app/lib/redis";
+import { isAdminRequestAuthorized } from "@/app/lib/admin-auth";
 
 interface ReviewItem { id: string; name: string; stars: number; text: string; date: string; verified: boolean; stayInfo?: string }
 interface ListingReviews { totalCount: number; items: ReviewItem[] }
@@ -150,8 +151,7 @@ function pickReviewText(stars: number, hospital: string, usedTexts: Set<string>)
 /* ─── Main Handler ─── */
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  if (searchParams.get("password") !== "carestay2026") {
+  if (!await isAdminRequestAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

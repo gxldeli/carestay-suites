@@ -1,22 +1,18 @@
 import { NextResponse } from "next/server";
 import { getReservations } from "@/app/lib/hostaway";
+import { isAdminRequestAuthorized } from "@/app/lib/admin-auth";
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  if (searchParams.get("password") !== "carestay2026") {
+  if (!await isAdminRequestAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const { searchParams } = new URL(request.url);
 
   try {
     const status = searchParams.get("status") || undefined;
     const listingId = searchParams.get("listingId") || undefined;
     const raw = await getReservations({ status, listingId });
-
-    // Log FULL first reservation — every single key
-    if (raw.length > 0) {
-      console.log("=== HOSTAWAY FULL RESERVATION KEYS ===", Object.keys(raw[0]).join(", "));
-      console.log("=== HOSTAWAY FULL RESERVATION ===", JSON.stringify(raw[0], null, 2));
-    }
 
     const reservations = raw.map((r: Record<string, unknown>) => {
       const nights = Number(r.nights || r.numberOfNights || 0);
@@ -88,12 +84,6 @@ export async function GET(request: Request) {
       };
     });
 
-    // Log each reservation's status + guest for debugging
-    console.log("=== ALL RESERVATIONS WITH STATUS ===");
-    for (const r of reservations) {
-      console.log(`  ${r.guestName} | ${r.listingName} | ${r.checkIn} → ${r.checkOut} | status: "${r.status}" | nights: ${r.nights} | payout: $${r.totalPrice}`);
-    }
-
     // Filter out inquiries, cancelled, and other non-confirmed statuses
     const activeStatuses = new Set(["new", "confirmed", "modified", "pending", "awaitingPayment", "awaitingpayment"]);
     const activeReservations = reservations.filter(r => {
@@ -160,7 +150,10 @@ export async function GET(request: Request) {
     // Sort final by check-in date descending (most recent first)
     final.sort((a, b) => String(b.checkIn).localeCompare(String(a.checkIn)));
 
-    return NextResponse.json({ status: "success", reservations: final, count: final.length });
+    return NextResponse.json(
+      { status: "success", reservations: final, count: final.length },
+      { headers: { "Cache-Control": "private, no-store" } }
+    );
   } catch (e) {
     return NextResponse.json({ status: "error", message: e instanceof Error ? e.message : "Failed to fetch reservations" }, { status: 500 });
   }

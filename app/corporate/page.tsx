@@ -59,6 +59,8 @@ const STEPS = [
 export default function CorporatePage() {
   const [scrolled, setScrolled] = useState(false);
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -72,8 +74,18 @@ export default function CorporatePage() {
   }, []);
 
   const handleSubmit = async () => {
-    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, company, moveIn, source: "corporate" }) });
-    setDone(true);
+    if (!email) { setSubmitError("Please add your email address."); return; }
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const response = await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, company, moveIn, source: "corporate" }) });
+      if (!response.ok) throw new Error("Inquiry could not be sent");
+      setDone(true);
+    } catch {
+      setSubmitError("We couldn’t send that inquiry. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -237,7 +249,8 @@ export default function CorporatePage() {
                   <div><label className="form-label">Company Name</label><input type="text" placeholder="Acme Corp" className="form-input" value={company} onChange={e => setCompany(e.target.value)} /></div>
                 </div>
                 <div style={{ marginBottom: 14 }}><label className="form-label">Arrival Details &amp; # of Units</label><input type="text" placeholder="e.g., preferred arrival date, locations, and 3 units" className="form-input" value={moveIn} onChange={e => setMoveIn(e.target.value)} /></div>
-                <button onClick={handleSubmit} style={{ width: "100%", background: "var(--accent)", color: "#fff", padding: 16, borderRadius: 999, fontWeight: 800, fontSize: 16, border: "none", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 12px 26px rgba(45,43,255,0.2)" }}>Submit Corporate Inquiry</button>
+                {submitError && <p role="alert" style={{ color: "#a13c34", fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{submitError}</p>}
+                <button onClick={handleSubmit} disabled={submitting} style={{ width: "100%", background: "var(--accent)", color: "#fff", padding: 16, borderRadius: 999, fontWeight: 800, fontSize: 16, border: "none", cursor: submitting ? "wait" : "pointer", opacity: submitting ? .7 : 1, fontFamily: "inherit", boxShadow: "0 12px 26px rgba(45,43,255,0.2)" }}>{submitting ? "Sending…" : "Submit Corporate Inquiry"}</button>
                 <p style={{ fontSize: 11, color: "var(--ink-faint)", textAlign: "center", marginTop: 12 }}>Direct billing available.</p>
               </div>
             ) : (

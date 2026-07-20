@@ -162,6 +162,40 @@ export async function getListings(): Promise<HostAwayListing[]> {
   return data.result || [];
 }
 
+export async function getAvailableListings(params: {
+  checkIn: string;
+  checkOut: string;
+  guests: number;
+}): Promise<HostAwayListing[]> {
+  const token = await getAccessToken();
+  const search = new URLSearchParams({
+    limit: "100",
+    includeResources: "0",
+    availabilityDateStart: params.checkIn,
+    availabilityDateEnd: params.checkOut,
+    availabilityGuestNumber: String(params.guests),
+  });
+
+  const res = await fetch(`${HOSTAWAY_API_BASE}/listings?${search.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    next: { revalidate: 60 },
+  });
+
+  if (!res.ok) {
+    throw new Error(`HostAway availability lookup failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+  if (data.status !== "success") {
+    throw new Error("HostAway availability lookup failed");
+  }
+
+  return data.result || [];
+}
+
 export async function getListing(id: number): Promise<HostAwayListing | null> {
   const token = await getAccessToken();
 

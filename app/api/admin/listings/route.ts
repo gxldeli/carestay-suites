@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getListings } from "@/app/lib/hostaway";
+import { isAdminRequestAuthorized } from "@/app/lib/admin-auth";
 
 export async function GET(request: Request) {
-  if (request.headers.get("x-admin-password") !== "carestay2026") {
+  if (!await isAdminRequestAuthorized(request)) {
     return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
   }
 

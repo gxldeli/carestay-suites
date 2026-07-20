@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Wifi, Coffee, UtensilsCrossed, Snowflake, Flame, WashingMachine, Wind, Tv, Car, Dumbbell, Waves, ArrowUpDown, Sun, GlassWater, Shirt, Laptop, Bell, ShieldCheck, Droplets, Bed, Sandwich, Microwave, ShowerHead, PawPrint, Lock, Zap, Accessibility, Check, Fan, Bath, DoorOpen, ArmchairIcon, SprayCan, Refrigerator, Baby, Sofa, Wine, Cookie, Thermometer, Glasses, Footprints, Moon, HandMetal, type LucideIcon, FireExtinguisher } from "lucide-react";
 import type { ReactNode } from "react";
 import { hasRestrictedDurationLanguage } from "@/app/lib/public-listing-copy";
+import { getNextDateInput, getTorontoToday, isValidDateInput } from "@/app/lib/date-input";
 
 interface ReviewItem { id: string; name: string; stars: number; text: string; date: string; verified: boolean; stayInfo?: string }
 interface ReviewData { totalCount: number; items: ReviewItem[] }
@@ -44,7 +45,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
   );
 }
 
-interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; hospitalDistance?: string; featured?: boolean; videoUrl?: string; amenities?: string[]; latitude?: number; longitude?: number; maxGuests?: number; bedrooms?: number; address?: string; availabilityStatus?: string }
+interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; hospitalDistance?: string; featured?: boolean; videoUrl?: string; amenities?: string[]; maxGuests?: number; bedrooms?: number; availabilityStatus?: string; isCustom?: boolean; bookable?: boolean }
 
 export default function ListingPage() {
   const params = useParams();
@@ -59,8 +60,14 @@ export default function ListingPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [moveIn, setMoveIn] = useState("");
+  const [moveOut, setMoveOut] = useState("");
+  const [guests, setGuests] = useState("1");
+  const [searchArea, setSearchArea] = useState("");
   const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const inquiryRef = useRef<HTMLDivElement>(null);
+  const lightboxCloseRef = useRef<HTMLButtonElement>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const touchStartX = useRef(0);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
@@ -69,6 +76,9 @@ export default function ListingPage() {
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (lightboxOpen) lightboxCloseRef.current?.focus();
+  }, [lightboxOpen]);
   useEffect(() => {
     if (!lightboxOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLightboxOpen(false); if (e.key === "ArrowRight") goNext(); if (e.key === "ArrowLeft") goPrev(); };
@@ -100,26 +110,35 @@ export default function ListingPage() {
     setSelectedImg("");
   }, [rawId]);
   useEffect(() => {
+    const search = new URLSearchParams(window.location.search);
+    const parsedGuests = Number(search.get("guests") || "1");
+    const parsedCheckIn = search.get("checkIn") || "";
+    const parsedCheckOut = search.get("checkOut") || "";
+    const hasValidDatePair = isValidDateInput(parsedCheckIn) && isValidDateInput(parsedCheckOut) && parsedCheckIn >= getTorontoToday() && parsedCheckOut > parsedCheckIn;
+    setMoveIn(hasValidDatePair ? parsedCheckIn : "");
+    setMoveOut(hasValidDatePair ? parsedCheckOut : "");
+    setSearchArea(search.get("where") || search.get("destination") || "");
+    setGuests(String(Number.isInteger(parsedGuests) && parsedGuests >= 1 && parsedGuests <= 20 ? parsedGuests : 1));
+  }, []);
+  useEffect(() => {
     const onScroll = () => { setScrolled(window.scrollY > 20); };
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
   useEffect(() => {
-    fetch(`/api/listings`)
+    fetch(`/api/listings/${encodeURIComponent(rawId)}`)
       .then(r => r.json())
       .then(data => {
-        if (data.status === "success" && data.listings) {
-          const match = data.listings.find((l: { id: number | string }) => String(l.id) === rawId);
-          if (match) {
+        if (data.status === "success" && data.listing) {
+          const match = data.listing;
             setListing({
               id: match.id, title: match.title, location: match.location, beds: match.beds, baths: match.baths,
               price: match.price, sqft: match.sqft, img: match.images?.[0] || match.img, tag: match.location || "GTA",
-              available: true, desc: match.description || "", description: match.description, images: match.images,
+              available: match.available !== false, desc: match.description || "", description: match.description, images: match.images,
               nearbyHospital: match.nearbyHospital || "", hospitalDistance: match.hospitalDistance || "", featured: match.featured || false, videoUrl: match.videoUrl || "", amenities: match.amenities || [],
-              address: match.address || "", latitude: match.latitude ?? undefined, longitude: match.longitude ?? undefined,
               maxGuests: match.maxGuests || undefined, bedrooms: match.bedrooms || undefined, availabilityStatus: match.availabilityStatus || "Available",
+              isCustom: match.isCustom === true, bookable: match.bookable !== false,
             });
-          }
         } else setLoadError(true);
         setLoading(false);
       })
@@ -134,31 +153,58 @@ export default function ListingPage() {
   }, [listing]);
   useEffect(() => {
     if (!listing) return;
-    fetch("/api/admin").then(r => r.json()).then(data => {
-      if (data.status === "success" && data.data?.reviews) {
-        const rd = data.data.reviews[String(listing.id)] as ReviewData | undefined;
-        if (rd && rd.items.length > 0) {
-          const manuallyAddedReviews = rd.items.filter((review) => !review.id.startsWith("rev-gen-") && !hasRestrictedDurationLanguage(review.text));
-          setReviews(manuallyAddedReviews);
-          setReviewTotalCount(manuallyAddedReviews.length);
-        }
+    fetch(`/api/listings/${listing.id}/reviews`).then(r => r.json()).then(data => {
+      if (data.status === "success" && data.reviews) {
+        const rd = data.reviews as ReviewData;
+        const manuallyAddedReviews = rd.items.filter((review) => !review.id.startsWith("rev-gen-") && !hasRestrictedDurationLanguage(review.text));
+        setReviews(manuallyAddedReviews);
+        setReviewTotalCount(manuallyAddedReviews.length);
       }
     }).catch(() => {});
   }, [listing]);
   const avgStars = reviews.length > 0 ? reviews.reduce((a, r) => a + r.stars, 0) / reviews.length : 0;
   const ratingLabel = avgStars >= 4.5 ? "Exceptional" : avgStars >= 4.0 ? "Excellent" : avgStars >= 3.5 ? "Very Good" : "Good";
   const displayTotalCount = reviewTotalCount || reviews.length;
-  const isComingSoon = listing ? !listing.available : false;
-  const availStatus = listing?.availabilityStatus || "Available";
-  const isWaitlist = availStatus === "Waitlist Only" || availStatus === "Booked";
-  const ctaLabel = availStatus === "Booked" ? "Join Waitlist for Next Opening" : availStatus === "Waitlist Only" ? "Join Waitlist" : isComingSoon ? "Join Waitlist" : "Inquire Now";
-  const ctaHeading = isWaitlist ? "Join the Waitlist for This Suite" : isComingSoon ? "Join the Waitlist for This Suite" : "Inquire About This Suite";
-  const ctaSub = isWaitlist ? "Be first to know when this suite becomes available." : isComingSoon ? "Be first to know when this suite becomes available." : "Fill out the form below and our team will follow up shortly.";
+  const isShowcase = listing?.isCustom === true;
+  const isComingSoon = listing ? !listing.available && !isShowcase : false;
+  const availStatus = isShowcase ? "Example" : listing?.availabilityStatus || "Available";
+  const isWaitlist = !isShowcase && (availStatus === "Waitlist Only" || availStatus === "Booked");
+  const ctaLabel = isShowcase ? "Ask About Similar Suites" : isWaitlist || isComingSoon ? "Join Waitlist" : "Inquire Now";
+  const ctaHeading = isShowcase ? "Looking for a Suite Like This?" : isWaitlist || isComingSoon ? "Join the Waitlist for This Suite" : "Inquire About This Suite";
+  const ctaSub = isShowcase ? "This is a non-bookable example. Tell us what you need and we’ll look for a real match." : isWaitlist || isComingSoon ? "Be first to know when this suite becomes available." : "Fill out the form below and our team will follow up shortly.";
+  const today = getTorontoToday();
+  const departureMin = getNextDateInput(moveIn) || today;
+  const returnParams = new URLSearchParams();
+  if (searchArea) returnParams.set("where", searchArea);
+  if (moveIn) returnParams.set("checkIn", moveIn);
+  if (moveOut) returnParams.set("checkOut", moveOut);
+  if (guests) returnParams.set("guests", guests);
+  const listingsHref = `/listings${returnParams.toString() ? `?${returnParams.toString()}` : ""}`;
   const handleSubmit = async () => {
-    const tags = isComingSoon ? ["carestay-waitlist", "listing-waitlist"] : [];
-    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, moveIn, message, listing: listing?.title, tags: [...tags, "professional-stays"] }) });
-    if (typeof window !== "undefined" && window.fbq) { window.fbq("track", "Lead"); }
-    setSubmitted(true);
+    if (!email) {
+      setSubmitError("Please add your email address.");
+      return;
+    }
+    if ((moveIn && !moveOut) || (!moveIn && moveOut) || (moveIn && moveOut && moveOut <= moveIn)) {
+      setSubmitError("Please choose a valid check-in and check-out date.");
+      return;
+    }
+    const tags = isWaitlist || isComingSoon ? ["carestay-waitlist", "listing-waitlist"] : [];
+    const search = new URLSearchParams(window.location.search);
+    const destination = search.get("where") || search.get("destination") || searchArea || listing?.location || "";
+    const searchContext = [`Guests: ${guests}`, destination ? `Preferred area: ${destination}` : ""].filter(Boolean).join("\n");
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const response = await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, moveIn, moveOut, message: [searchContext, message].filter(Boolean).join("\n\n"), listing: listing?.title, tags: [...tags, "professional-stays"] }) });
+      if (!response.ok) throw new Error("Inquiry could not be sent");
+      if (typeof window !== "undefined" && window.fbq) { window.fbq("track", "Lead"); }
+      setSubmitted(true);
+    } catch {
+      setSubmitError("We couldn’t send that inquiry. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -224,32 +270,38 @@ export default function ListingPage() {
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px 0" }}>
           <div
             className="gallery-main"
-            style={{ borderRadius: 16, overflow: "hidden", maxHeight: 500, position: "relative", cursor: "pointer" }}
+            style={{ borderRadius: 16, overflow: "hidden", maxHeight: 500, position: "relative" }}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
-            onClick={() => setLightboxOpen(true)}
           >
-            {!currentImg && <div className="gallery-fallback"><strong>CareStay Suites</strong><span>Photo unavailable</span></div>}
-            {currentImg && <img
-              key={currentImg}
-              src={currentImg}
-              alt={listing.title}
-              onError={() => markImageFailed(currentImg)}
-              style={{ position: "relative", zIndex: 1, width: "100%", height: "100%", maxHeight: 500, objectFit: "cover", display: "block" }}
-            />}
+            <button
+              type="button"
+              aria-label="Open photo gallery"
+              onClick={() => setLightboxOpen(true)}
+              style={{ position: "absolute", inset: 0, zIndex: 1, display: "block", width: "100%", height: "100%", padding: 0, border: 0, background: "transparent", cursor: "pointer" }}
+            >
+              {!currentImg && <div className="gallery-fallback"><strong>CareStay Suites</strong><span>Photo unavailable</span></div>}
+              {currentImg && <img
+                key={currentImg}
+                src={currentImg}
+                alt={listing.title}
+                onError={() => markImageFailed(currentImg)}
+                style={{ width: "100%", height: "100%", maxHeight: 500, objectFit: "cover", display: "block" }}
+              />}
+            </button>
             {/* Gallery Badges */}
             <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 8, zIndex: 2 }}>
               {listing.featured && (
-                <span onClick={e => e.stopPropagation()} style={{ background: "#d4a844", color: "#1a1200", padding: "5px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: "0.02em", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>Featured Suite</span>
+                <span style={{ background: "#d4a844", color: "#1a1200", padding: "5px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: "0.02em", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>Featured Suite</span>
               )}
               {reviews.length > 0 && avgStars >= 4.8 && (
-                <span onClick={e => e.stopPropagation()} style={{ background: "rgba(23,38,48,0.9)", color: "#fff", padding: "5px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: "0.02em", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>◆ Highest Rated</span>
+                <span style={{ background: "rgba(23,38,48,0.9)", color: "#fff", padding: "5px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: "0.02em", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>◆ Highest Rated</span>
               )}
             </div>
             {availableImages.length > 1 && (
               <>
-                <button onClick={e => { e.stopPropagation(); goPrev(); }} style={{ position: "absolute", zIndex: 2, left: 12, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>‹</button>
-                <button onClick={e => { e.stopPropagation(); goNext(); }} style={{ position: "absolute", zIndex: 2, right: 12, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>›</button>
+                <button type="button" aria-label="Previous photo" onClick={goPrev} style={{ position: "absolute", zIndex: 2, left: 12, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>‹</button>
+                <button type="button" aria-label="Next photo" onClick={goNext} style={{ position: "absolute", zIndex: 2, right: 12, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>›</button>
                 <div style={{ position: "absolute", zIndex: 2, bottom: 12, right: 12, background: "rgba(0,0,0,0.6)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>{currentIdx + 1} / {availableImages.length}</div>
               </>
             )}
@@ -260,11 +312,13 @@ export default function ListingPage() {
             <div className="gallery-thumbs" style={{ display: "flex", gap: 8, overflowX: "auto", paddingTop: 12, paddingBottom: 4 }}>
               {availableImages.map((imgUrl, i) => (
                 <button
+                  type="button"
                   key={imgUrl}
+                  aria-label={`Show photo ${i + 1}`}
                   onClick={() => setSelectedImg(imgUrl)}
                   style={{ flexShrink: 0, width: 72, height: 48, borderRadius: 8, overflow: "hidden", border: currentImg === imgUrl ? "2px solid var(--accent)" : "2px solid rgba(30,42,50,0.1)", cursor: "pointer", padding: 0, background: "none" }}
                 >
-                  <img src={imgUrl} alt={`${listing.title} ${i + 1}`} onError={() => markImageFailed(imgUrl)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <img src={imgUrl} alt={`${listing.title} ${i + 1}`} loading="lazy" decoding="async" onError={() => markImageFailed(imgUrl)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 </button>
               ))}
             </div>
@@ -279,8 +333,8 @@ export default function ListingPage() {
               {/* Badges */}
               <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                 <span style={{ background: "rgba(94,129,148,0.1)", color: "var(--accent2)", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{listing.tag}</span>
-                <span style={{ background: availStatus === "Almost Booked" ? "rgba(255,160,0,0.15)" : availStatus === "Waitlist Only" ? "rgba(0,140,255,0.15)" : availStatus === "Booked" ? "rgba(255,60,60,0.15)" : "rgba(45,43,255,0.15)", color: availStatus === "Almost Booked" ? "#ffa000" : availStatus === "Waitlist Only" ? "#08f" : availStatus === "Booked" ? "#f66" : "var(--accent)", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>
-                  {availStatus === "Almost Booked" ? "Almost Booked — inquire now" : availStatus === "Waitlist Only" ? "Waitlist Only" : availStatus === "Booked" ? "Currently Booked" : "Available"}
+                <span style={{ background: availStatus === "Almost Booked" ? "rgba(205,119,20,0.12)" : availStatus === "Example" || availStatus === "Waitlist Only" || availStatus === "Booked" ? "rgba(30,42,50,0.1)" : "rgba(45,43,255,0.1)", color: availStatus === "Almost Booked" ? "#a75d10" : availStatus === "Example" || availStatus === "Waitlist Only" || availStatus === "Booked" ? "var(--ink)" : "var(--accent)", padding: "5px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                  {availStatus === "Example" ? "Example · not bookable" : availStatus === "Almost Booked" ? "Limited availability" : availStatus === "Waitlist Only" || availStatus === "Booked" ? "Fully booked" : "Check your dates"}
                 </span>
                 {listing.featured && (
                   <span style={{ background: "rgba(185,130,79,0.15)", color: "var(--gold)", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>★ Featured</span>
@@ -498,28 +552,25 @@ export default function ListingPage() {
                 </div>
               </div>
 
-              {/* Where You'll Be — Map */}
+              {/* Where You'll Be — approximate area only */}
               {(() => {
-                const hasCoords = listing.latitude != null && listing.longitude != null && (listing.latitude !== 0 || listing.longitude !== 0);
-                const mapQuery = hasCoords
-                  ? `${listing.latitude},${listing.longitude}`
-                  : encodeURIComponent(listing.location + ", Ontario, Canada");
+                const mapQuery = encodeURIComponent(listing.location + ", Ontario, Canada");
                 return (
                 <div style={{ marginBottom: 48 }}>
                   <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Where You&apos;ll Be</h2>
                   <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid rgba(30,42,50,0.06)" }}>
                     <iframe
                       className="map-iframe"
-                      src={`https://maps.google.com/maps?q=${mapQuery}&z=14&output=embed`}
+                      src={`https://maps.google.com/maps?q=${mapQuery}&z=12&output=embed`}
                       style={{ width: "100%", height: 400, border: "none", display: "block" }}
                       allowFullScreen
                       loading="lazy"
                       referrerPolicy="no-referrer-when-downgrade"
-                      title="Map location"
+                      title={`Approximate area for ${listing.location}`}
                     />
                   </div>
                   <div style={{ marginTop: 12, fontSize: 15, color: "rgba(30,42,50,0.6)", fontWeight: 500 }}>
-                    📍 {listing.location}
+                    📍 {listing.location} · Approximate area. Exact arrival details are shared after booking.
                   </div>
                 </div>
                 );
@@ -567,19 +618,14 @@ export default function ListingPage() {
             {/* Right — Booking Card */}
             <div className="detail-sidebar" style={{ position: "sticky", top: 88 }}>
               <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 18, padding: 28, boxShadow: "var(--shadow)" }}>
-                <div style={{ marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, color: "var(--ink-faint)", marginRight: 6 }}>From</span>
-                  <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 36, color: "var(--ink)" }}>${listing.price.toLocaleString()}</span>
-                </div>
+                <div style={{ marginBottom: 8 }}>{listing.price ? <><span style={{ fontSize: 13, color: "var(--ink-faint)", marginRight: 6 }}>From</span><span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 36, color: "var(--ink)" }}>${listing.price.toLocaleString()}</span></> : <span style={{ fontSize: 18, fontWeight: 700 }}>Rate on request</span>}</div>
                 {reviews.length > 0 && <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
                   <span style={{ color: "var(--gold)", fontSize: 14 }}>{"★".repeat(Math.round(avgStars))}</span>
                   <span style={{ fontSize: 13, color: "var(--gold)" }}>{avgStars.toFixed(1)} · {displayTotalCount} reviews</span>
                 </div>}
 
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Preferred Move-in</div>
-                  <input type="text" placeholder="e.g., April 15" value={moveIn} onChange={e => setMoveIn(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
-                </div>
+                <div className="inquiry-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}><div><label style={{ display: "block", fontSize: 10, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }} htmlFor="sidebar-arrival">Check in</label><input id="sidebar-arrival" type="date" min={today} value={moveIn} onChange={e => setMoveIn(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "12px 10px", color: "var(--ink)", fontSize: 13, outline: "none", fontFamily: "inherit", colorScheme: "light" }} /></div><div><label style={{ display: "block", fontSize: 10, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }} htmlFor="sidebar-departure">Check out</label><input id="sidebar-departure" type="date" min={departureMin} value={moveOut} onChange={e => setMoveOut(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "12px 10px", color: "var(--ink)", fontSize: 13, outline: "none", fontFamily: "inherit", colorScheme: "light" }} /></div></div>
+                <div style={{ marginBottom: 14 }}><label style={{ display: "block", fontSize: 10, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }} htmlFor="sidebar-guests">Guests</label><select id="sidebar-guests" value={guests} onChange={e => setGuests(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "12px 14px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit" }}>{Array.from({ length: Math.max(10, listing.maxGuests || 0) }, (_, index) => index + 1).slice(0, 20).map((count) => <option key={count} value={count}>{count} guest{count === 1 ? "" : "s"}</option>)}</select></div>
 
                 <a href="#inquiry" style={{ display: "block", width: "100%", padding: "16px 0", background: "var(--accent)", color: "#fff", borderRadius: 10, fontWeight: 700, fontSize: 15, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
                   {ctaLabel}
@@ -601,33 +647,35 @@ export default function ListingPage() {
             <p style={{ fontSize: 14, color: "var(--ink-soft)", textAlign: "center", marginBottom: 28 }}>{ctaSub}</p>
 
             {!submitted ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <form
+                onSubmit={(event) => { event.preventDefault(); void handleSubmit(); }}
+                style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              >
                 <div className="inquiry-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                   <div>
-                    <div style={{ fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Full Name</div>
-                    <input type="text" placeholder="Jane Smith" value={name} onChange={e => setName(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                    <label htmlFor="inquiry-name" style={{ display: "block", fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Full Name</label>
+                    <input id="inquiry-name" name="name" autoComplete="name" type="text" placeholder="Jane Smith" value={name} onChange={e => setName(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Email</div>
-                    <input type="email" placeholder="name@email.com" value={email} onChange={e => setEmail(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                    <label htmlFor="inquiry-email" style={{ display: "block", fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Email</label>
+                    <input id="inquiry-email" name="email" autoComplete="email" type="email" required placeholder="name@email.com" value={email} onChange={e => setEmail(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Phone</div>
-                  <input type="tel" placeholder="(647) 000-0000" value={phone} onChange={e => setPhone(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                  <label htmlFor="inquiry-phone" style={{ display: "block", fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Phone</label>
+                  <input id="inquiry-phone" name="phone" autoComplete="tel" type="tel" placeholder="(647) 000-0000" value={phone} onChange={e => setPhone(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
                 </div>
+                <div className="inquiry-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}><div><label style={{ display: "block", fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }} htmlFor="inquiry-arrival">Check in</label><input id="inquiry-arrival" name="checkIn" type="date" min={today} value={moveIn} onChange={e => setMoveIn(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit", colorScheme: "light" }} /></div><div><label style={{ display: "block", fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }} htmlFor="inquiry-departure">Check out</label><input id="inquiry-departure" name="checkOut" type="date" min={departureMin} value={moveOut} onChange={e => setMoveOut(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit", colorScheme: "light" }} /></div></div>
+                <div><label style={{ display: "block", fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }} htmlFor="inquiry-guests">Guests</label><select id="inquiry-guests" name="guests" value={guests} onChange={e => setGuests(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit" }}>{Array.from({ length: Math.max(10, listing.maxGuests || 0) }, (_, index) => index + 1).slice(0, 20).map((count) => <option key={count} value={count}>{count} guest{count === 1 ? "" : "s"}</option>)}</select></div>
                 <div>
-                  <div style={{ fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Preferred Arrival</div>
-                  <input type="date" value={moveIn} onChange={e => setMoveIn(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit", colorScheme: "light" }} />
+                  <label htmlFor="inquiry-message" style={{ display: "block", fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Message / Special Requests</label>
+                  <textarea id="inquiry-message" name="message" placeholder="Any special requests or questions..." value={message} onChange={e => setMessage(e.target.value)} rows={3} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit", resize: "vertical" }} />
                 </div>
-                <div>
-                  <div style={{ fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Message / Special Requests</div>
-                  <textarea placeholder="Any special requests or questions..." value={message} onChange={e => setMessage(e.target.value)} rows={3} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit", resize: "vertical" }} />
-                </div>
-                <button onClick={handleSubmit} style={{ width: "100%", padding: "16px 0", background: "var(--accent)", color: "#fff", borderRadius: 10, fontWeight: 700, fontSize: 15, textAlign: "center", border: "none", cursor: "pointer", fontFamily: "inherit", marginTop: 4 }}>
-                  Submit Inquiry
+                {submitError && <p role="alert" style={{ color: "#a13c34", fontSize: 13, fontWeight: 600 }}>{submitError}</p>}
+                <button type="submit" disabled={submitting} style={{ width: "100%", padding: "16px 0", background: "var(--accent)", color: "#fff", borderRadius: 10, fontWeight: 700, fontSize: 15, textAlign: "center", border: "none", cursor: submitting ? "wait" : "pointer", opacity: submitting ? .7 : 1, fontFamily: "inherit", marginTop: 4 }}>
+                  {submitting ? "Sending…" : isWaitlist ? "Join Waitlist" : "Submit Inquiry"}
                 </button>
-              </div>
+              </form>
             ) : (
               <div style={{ textAlign: "center", padding: "32px 0" }}>
                 <div style={{ fontSize: 48, marginBottom: 12 }}>✓</div>
@@ -640,7 +688,7 @@ export default function ListingPage() {
 
         {/* Back link */}
         <div className="wrap" style={{ padding: "60px 24px 40px" }}>
-          <Link href="/listings" style={{ color: "var(--accent)", fontSize: 14, fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(45,43,255,0.3)", paddingBottom: 2 }}>
+          <Link href={listingsHref} style={{ color: "var(--accent)", fontSize: 14, fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(45,43,255,0.3)", paddingBottom: 2 }}>
             Browse all suites
           </Link>
         </div>
@@ -688,12 +736,12 @@ export default function ListingPage() {
 
       {/* Desktop Lightbox */}
       {lightboxOpen && (
-        <div onClick={() => setLightboxOpen(false)} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)" }}>
-          <button onClick={() => setLightboxOpen(false)} style={{ position: "absolute", top: 20, right: 24, background: "none", border: "none", color: "#fff", fontSize: 32, cursor: "pointer", zIndex: 201 }}>✕</button>
+        <div role="dialog" aria-modal="true" aria-label="Suite photo gallery" onClick={() => setLightboxOpen(false)} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)" }}>
+          <button ref={lightboxCloseRef} type="button" aria-label="Close photo gallery" onClick={() => setLightboxOpen(false)} style={{ position: "absolute", top: 20, right: 24, background: "none", border: "none", color: "#fff", fontSize: 32, cursor: "pointer", zIndex: 201 }}>✕</button>
           {availableImages.length > 1 && (
             <>
-              <button onClick={e => { e.stopPropagation(); goPrev(); }} style={{ position: "absolute", left: 20, top: "50%", transform: "translateY(-50%)", width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", color: "#fff", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 201 }}>‹</button>
-              <button onClick={e => { e.stopPropagation(); goNext(); }} style={{ position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)", width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", color: "#fff", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 201 }}>›</button>
+              <button type="button" aria-label="Previous photo" onClick={e => { e.stopPropagation(); goPrev(); }} style={{ position: "absolute", left: 20, top: "50%", transform: "translateY(-50%)", width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", color: "#fff", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 201 }}>‹</button>
+              <button type="button" aria-label="Next photo" onClick={e => { e.stopPropagation(); goNext(); }} style={{ position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)", width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", color: "#fff", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 201 }}>›</button>
             </>
           )}
           <div style={{ color: "rgba(255,255,255,0.72)", textAlign: "center", fontSize: 14 }}>Photo update in progress</div>
@@ -707,10 +755,7 @@ export default function ListingPage() {
       {/* Mobile Sticky Price Bar */}
       <div className="mobile-sticky-bar" style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50, background: "rgba(255,253,249,0.97)", backdropFilter: "blur(20px)", borderTop: "1px solid var(--line)", boxShadow: "0 -8px 30px rgba(30,42,50,0.12)", padding: "12px 24px", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <div>
-            <span style={{ fontSize: 11, color: "var(--ink-faint)", marginRight: 5 }}>From</span>
-            <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "var(--ink)" }}>${listing.price.toLocaleString()}</span>
-          </div>
+          <div>{listing.price ? <><span style={{ fontSize: 11, color: "var(--ink-faint)", marginRight: 5 }}>From</span><span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: "var(--ink)" }}>${listing.price.toLocaleString()}</span></> : <span style={{ fontSize: 13, fontWeight: 700 }}>Rate on request</span>}</div>
           {reviews.length > 0 && <div style={{ fontSize: 11, color: "#a36f31", marginTop: 2 }}>★ {avgStars.toFixed(1)} · {displayTotalCount} reviews</div>}
         </div>
         <a href="#inquiry" style={{ background: "var(--accent)", color: "#fff", padding: "12px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: "none", whiteSpace: "nowrap" }}>{ctaLabel}</a>

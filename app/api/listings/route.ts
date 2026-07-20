@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getListings, extractAmenityNames, extractBedroomCount } from "@/app/lib/hostaway";
 import { redis } from "@/app/lib/redis";
 import { filterPublicAmenities, getPublicListingDescription, hasRestrictedDurationLanguage } from "@/app/lib/public-listing-copy";
+import { getPublicAreaLabel, getPublicShowcaseDescription } from "@/app/lib/public-location";
 
 // Upstash Redis overrides store
 interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string; sortOrder?: number; featured?: boolean; videoUrl?: string; availabilityStatus?: string }
@@ -11,7 +12,10 @@ interface ListingReviews { totalCount: number; items: ReviewItem[] }
 interface OverridesData { listings: Record<string, ListingOverride>; customListings: CustomListing[]; reviews?: Record<string, ListingReviews> }
 
 function getPublishedReviewMetrics(reviews?: ListingReviews): { count: number; average: number } {
-  const published = reviews?.items.filter((review) => !review.id.startsWith("rev-gen-") && !hasRestrictedDurationLanguage(review.text)) || [];
+  const published = reviews?.items.filter((review) =>
+    !review.id.startsWith("rev-gen-") &&
+    !hasRestrictedDurationLanguage([review.text, review.stayInfo || ""].join(" "))
+  ) || [];
   if (published.length === 0) return { count: 0, average: 0 };
   return {
     count: published.length,
@@ -52,16 +56,15 @@ function findNearestHospital(lat: number, lng: number): { name: string; distance
   return { name: best.name, distance: `${mins} min drive` };
 }
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const includeHidden = searchParams.get("includeHidden") === "true";
     const listings = await getListings();
 
     const overrides = (await redis.get<OverridesData>("admin:overrides")) || { listings: {}, customListings: [] };
 
     // Transform HostAway data into our frontend format
     const transformed = listings
+      .filter((listing) => listing.isActive !== 0)
       .map((l) => {
         const ov = overrides.listings[String(l.id)] || {};
         const autoHospital = (!ov.nearbyHospital && l.latitude && l.longitude) ? findNearestHospital(l.latitude, l.longitude) : null;
@@ -82,11 +85,8 @@ export async function GET(request: Request) {
             bedrooms: extractBedroomCount(l),
             description: ov.descriptionOverride || l.description || "",
           }),
-          available: true,
+          available: !["Booked", "Waitlist Only"].includes(ov.availabilityStatus || ""),
           amenities: filterPublicAmenities(extractAmenityNames(l)),
-          address: l.address || "",
-          latitude: l.latitude,
-          longitude: l.longitude,
           maxGuests: l.personCapacity || l.maxGuests || l.guestsIncluded || 0,
           bedrooms: extractBedroomCount(l),
           soakingTub: ov.soakingTub || false,
@@ -100,47 +100,46 @@ export async function GET(request: Request) {
           availabilityStatus: ov.availabilityStatus || "Available",
           reviewCount: getPublishedReviewMetrics(overrides.reviews?.[String(l.id)]).count,
           reviewAvg: getPublishedReviewMetrics(overrides.reviews?.[String(l.id)]).average,
+          inventorySource: "hostaway" as const,
+          bookable: !["Booked", "Waitlist Only"].includes(ov.availabilityStatus || ""),
         };
       })
-      .filter((l) => includeHidden || !l.hidden);
+      .filter((l) => !l.hidden);
 
     // Append custom listings
-    const custom = overrides.customListings.map((cl) => ({
-      id: cl.id,
-      title: cl.title,
-      location: cl.location,
-      beds: cl.beds,
-      baths: cl.baths,
-      price: cl.price,
-      sqft: cl.sqft,
-      img: cl.images?.[0] || cl.img,
-      images: cl.images?.length ? cl.images : (cl.img ? [cl.img] : []),
-      description: getPublicListingDescription({
-        title: cl.title,
-        location: cl.location,
+    const custom = overrides.customListings.map((cl) => {
+      const publicLocation = getPublicAreaLabel(cl.location);
+      return {
+        id: cl.id,
+        title: `Example · ${cl.title}`,
+        location: publicLocation,
         beds: cl.beds,
-        description: cl.description,
-      }),
-      available: true,
-      amenities: [] as string[],
-      address: "",
-      latitude: 0,
-      longitude: 0,
-      maxGuests: cl.beds * 2 || 2,
-      bedrooms: cl.beds || 1,
-      soakingTub: cl.soakingTub,
-      carestayStandard: cl.carestayStandard,
-      hidden: cl.hidden || false,
-      nearbyHospital: cl.nearbyHospital,
-      hospitalDistance: cl.hospitalDistance,
-      sortOrder: cl.sortOrder ?? 50,
-      featured: cl.featured === true,
-      videoUrl: cl.videoUrl || "",
-      availabilityStatus: cl.availabilityStatus || "Available",
-      reviewCount: getPublishedReviewMetrics(overrides.reviews?.[String(cl.id)]).count,
-      reviewAvg: getPublishedReviewMetrics(overrides.reviews?.[String(cl.id)]).average,
-      isCustom: true,
-    })).filter((l) => includeHidden || !l.hidden);
+        baths: cl.baths,
+        price: 0,
+        sqft: cl.sqft,
+        img: cl.images?.[0] || cl.img,
+        images: cl.images?.length ? cl.images : (cl.img ? [cl.img] : []),
+        description: getPublicShowcaseDescription(cl.title, publicLocation),
+        available: false,
+        amenities: [] as string[],
+        maxGuests: 0,
+        bedrooms: cl.beds || 1,
+        soakingTub: cl.soakingTub,
+        carestayStandard: cl.carestayStandard,
+        hidden: cl.hidden || false,
+        nearbyHospital: cl.nearbyHospital,
+        hospitalDistance: cl.hospitalDistance,
+        sortOrder: cl.sortOrder ?? 50,
+        featured: cl.featured === true,
+        videoUrl: cl.videoUrl || "",
+        availabilityStatus: "Example",
+        reviewCount: getPublishedReviewMetrics(overrides.reviews?.[String(cl.id)]).count,
+        reviewAvg: getPublishedReviewMetrics(overrides.reviews?.[String(cl.id)]).average,
+        isCustom: true,
+        inventorySource: "showcase" as const,
+        bookable: false,
+      };
+    }).filter((l) => !l.hidden);
 
     const all = [...transformed, ...custom].sort((a, b) => (a.sortOrder ?? 50) - (b.sortOrder ?? 50));
 
@@ -149,9 +148,9 @@ export async function GET(request: Request) {
       listings: all,
       count: all.length,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { status: "error", message: error instanceof Error ? error.message : "Failed to fetch listings", listings: [] },
+      { status: "error", message: "Failed to fetch listings", listings: [] },
       { status: 500 }
     );
   }
