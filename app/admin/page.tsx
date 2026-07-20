@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useDeferredValue, useMemo, useRef } from "react";
 
 interface ListingOverride {
   priceOverride?: number;
@@ -75,20 +75,78 @@ interface OverridesData {
 const PW_KEY = "carestay_admin_pw";
 
 /* ─── Styles ─── */
-const inputStyle: React.CSSProperties = { width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "10px 14px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" };
-const btnStyle: React.CSSProperties = { padding: "10px 20px", background: "linear-gradient(135deg,#0fa,#0af)", color: "#0a0c0f", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" };
+const inputStyle: React.CSSProperties = { width: "100%", background: "rgba(255,255,255,0.055)", border: "1px solid rgba(255,255,255,0.11)", borderRadius: 10, padding: "10px 14px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit", transition: "border-color .18s ease, background .18s ease, box-shadow .18s ease" };
+const btnStyle: React.CSSProperties = { padding: "10px 20px", background: "linear-gradient(135deg,#5b5cff,#7778ff)", color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 10px 24px rgba(91,92,255,.22)", transition: "transform .18s ease, opacity .18s ease, box-shadow .18s ease" };
 const thStyle: React.CSSProperties = { padding: "10px 12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid rgba(255,255,255,0.08)" };
 const tdStyle: React.CSSProperties = { padding: "10px 12px", fontSize: 14, borderBottom: "1px solid rgba(255,255,255,0.05)", verticalAlign: "middle" };
-const cardStyle: React.CSSProperties = { background: "#12151a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 24, marginBottom: 24 };
+const cardStyle: React.CSSProperties = { background: "rgba(18,24,32,0.88)", border: "1px solid rgba(255,255,255,0.075)", borderRadius: 18, padding: 22, marginBottom: 20, boxShadow: "0 18px 54px rgba(0,0,0,.2)", backdropFilter: "blur(18px)" };
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ checked, onChange, disabled = false }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <button
+      type="button"
+      aria-pressed={checked}
+      disabled={disabled}
       onClick={() => onChange(!checked)}
-      style={{ width: 44, height: 24, borderRadius: 12, border: "none", background: checked ? "#0fa" : "rgba(255,255,255,0.1)", position: "relative", cursor: "pointer", transition: "background 0.2s" }}
+      style={{ width: 44, height: 24, borderRadius: 12, border: "none", background: checked ? "#6f70ff" : "rgba(255,255,255,0.12)", position: "relative", cursor: disabled ? "wait" : "pointer", opacity: disabled ? 0.6 : 1, transition: "background 0.2s, opacity 0.2s" }}
     >
       <div style={{ width: 18, height: 18, borderRadius: 9, background: "#fff", position: "absolute", top: 3, left: checked ? 23 : 3, transition: "left 0.2s" }} />
     </button>
+  );
+}
+
+type LoadStatus = "idle" | "loading" | "loaded" | "error";
+type LoadResource = "settings" | "admin" | "listings";
+
+function LoadingPanel({ label, error, onRetry }: { label: string; error?: string; onRetry?: () => void }) {
+  return (
+    <div style={{ ...cardStyle, minHeight: 220, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+      <div style={{ width: "100%", maxWidth: 420 }}>
+        {error ? (
+          <>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#f66", marginBottom: 8 }}>Couldn&apos;t load this section</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 16 }}>{error}</div>
+            {onRetry && <button type="button" onClick={onRetry} style={btnStyle}>Try Again</button>}
+          </>
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 16 }}>
+              {[0, 1, 2].map((item) => <span key={item} style={{ width: 9, height: 9, borderRadius: "50%", background: "#14b8a6", opacity: 1 - item * 0.25 }} />)}
+            </div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>{label}</div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ReviewCountInput({ value, disabled, onSave }: { value: number; disabled: boolean; onSave: (value: number) => Promise<void> | void }) {
+  const [draft, setDraft] = useState(String(value));
+
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
+  const commit = () => {
+    const parsed = Number(draft);
+    const nextValue = Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : value;
+    setDraft(String(nextValue));
+    if (nextValue !== value) void onSave(nextValue);
+  };
+
+  return (
+    <input
+      type="number"
+      min="0"
+      inputMode="numeric"
+      value={draft}
+      disabled={disabled}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
+      style={{ ...inputStyle, width: 80, padding: "6px 10px", textAlign: "center" }}
+    />
   );
 }
 
@@ -128,13 +186,23 @@ const TABS = [
   { key: "reservations", label: "Reservations" },
 ] as const;
 
+type TabKey = (typeof TABS)[number]["key"];
+
 export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>(() => (typeof window !== "undefined" && localStorage.getItem("adminActiveTab")) || "settings");
-  const switchTab = (tab: string) => { setActiveTab(tab); if (typeof window !== "undefined") localStorage.setItem("adminActiveTab", tab); };
+  const [activeTab, setActiveTab] = useState<TabKey>("settings");
+  const switchTab = (tab: TabKey) => { setActiveTab(tab); localStorage.setItem("adminActiveTab", tab); };
   const [listings, setListings] = useState<ApiListing[]>([]);
   const [overrides, setOverrides] = useState<OverridesData>({ listings: {}, customListings: [], reviews: {} });
+  const [loadStatus, setLoadStatus] = useState<Record<LoadResource, LoadStatus>>({ settings: "idle", admin: "idle", listings: "idle" });
+  const [loadErrors, setLoadErrors] = useState<Partial<Record<LoadResource, string>>>({});
+  const loadedResources = useRef<Record<LoadResource, boolean>>({ settings: false, admin: false, listings: false });
+  const pendingLoads = useRef<Partial<Record<LoadResource, Promise<void>>>>({});
+  const mutationQueue = useRef<Promise<void>>(Promise.resolve());
+  const latestMutationId = useRef(0);
+  const pendingMutationCount = useRef(0);
+  const adminReloadNeeded = useRef(false);
   const [reviewListingId, setReviewListingId] = useState<string | null>(null);
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [revName, setRevName] = useState("");
@@ -144,6 +212,7 @@ export default function AdminPage() {
   const [revVerified, setRevVerified] = useState(true);
   const [revStayInfo, setRevStayInfo] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
+  const [mutationPending, setMutationPending] = useState(0);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   // Site settings
@@ -155,7 +224,7 @@ export default function AdminPage() {
   const [siteStatHospitals, setSiteStatHospitals] = useState("30+");
   const [siteStatRating, setSiteStatRating] = useState("4.9");
   const [bannerEnabled, setBannerEnabled] = useState(true);
-  const [bannerText, setBannerText] = useState("🏥 New suites dropping soon — join the waitlist");
+  const [bannerText, setBannerText] = useState("New furnished suites are added regularly");
   const [bannerButtonText, setBannerButtonText] = useState("Join");
   const [bannerLinkUrl, setBannerLinkUrl] = useState("/#contact");
   const [settingsSaved, setSettingsSaved] = useState(false);
@@ -242,16 +311,19 @@ export default function AdminPage() {
     if (!editingCustomId || !editTitle || !editPrice) return alert("Title and price required");
     const imgLines = editImg.split("\n").map(s => s.trim()).filter(Boolean);
     setSaving("editCustom");
-    await adminPost("updateCustomListing", {
-      id: editingCustomId,
-      title: editTitle, location: editLocation, beds: Number(editBeds), baths: Number(editBaths),
-      price: Number(editPrice), sqft: Number(editSqft), img: imgLines[0] || "", images: imgLines,
-      description: editDesc, nearbyHospital: editHospital, hospitalDistance: editDistance,
-      soakingTub: editTub, carestayStandard: editStandard, featured: editFeatured, sortOrder: Number(editSortOrder),
-      videoUrl: editVideoUrl, hidden: editHidden, availabilityStatus: editAvailStatus,
-    });
-    setSaving(null);
-    setEditingCustomId(null);
+    try {
+      const result = await adminPost("updateCustomListing", {
+        id: editingCustomId,
+        title: editTitle, location: editLocation, beds: Number(editBeds), baths: Number(editBaths),
+        price: Number(editPrice), sqft: Number(editSqft), img: imgLines[0] || "", images: imgLines,
+        description: editDesc, nearbyHospital: editHospital, hospitalDistance: editDistance,
+        soakingTub: editTub, carestayStandard: editStandard, featured: editFeatured, sortOrder: Number(editSortOrder),
+        videoUrl: editVideoUrl, hidden: editHidden, availabilityStatus: editAvailStatus,
+      });
+      if (result.status === "success") setEditingCustomId(null);
+    } finally {
+      setSaving(null);
+    }
   };
 
   const moveCustomListing = async (id: string, direction: "up" | "down") => {
@@ -259,63 +331,157 @@ export default function AdminPage() {
     if (idx === -1) return;
     const swapIdx = direction === "up" ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= overrides.customListings.length) return;
-    const a = overrides.customListings[idx];
-    const b = overrides.customListings[swapIdx];
-    const aSort = a.sortOrder ?? 50;
-    const bSort = b.sortOrder ?? 50;
+    const reordered = [...overrides.customListings];
+    [reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]];
     setSaving("moveCustom");
-    await adminPost("updateCustomListing", { id: a.id, sortOrder: bSort });
-    await adminPost("updateCustomListing", { id: b.id, sortOrder: aSort });
-    setSaving(null);
+    try {
+      await adminPost("reorderCustomListings", {
+        updates: reordered.map((listing, index) => ({ id: listing.id, sortOrder: (index + 1) * 10 })),
+      });
+    } finally {
+      setSaving(null);
+    }
   };
 
-  const storedPw = typeof window !== "undefined" ? sessionStorage.getItem(PW_KEY) : null;
-
   useEffect(() => {
-    if (storedPw === "carestay2026") setAuthed(true);
-  }, [storedPw]);
-
-  const loadData = useCallback(async () => {
-    const [listRes, adminRes, settingsRes] = await Promise.all([
-      fetch("/api/listings?includeHidden=true"),
-      fetch("/api/admin"),
-      fetch("/api/settings"),
-    ]);
-    const listData = await listRes.json();
-    const adminData = await adminRes.json();
-    const settingsData = await settingsRes.json();
-    if (listData.status === "success") setListings(listData.listings || []);
-    if (adminData.status === "success") setOverrides(adminData.data);
-    if (settingsData.status === "success" && settingsData.settings) {
-      const s = settingsData.settings;
-      setSiteEmail(s.contactEmail || "info@carestaysuites.com");
-      setSiteAddress(s.companyAddress || "35 Mariner Terrace, Toronto, ON M5V 3V9");
-      setSiteHeroTagline(s.heroTagline || "");
-      setSiteStatProps(s.statProperties || "60+");
-      setSiteStatPros(s.statHealthcarePros || "150+");
-      setSiteStatHospitals(s.statHospitalPartnerships || "30+");
-      setSiteStatRating(s.statAverageRating || "4.9");
-      setBannerEnabled(s.bannerEnabled !== false);
-      setBannerText(s.bannerText || "🏥 New suites dropping soon — join the waitlist");
-      setBannerButtonText(s.bannerButtonText || "Join");
-      setBannerLinkUrl(s.bannerLinkUrl || "/#contact");
-    }
+    const storedTab = localStorage.getItem("adminActiveTab");
+    if (TABS.some((tab) => tab.key === storedTab)) setActiveTab(storedTab as TabKey);
+    if (sessionStorage.getItem(PW_KEY) === "carestay2026") setAuthed(true);
   }, []);
 
+  const beginLoad = useCallback((resource: LoadResource, loader: () => Promise<void>): Promise<void> => {
+    if (loadedResources.current[resource]) return Promise.resolve();
+    const existing = pendingLoads.current[resource];
+    if (existing) return existing;
+
+    setLoadStatus((current) => ({ ...current, [resource]: "loading" }));
+    setLoadErrors((current) => ({ ...current, [resource]: undefined }));
+
+    const request = loader()
+      .then(() => {
+        loadedResources.current[resource] = true;
+        setLoadStatus((current) => ({ ...current, [resource]: "loaded" }));
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "Please try again.";
+        setLoadErrors((current) => ({ ...current, [resource]: message }));
+        setLoadStatus((current) => ({ ...current, [resource]: "error" }));
+      })
+      .finally(() => {
+        delete pendingLoads.current[resource];
+      });
+
+    pendingLoads.current[resource] = request;
+    return request;
+  }, []);
+
+  const loadSettings = useCallback(() => beginLoad("settings", async () => {
+    const response = await fetch("/api/settings", { cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok || data.status !== "success" || !data.settings) throw new Error(data.message || "Settings could not be loaded.");
+    const s = data.settings;
+    setSiteEmail(s.contactEmail || "info@carestaysuites.com");
+    setSiteAddress(s.companyAddress || "35 Mariner Terrace, Toronto, ON M5V 3V9");
+    setSiteHeroTagline(s.heroTagline || "");
+    setSiteStatProps(s.statProperties || "60+");
+    setSiteStatPros(s.statHealthcarePros || "150+");
+    setSiteStatHospitals(s.statHospitalPartnerships || "30+");
+    setSiteStatRating(s.statAverageRating || "4.9");
+    setBannerEnabled(s.bannerEnabled !== false);
+    setBannerText(s.bannerText || "New furnished suites are added regularly");
+    setBannerButtonText(s.bannerButtonText || "Join");
+    setBannerLinkUrl(s.bannerLinkUrl || "/#contact");
+  }), [beginLoad]);
+
+  const loadAdminData = useCallback(() => beginLoad("admin", async () => {
+    const response = await fetch("/api/admin", { cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok || data.status !== "success" || !data.data) throw new Error(data.message || "Listing controls could not be loaded.");
+    setOverrides(data.data);
+  }), [beginLoad]);
+
+  const loadListings = useCallback(() => beginLoad("listings", async () => {
+    const adminPassword = sessionStorage.getItem(PW_KEY) || password;
+    const response = await fetch("/api/admin/listings", {
+      cache: "no-store",
+      headers: { "x-admin-password": adminPassword },
+    });
+    const data = await response.json();
+    if (!response.ok || data.status !== "success") throw new Error(data.message || "HostAway listings could not be loaded.");
+    setListings(data.listings || []);
+  }), [beginLoad, password]);
+
   useEffect(() => {
-    if (authed) loadData();
-  }, [authed, loadData]);
+    if (!authed) return;
+
+    if (activeTab === "settings") void loadSettings();
+    if (activeTab === "custom") void loadAdminData();
+    if (activeTab === "hostaway" || activeTab === "reviews") {
+      void Promise.all([loadAdminData(), loadListings()]);
+    }
+    if (activeTab === "reservations") void loadListings();
+
+    // Warm the remaining tabs after the visible section has started loading.
+    // These calls are deduplicated, so quick tab switches never double-fetch.
+    const prefetchTimer = window.setTimeout(() => {
+      void loadSettings();
+      void loadAdminData();
+      void loadListings();
+    }, 900);
+    return () => window.clearTimeout(prefetchTimer);
+  }, [activeTab, authed, loadAdminData, loadListings, loadSettings]);
+
 
   const adminPost = async (action: string, payload: Record<string, unknown>) => {
-    const pw = sessionStorage.getItem(PW_KEY) || password;
-    const res = await fetch("/api/admin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: pw, action, payload }),
+    const mutationId = ++latestMutationId.current;
+    pendingMutationCount.current += 1;
+    setMutationPending((current) => current + 1);
+    const request = mutationQueue.current.then(async () => {
+      const pw = sessionStorage.getItem(PW_KEY) || password;
+      const res = await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({ password: pw, action, payload }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.status !== "success") {
+        const message = data.message || "The update could not be saved.";
+        adminReloadNeeded.current = true;
+        setToast(message);
+        window.setTimeout(() => setToast(""), 2600);
+        return { ...data, status: "error", message };
+      }
+      // A newer optimistic action may already be visible while this request is
+      // waiting in the queue. Only the latest response may replace that state.
+      if (mutationId === latestMutationId.current) setOverrides(data.data);
+      return data;
+    }).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : "The update could not be saved.";
+      adminReloadNeeded.current = true;
+      setToast(message);
+      window.setTimeout(() => setToast(""), 2600);
+      return { status: "error", message };
+    }).finally(() => {
+      pendingMutationCount.current = Math.max(0, pendingMutationCount.current - 1);
+      setMutationPending((current) => Math.max(0, current - 1));
+      if (pendingMutationCount.current === 0 && adminReloadNeeded.current) {
+        adminReloadNeeded.current = false;
+        loadedResources.current.admin = false;
+        void loadAdminData();
+      }
     });
-    const data = await res.json();
-    if (data.status === "success") setOverrides(data.data);
-    return data;
+    mutationQueue.current = request.then(() => undefined, () => undefined);
+    return request;
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem(PW_KEY);
+    loadedResources.current = { settings: false, admin: false, listings: false };
+    pendingLoads.current = {};
+    setLoadStatus({ settings: "idle", admin: "idle", listings: "idle" });
+    setAuthed(false);
+    setPassword("");
   };
 
   const handleLogin = () => {
@@ -330,14 +496,41 @@ export default function AdminPage() {
   const updateOverride = async (id: string | number, field: string, value: unknown) => {
     const key = `${id}-${field}`;
     setSaving(key);
-    await adminPost("updateListing", { id: String(id), [field]: value });
-    setSaving(null);
+    setOverrides((current) => ({
+      ...current,
+      listings: {
+        ...current.listings,
+        [String(id)]: { ...current.listings[String(id)], [field]: value },
+      },
+    }));
+    try {
+      await adminPost("updateListing", { id: String(id), [field]: value });
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const updateCustomField = async (id: string, field: keyof CustomListing, value: unknown) => {
+    const key = `custom-${id}-${field}`;
+    setSaving(key);
+    setOverrides((current) => ({
+      ...current,
+      customListings: current.customListings.map((listing) => listing.id === id ? { ...listing, [field]: value } : listing),
+    }));
+    try {
+      await adminPost("updateCustomListing", { id, [field]: value });
+    } finally {
+      setSaving(null);
+    }
   };
 
   const saveExpandedOverrides = async (id: number, fields: Partial<ListingOverride>) => {
     setSaving(`${id}-expanded`);
-    await adminPost("updateListing", { id: String(id), ...fields });
-    setSaving(null);
+    try {
+      await adminPost("updateListing", { id: String(id), ...fields });
+    } finally {
+      setSaving(null);
+    }
   };
 
   const SHOWCASE_PRESETS = [
@@ -358,51 +551,79 @@ export default function AdminPage() {
   const addCustomListing = async () => {
     if (!newTitle || !newPrice) return alert("Title and price are required");
     const imgLines = newImg.split("\n").map(s => s.trim()).filter(Boolean);
-    await adminPost("addCustomListing", {
-      title: newTitle, location: newLocation, beds: Number(newBeds), baths: Number(newBaths),
-      price: Number(newPrice), sqft: Number(newSqft), img: imgLines[0] || "", images: imgLines, description: newDesc,
-      nearbyHospital: newHospital, hospitalDistance: newDistance, soakingTub: newTub, carestayStandard: newStandard, featured: newFeatured, availabilityStatus: "Available",
-    });
-    setNewTitle(""); setNewLocation(""); setNewBeds("1"); setNewBaths("1"); setNewPrice(""); setNewSqft("");
-    setNewImg(""); setNewHospital(""); setNewDistance(""); setNewDesc(""); setNewTub(false); setNewStandard(false); setNewFeatured(false);
+    setSaving("addCustom");
+    try {
+      const result = await adminPost("addCustomListing", {
+        title: newTitle, location: newLocation, beds: Number(newBeds), baths: Number(newBaths),
+        price: Number(newPrice), sqft: Number(newSqft), img: imgLines[0] || "", images: imgLines, description: newDesc,
+        nearbyHospital: newHospital, hospitalDistance: newDistance, soakingTub: newTub, carestayStandard: newStandard, featured: newFeatured, availabilityStatus: "Available",
+      });
+      if (result.status === "success") {
+        setNewTitle(""); setNewLocation(""); setNewBeds("1"); setNewBaths("1"); setNewPrice(""); setNewSqft("");
+        setNewImg(""); setNewHospital(""); setNewDistance(""); setNewDesc(""); setNewTub(false); setNewStandard(false); setNewFeatured(false);
+      }
+    } finally {
+      setSaving(null);
+    }
   };
 
   const deleteCustom = async (id: string, name?: string) => {
     if (!confirm(`Are you sure you want to delete "${name || "this listing"}"?`)) return;
-    await adminPost("deleteCustomListing", { id });
-    showToast("Listing deleted");
+    setSaving(`delete-${id}`);
+    try {
+      const result = await adminPost("deleteCustomListing", { id });
+      if (result.status === "success") showToast("Listing deleted");
+    } finally {
+      setSaving(null);
+    }
   };
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2000); };
 
   const bulkHostaway = async (field: string, value: unknown) => {
-    for (const id of Array.from(selectedHostaway)) {
-      await adminPost("updateListing", { id: String(id), [field]: value });
+    const ids = Array.from(selectedHostaway).map(String);
+    if (ids.length === 0) return;
+    setSaving("bulkHostaway");
+    try {
+      const result = await adminPost("batchUpdateListings", { ids, fields: { [field]: value } });
+      if (result.status === "success") {
+        setSelectedHostaway(new Set());
+        showToast(`Updated ${ids.length} listings`);
+      }
+    } finally {
+      setSaving(null);
     }
-    setSelectedHostaway(new Set());
-    showToast(`Updated ${selectedHostaway.size} listings`);
   };
 
   const bulkCustom = async (field: string, value: unknown) => {
-    for (const id of Array.from(selectedCustom)) {
-      await adminPost("updateCustomListing", { id, [field]: value });
+    const ids = Array.from(selectedCustom);
+    if (ids.length === 0) return;
+    setSaving("bulkCustom");
+    try {
+      const result = await adminPost("batchUpdateCustomListings", { ids, fields: { [field]: value } });
+      if (result.status === "success") {
+        setSelectedCustom(new Set());
+        showToast(`Updated ${ids.length} listings`);
+      }
+    } finally {
+      setSaving(null);
     }
-    setSelectedCustom(new Set());
-    showToast(`Updated ${selectedCustom.size} listings`);
   };
 
-  const filteredHostaway = listings.filter(l => {
-    if (!haSearch) return true;
-    const q = haSearch.toLowerCase();
+  const deferredHaSearch = useDeferredValue(haSearch);
+  const deferredClSearch = useDeferredValue(clSearch);
+  const filteredHostaway = useMemo(() => listings.filter(l => {
+    if (!deferredHaSearch) return true;
+    const q = deferredHaSearch.toLowerCase();
     const ov = overrides.listings[String(l.id)] || {};
     return (ov.titleOverride || l.title).toLowerCase().includes(q) || l.location.toLowerCase().includes(q);
-  });
+  }), [deferredHaSearch, listings, overrides.listings]);
 
-  const filteredCustom = overrides.customListings.filter(cl => {
-    if (!clSearch) return true;
-    const q = clSearch.toLowerCase();
+  const filteredCustom = useMemo(() => overrides.customListings.filter(cl => {
+    if (!deferredClSearch) return true;
+    const q = deferredClSearch.toLowerCase();
     return cl.title.toLowerCase().includes(q) || cl.location.toLowerCase().includes(q);
-  });
+  }), [deferredClSearch, overrides.customListings]);
 
   const loadReservations = async (propertyId?: string) => {
     setResLoading(true);
@@ -423,9 +644,10 @@ export default function AdminPage() {
     setPayoutMiscNote("");
   };
 
-  const filteredRes = reservations.filter(r => {
-    if (resSearch) {
-      const q = resSearch.toLowerCase();
+  const deferredResSearch = useDeferredValue(resSearch);
+  const filteredRes = useMemo(() => reservations.filter(r => {
+    if (deferredResSearch) {
+      const q = deferredResSearch.toLowerCase();
       if (!r.guestName.toLowerCase().includes(q) && !r.listingName.toLowerCase().includes(q)) return false;
     }
     if (resMonth) {
@@ -436,12 +658,12 @@ export default function AdminPage() {
       if (ci.getTime() > me.getTime() || co.getTime() <= ms.getTime()) return false;
     }
     return true;
-  });
+  }), [deferredResSearch, resMonth, reservations]);
 
   /* ─── Login Screen ─── */
   if (!authed) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0a0c0f", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "radial-gradient(circle at 20% 10%,rgba(91,92,255,.18),transparent 34%),#090d13", fontFamily: "'DM Sans',system-ui,sans-serif", padding: 20 }}>
         <div style={{ ...cardStyle, width: 360, textAlign: "center" }}>
           <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: "#fff", marginBottom: 8 }}>CareStay Admin</h1>
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 24 }}>Enter password to continue</p>
@@ -459,37 +681,54 @@ export default function AdminPage() {
 
   /* ─── Admin Panel ─── */
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0c0f", fontFamily: "'DM Sans',system-ui,sans-serif", color: "#fff" }}>
+    <div style={{ minHeight: "100vh", background: "radial-gradient(circle at 8% 0%,rgba(91,92,255,.13),transparent 28%),radial-gradient(circle at 94% 8%,rgba(43,141,255,.08),transparent 24%),#090d13", fontFamily: "'DM Sans',system-ui,sans-serif", color: "#fff" }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .admin-tabs{scrollbar-width:none}.admin-tabs::-webkit-scrollbar{display:none}
+        .admin-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:20px}
+        .admin-metric{background:rgba(18,24,32,.72);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px 16px;box-shadow:0 12px 34px rgba(0,0,0,.16)}
+        @media(max-width:760px){.admin-shell{padding:18px 14px 64px!important}.admin-metrics{grid-template-columns:1fr 1fr}.admin-header{align-items:flex-start!important;gap:14px;flex-direction:column}.admin-header-actions{width:100%;overflow-x:auto}.admin-tab-button{padding:10px 14px!important;white-space:nowrap}.admin-form-grid{grid-template-columns:1fr!important}}
+      ` }} />
       {/* Toast */}
       {toast && <div style={{ position: "fixed", top: 24, right: 24, zIndex: 2000, background: "#14b8a6", color: "#000", padding: "10px 20px", borderRadius: 10, fontSize: 13, fontWeight: 700, boxShadow: "0 4px 20px rgba(0,0,0,0.4)", animation: "fadeIn 0.2s" }}>{toast}</div>}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 24px 80px" }}>
+      <div className="admin-shell" style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 24px 80px" }}>
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32, paddingBottom: 20, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="admin-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, paddingBottom: 18, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
           <div>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".09em", textTransform: "uppercase", color: "#8f90ff", marginBottom: 5 }}>Operations dashboard</div>
             <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700 }}>CareStay Admin</h1>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>{listings.length} HostAway listings &middot; {overrides.customListings.length} custom listings</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.48)", marginTop: 4 }}>Manage the website, suites, guest proof, and reservations.</p>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={async () => { if (confirm("Reset ALL featured flags to OFF for every listing?")) { await adminPost("resetAllFeatured", {}); alert("All featured flags reset. Reload to see changes."); window.location.reload(); } }} style={{ padding: "8px 16px", background: "rgba(255,77,77,0.15)", color: "#f66", border: "1px solid rgba(255,77,77,0.2)", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>
-              Reset All Featured
+          <div className="admin-header-actions" style={{ display: "flex", gap: 8 }}>
+            <button onClick={async () => { if (confirm("Reset ALL featured flags to OFF for every listing?")) { setSaving("resetFeatured"); try { const result = await adminPost("resetAllFeatured", {}); if (result.status === "success") showToast("All featured flags reset"); } finally { setSaving(null); } } }} disabled={mutationPending > 0 || saving === "resetFeatured" || loadStatus.admin !== "loaded"} style={{ padding: "8px 16px", background: "rgba(255,77,77,0.15)", color: "#f66", border: "1px solid rgba(255,77,77,0.2)", borderRadius: 8, fontSize: 13, cursor: mutationPending > 0 || saving === "resetFeatured" ? "wait" : "pointer", opacity: loadStatus.admin !== "loaded" || mutationPending > 0 ? 0.5 : 1, fontFamily: "inherit", fontWeight: 600 }}>
+              {saving === "resetFeatured" ? "Resetting…" : "Reset All Featured"}
             </button>
-            <button onClick={() => { sessionStorage.removeItem(PW_KEY); setAuthed(false); }} style={{ padding: "8px 16px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+            <button onClick={handleLogout} style={{ padding: "8px 16px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.62)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, fontSize: 13, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
               Log Out
             </button>
           </div>
         </div>
 
+        <div className="admin-metrics">
+          {[
+            { label: "Website", value: loadStatus.settings === "loaded" ? "Ready" : "Loading…" },
+            { label: "HostAway", value: loadStatus.listings === "loaded" ? String(listings.length) : "—" },
+            { label: "Custom suites", value: loadStatus.admin === "loaded" ? String(overrides.customListings.length) : "—" },
+            { label: "Reservations", value: reservations.length ? String(reservations.length) : "Open tab" },
+          ].map((metric) => <div key={metric.label} className="admin-metric"><div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", textTransform: "uppercase", letterSpacing: ".06em", fontWeight: 700 }}>{metric.label}</div><div style={{ fontSize: 20, fontWeight: 750, marginTop: 4, color: "rgba(255,255,255,.92)" }}>{metric.value}</div></div>)}
+        </div>
+
         {/* Tab Navigation */}
-        <div style={{ display: "flex", gap: 0, marginBottom: 28, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        <div className="admin-tabs" style={{ display: "flex", gap: 4, marginBottom: 20, padding: 5, overflowX: "auto", background: "rgba(18,24,32,.72)", border: "1px solid rgba(255,255,255,.07)", borderRadius: 14, boxShadow: "0 12px 34px rgba(0,0,0,.14)" }}>
           {TABS.map(t => (
-            <button key={t.key} onClick={() => switchTab(t.key)} style={{ padding: "12px 24px", background: "none", border: "none", borderBottom: activeTab === t.key ? "2px solid #14b8a6" : "2px solid transparent", color: activeTab === t.key ? "#14b8a6" : "rgba(255,255,255,0.45)", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}>{t.label}</button>
+            <button className="admin-tab-button" key={t.key} onClick={() => switchTab(t.key)} style={{ padding: "10px 20px", background: activeTab === t.key ? "rgba(91,92,255,.18)" : "transparent", border: activeTab === t.key ? "1px solid rgba(111,112,255,.24)" : "1px solid transparent", borderRadius: 10, color: activeTab === t.key ? "#a9aaff" : "rgba(255,255,255,0.48)", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all 0.18s" }}>{t.label}</button>
           ))}
         </div>
 
         {/* ═══ TAB: Site Settings ═══ */}
-        {activeTab === "settings" && <div style={cardStyle}>
+        {activeTab === "settings" && loadStatus.settings !== "loaded" && <LoadingPanel label="Loading site settings…" error={loadStatus.settings === "error" ? loadErrors.settings : undefined} onRetry={() => { loadedResources.current.settings = false; void loadSettings(); }} />}
+        {activeTab === "settings" && loadStatus.settings === "loaded" && <div style={cardStyle}>
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Site Settings</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+          <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Contact Email</div>
               <input value={siteEmail} onChange={e => setSiteEmail(e.target.value)} style={inputStyle} />
@@ -499,7 +738,7 @@ export default function AdminPage() {
               <input value={siteAddress} onChange={e => setSiteAddress(e.target.value)} style={inputStyle} />
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+          <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Average Rating</div>
               <input value={siteStatRating} onChange={e => setSiteStatRating(e.target.value)} style={inputStyle} />
@@ -509,23 +748,23 @@ export default function AdminPage() {
             <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Hero Tagline (homepage subtitle)</div>
             <textarea value={siteHeroTagline} onChange={e => setSiteHeroTagline(e.target.value)} rows={2} placeholder="Leave empty for default" style={{ ...inputStyle, resize: "vertical" }} />
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 16 }}>
+          <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 16 }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Properties Managed</div>
               <input value={siteStatProps} onChange={e => setSiteStatProps(e.target.value)} style={inputStyle} />
             </div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Healthcare Pros Housed</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Professionals Housed</div>
               <input value={siteStatPros} onChange={e => setSiteStatPros(e.target.value)} style={inputStyle} />
             </div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Hospital Partnerships</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Organization Partners</div>
               <input value={siteStatHospitals} onChange={e => setSiteStatHospitals(e.target.value)} style={inputStyle} />
             </div>
           </div>
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginBottom: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: 12 }}>Announcement Banner</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 14 }}>
+            <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 14 }}>
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Banner Enabled</div>
                 <button onClick={() => setBannerEnabled(!bannerEnabled)} style={{ ...inputStyle, cursor: "pointer", textAlign: "left", color: bannerEnabled ? "#0fa" : "rgba(255,255,255,0.4)" }}>{bannerEnabled ? "ON" : "OFF"}</button>
@@ -548,10 +787,17 @@ export default function AdminPage() {
             <button onClick={async () => {
               setSaving("settings");
               const pw = sessionStorage.getItem(PW_KEY) || password;
-              await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw, settings: { contactEmail: siteEmail, companyAddress: siteAddress, heroTagline: siteHeroTagline, statProperties: siteStatProps, statHealthcarePros: siteStatPros, statHospitalPartnerships: siteStatHospitals, statAverageRating: siteStatRating, bannerEnabled: bannerEnabled, bannerText: bannerText, bannerButtonText: bannerButtonText, bannerLinkUrl: bannerLinkUrl } }) });
-              setSaving(null);
-              setSettingsSaved(true);
-              setTimeout(() => setSettingsSaved(false), 2000);
+              try {
+                const response = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw, settings: { contactEmail: siteEmail, companyAddress: siteAddress, heroTagline: siteHeroTagline, statProperties: siteStatProps, statHealthcarePros: siteStatPros, statHospitalPartnerships: siteStatHospitals, statAverageRating: siteStatRating, bannerEnabled: bannerEnabled, bannerText: bannerText, bannerButtonText: bannerButtonText, bannerLinkUrl: bannerLinkUrl } }) });
+                const result = await response.json();
+                if (!response.ok || result.status !== "success") throw new Error(result.message || "Settings could not be saved.");
+                setSettingsSaved(true);
+                setTimeout(() => setSettingsSaved(false), 2000);
+              } catch (error: unknown) {
+                showToast(error instanceof Error ? error.message : "Settings could not be saved.");
+              } finally {
+                setSaving(null);
+              }
             }} style={btnStyle} disabled={saving === "settings"}>
               {saving === "settings" ? "Saving..." : "Save Settings"}
             </button>
@@ -560,14 +806,15 @@ export default function AdminPage() {
         </div>}
 
         {/* ═══ TAB: HostAway Listings ═══ */}
-        {activeTab === "hostaway" && <div style={cardStyle}>
+        {activeTab === "hostaway" && (loadStatus.admin !== "loaded" || loadStatus.listings !== "loaded") && <LoadingPanel label="Loading your HostAway controls…" error={loadStatus.admin === "error" ? loadErrors.admin : loadStatus.listings === "error" ? loadErrors.listings : undefined} onRetry={() => { loadedResources.current.admin = false; loadedResources.current.listings = false; void Promise.all([loadAdminData(), loadListings()]); }} />}
+        {activeTab === "hostaway" && loadStatus.admin === "loaded" && loadStatus.listings === "loaded" && <div style={cardStyle}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 16, flexWrap: "wrap" }}>
             <h2 style={{ fontSize: 18, fontWeight: 700 }}>HostAway Listings ({filteredHostaway.length})</h2>
             <input placeholder="Search by title or location..." value={haSearch} onChange={e => setHaSearch(e.target.value)} style={{ ...inputStyle, width: 280, padding: "8px 14px" }} />
           </div>
           {selectedHostaway.size > 0 && (
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 16, padding: "12px 16px", background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", borderRadius: 10 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#14b8a6", marginRight: 8 }}>{selectedHostaway.size} selected</span>
+            <div aria-busy={saving === "bulkHostaway"} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 16, padding: "12px 16px", background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", borderRadius: 10, opacity: mutationPending > 0 ? 0.65 : 1, pointerEvents: mutationPending > 0 ? "none" : "auto" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#14b8a6", marginRight: 8 }}>{saving === "bulkHostaway" ? "Updating…" : `${selectedHostaway.size} selected`}</span>
               <select onChange={e => { if (e.target.value) { bulkHostaway("availabilityStatus", e.target.value); e.target.value = ""; } }} style={{ ...inputStyle, width: "auto", padding: "6px 10px", fontSize: 12 }}><option value="">Set Status...</option><option value="Available">Available</option><option value="Almost Booked">Almost Booked</option><option value="Waitlist Only">Waitlist Only</option><option value="Booked">Booked</option></select>
               <button onClick={() => bulkHostaway("hidden", false)} style={{ padding: "6px 12px", background: "rgba(0,255,170,0.12)", color: "#0fa", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Show</button>
               <button onClick={() => bulkHostaway("hidden", true)} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Hide</button>
@@ -597,7 +844,7 @@ export default function AdminPage() {
                       <td style={tdStyle}><input type="checkbox" checked={selectedHostaway.has(l.id)} onChange={e => { const s = new Set(selectedHostaway); if (e.target.checked) s.add(l.id); else s.delete(l.id); setSelectedHostaway(s); }} /></td>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          {l.img && <img src={l.img} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect fill='%23222' width='40' height='40'/%3E%3Ctext x='50%25' y='50%25' fill='%23555' font-size='14' text-anchor='middle' dy='.35em'%3E?%3C/text%3E%3C/svg%3E"; }} />}
+                          {l.img && <img src={l.img} alt="" loading="lazy" decoding="async" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect fill='%23222' width='40' height='40'/%3E%3Ctext x='50%25' y='50%25' fill='%23555' font-size='14' text-anchor='middle' dy='.35em'%3E?%3C/text%3E%3C/svg%3E"; }} />}
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 14 }}>{ov.titleOverride || l.title}</div>
                             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>ID: {l.id}</div>
@@ -607,8 +854,8 @@ export default function AdminPage() {
                       <td style={tdStyle}>{l.location}</td>
                       <td style={tdStyle}>{ov.priceOverride ? `$${ov.priceOverride.toLocaleString()}` : `$${l.price.toLocaleString()}`}/mo</td>
                       <td style={tdStyle}><StatusBadge status={ov.availabilityStatus} /></td>
-                      <td style={tdStyle}><Toggle checked={!!ov.featured} onChange={(v) => updateOverride(l.id, "featured", v)} /></td>
-                      <td style={tdStyle}><Toggle checked={!ov.hidden} onChange={(v) => updateOverride(l.id, "hidden", !v)} /></td>
+                      <td style={tdStyle}><Toggle checked={!!ov.featured} disabled={mutationPending > 0 || saving === `${l.id}-featured`} onChange={(v) => updateOverride(l.id, "featured", v)} /></td>
+                      <td style={tdStyle}><Toggle checked={!ov.hidden} disabled={mutationPending > 0 || saving === `${l.id}-hidden`} onChange={(v) => updateOverride(l.id, "hidden", !v)} /></td>
                       <td style={tdStyle}><button onClick={() => setExpandedId(l.id)} style={{ background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)", borderRadius: 6, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Edit</button></td>
                     </tr>
                   );
@@ -622,7 +869,7 @@ export default function AdminPage() {
             const ov = overrides.listings[String(l.id)] || {};
             return (
               <Modal open={true} onClose={() => setExpandedId(null)} title={`Edit: ${ov.titleOverride || l.title}`}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                   <div>
                     <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Title Override</label>
                     <input style={inputStyle} defaultValue={ov.titleOverride || ""} placeholder={l.title} onBlur={e => { if (e.target.value !== (ov.titleOverride || "")) saveExpandedOverrides(l.id, { titleOverride: e.target.value || undefined }); }} />
@@ -659,16 +906,16 @@ export default function AdminPage() {
                 </div>
                 <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-                    <Toggle checked={!ov.hidden} onChange={(v) => saveExpandedOverrides(l.id, { hidden: !v })} /> Visible
+                    <Toggle checked={!ov.hidden} disabled={mutationPending > 0} onChange={(v) => saveExpandedOverrides(l.id, { hidden: !v })} /> Visible
                   </label>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-                    <Toggle checked={!!ov.soakingTub} onChange={(v) => saveExpandedOverrides(l.id, { soakingTub: v })} /> Soaking Tub
+                    <Toggle checked={!!ov.soakingTub} disabled={mutationPending > 0} onChange={(v) => saveExpandedOverrides(l.id, { soakingTub: v })} /> Soaking Tub
                   </label>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-                    <Toggle checked={!!ov.carestayStandard} onChange={(v) => saveExpandedOverrides(l.id, { carestayStandard: v })} /> CareStay Standard
+                    <Toggle checked={!!ov.carestayStandard} disabled={mutationPending > 0} onChange={(v) => saveExpandedOverrides(l.id, { carestayStandard: v })} /> CareStay Standard
                   </label>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-                    <Toggle checked={!!ov.featured} onChange={(v) => saveExpandedOverrides(l.id, { featured: v })} /> <span style={{ color: "#f0c040" }}>Featured</span>
+                    <Toggle checked={!!ov.featured} disabled={mutationPending > 0} onChange={(v) => saveExpandedOverrides(l.id, { featured: v })} /> <span style={{ color: "#f0c040" }}>Featured</span>
                   </label>
                   {saving === `${expandedId}-expanded` && <span style={{ fontSize: 12, color: "#0fa" }}>Saving...</span>}
                 </div>
@@ -678,14 +925,18 @@ export default function AdminPage() {
         </div>}
 
         {/* ═══ TAB: Custom Listings ═══ */}
-        {activeTab === "custom" && <div style={cardStyle}>
+        {activeTab === "custom" && loadStatus.admin !== "loaded" && <LoadingPanel label="Loading custom listings…" error={loadStatus.admin === "error" ? loadErrors.admin : undefined} onRetry={() => { loadedResources.current.admin = false; void loadAdminData(); }} />}
+        {activeTab === "custom" && loadStatus.admin === "loaded" && <div style={cardStyle}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 16, flexWrap: "wrap" }}>
             <h2 style={{ fontSize: 18, fontWeight: 700 }}>Custom Listings ({filteredCustom.length})</h2>
-            <input placeholder="Search by title or location..." value={clSearch} onChange={e => setClSearch(e.target.value)} style={{ ...inputStyle, width: 280, padding: "8px 14px" }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              <input placeholder="Search by title or location..." value={clSearch} onChange={e => setClSearch(e.target.value)} style={{ ...inputStyle, width: 280, padding: "8px 14px" }} />
+              {clSearch.trim() && <span style={{ fontSize: 10, color: "rgba(255,255,255,.35)", textAlign: "right" }}>Clear search to reorder suites</span>}
+            </div>
           </div>
           {selectedCustom.size > 0 && (
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 16, padding: "12px 16px", background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", borderRadius: 10 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#14b8a6", marginRight: 8 }}>{selectedCustom.size} selected</span>
+            <div aria-busy={saving === "bulkCustom"} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 16, padding: "12px 16px", background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", borderRadius: 10, opacity: mutationPending > 0 ? 0.65 : 1, pointerEvents: mutationPending > 0 ? "none" : "auto" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#14b8a6", marginRight: 8 }}>{saving === "bulkCustom" ? "Updating…" : `${selectedCustom.size} selected`}</span>
               <select onChange={e => { if (e.target.value) { bulkCustom("availabilityStatus", e.target.value); e.target.value = ""; } }} style={{ ...inputStyle, width: "auto", padding: "6px 10px", fontSize: 12 }}><option value="">Set Status...</option><option value="Available">Available</option><option value="Almost Booked">Almost Booked</option><option value="Waitlist Only">Waitlist Only</option><option value="Booked">Booked</option></select>
               <button onClick={() => bulkCustom("hidden", false)} style={{ padding: "6px 12px", background: "rgba(0,255,170,0.12)", color: "#0fa", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Show</button>
               <button onClick={() => bulkCustom("hidden", true)} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Hide</button>
@@ -715,7 +966,7 @@ export default function AdminPage() {
                       <td style={tdStyle}><input type="checkbox" checked={selectedCustom.has(cl.id)} onChange={e => { const s = new Set(selectedCustom); if (e.target.checked) s.add(cl.id); else s.delete(cl.id); setSelectedCustom(s); }} /></td>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          {cl.images?.[0] && <img src={cl.images[0]} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect fill='%23222' width='40' height='40'/%3E%3Ctext x='50%25' y='50%25' fill='%23555' font-size='14' text-anchor='middle' dy='.35em'%3E?%3C/text%3E%3C/svg%3E"; }} />}
+                          {cl.images?.[0] && <img src={cl.images[0]} alt="" loading="lazy" decoding="async" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect fill='%23222' width='40' height='40'/%3E%3Ctext x='50%25' y='50%25' fill='%23555' font-size='14' text-anchor='middle' dy='.35em'%3E?%3C/text%3E%3C/svg%3E"; }} />}
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 14 }}>{cl.title}</div>
                             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{cl.beds}bd / {cl.baths}ba</div>
@@ -725,18 +976,18 @@ export default function AdminPage() {
                       <td style={tdStyle}>{cl.location}</td>
                       <td style={tdStyle}>${cl.price.toLocaleString()}/mo</td>
                       <td style={tdStyle}><StatusBadge status={cl.availabilityStatus} /></td>
-                      <td style={tdStyle}><Toggle checked={!!cl.featured} onChange={async (v) => { await adminPost("updateCustomListing", { id: cl.id, featured: v }); }} /></td>
-                      <td style={tdStyle}><Toggle checked={!cl.hidden} onChange={async (v) => { await adminPost("updateCustomListing", { id: cl.id, hidden: !v }); }} /></td>
+                      <td style={tdStyle}><Toggle checked={!!cl.featured} disabled={mutationPending > 0 || saving === `custom-${cl.id}-featured`} onChange={(v) => updateCustomField(cl.id, "featured", v)} /></td>
+                      <td style={tdStyle}><Toggle checked={!cl.hidden} disabled={mutationPending > 0 || saving === `custom-${cl.id}-hidden`} onChange={(v) => updateCustomField(cl.id, "hidden", !v)} /></td>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", gap: 4 }}>
-                          <button disabled={idx === 0} onClick={() => moveCustomListing(cl.id, "up")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: idx === 0 ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 12, padding: "2px 8px", cursor: idx === 0 ? "default" : "pointer", fontFamily: "inherit" }}>▲</button>
-                          <button disabled={idx === overrides.customListings.length - 1} onClick={() => moveCustomListing(cl.id, "down")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: idx === overrides.customListings.length - 1 ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 12, padding: "2px 8px", cursor: idx === overrides.customListings.length - 1 ? "default" : "pointer", fontFamily: "inherit" }}>▼</button>
+                          <button disabled={mutationPending > 0 || Boolean(clSearch.trim()) || idx === 0} onClick={() => moveCustomListing(cl.id, "up")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: mutationPending > 0 || clSearch.trim() || idx === 0 ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 12, padding: "2px 8px", cursor: mutationPending > 0 || clSearch.trim() || idx === 0 ? "default" : "pointer", fontFamily: "inherit" }}>▲</button>
+                          <button disabled={mutationPending > 0 || Boolean(clSearch.trim()) || idx === overrides.customListings.length - 1} onClick={() => moveCustomListing(cl.id, "down")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: mutationPending > 0 || clSearch.trim() || idx === overrides.customListings.length - 1 ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 12, padding: "2px 8px", cursor: mutationPending > 0 || clSearch.trim() || idx === overrides.customListings.length - 1 ? "default" : "pointer", fontFamily: "inherit" }}>▼</button>
                         </div>
                       </td>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", gap: 6 }}>
                           <button onClick={() => openEditCustom(cl)} style={{ background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Edit</button>
-                          <button onClick={() => deleteCustom(cl.id, cl.title)} style={{ background: "rgba(255,77,77,0.12)", color: "#f66", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Delete</button>
+                          <button disabled={mutationPending > 0} onClick={() => deleteCustom(cl.id, cl.title)} style={{ background: "rgba(255,77,77,0.12)", color: "#f66", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: mutationPending > 0 ? "wait" : "pointer", opacity: mutationPending > 0 ? 0.55 : 1, fontWeight: 600, fontFamily: "inherit" }}>Delete</button>
                         </div>
                       </td>
                     </tr>
@@ -751,7 +1002,7 @@ export default function AdminPage() {
             if (!cl) return null;
             return (
               <Modal open={true} onClose={() => setEditingCustomId(null)} title={`Edit: ${cl.title}`}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Title *</label><input style={inputStyle} value={editTitle} onChange={e => setEditTitle(e.target.value)} /></div>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Location</label><input style={inputStyle} value={editLocation} onChange={e => setEditLocation(e.target.value)} /></div>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Beds</label><input style={inputStyle} type="number" value={editBeds} onChange={e => setEditBeds(e.target.value)} /></div>
@@ -767,7 +1018,7 @@ export default function AdminPage() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
                       {editImg.split("\n").filter(s => s.trim()).map((url, i, arr) => (
                         <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", background: i === 0 ? "rgba(0,255,170,0.06)" : "rgba(255,255,255,0.02)", border: i === 0 ? "1px solid rgba(0,255,170,0.15)" : "1px solid rgba(255,255,255,0.06)", borderRadius: 8 }}>
-                          <img src={url.trim()} alt={`Photo ${i + 1}`} style={{ width: 64, height: 44, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='44'%3E%3Crect fill='%23222' width='64' height='44'/%3E%3Ctext x='50%25' y='50%25' fill='%23f66' font-size='10' text-anchor='middle' dy='.35em'%3EBroken%3C/text%3E%3C/svg%3E"; }} />
+                          <img src={url.trim()} alt={`Photo ${i + 1}`} loading="lazy" decoding="async" style={{ width: 64, height: 44, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='44'%3E%3Crect fill='%23222' width='64' height='44'/%3E%3Ctext x='50%25' y='50%25' fill='%23f66' font-size='10' text-anchor='middle' dy='.35em'%3EBroken%3C/text%3E%3C/svg%3E"; }} />
                           <span style={{ fontSize: 11, color: i === 0 ? "#0fa" : "rgba(255,255,255,0.4)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{i === 0 ? "Cover · " : ""}{url.trim().split("/").pop()}</span>
                           <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
                             <button disabled={i === 0} onClick={() => { const lines = editImg.split("\n").filter(s => s.trim()); [lines[i - 1], lines[i]] = [lines[i], lines[i - 1]]; setEditImg(lines.join("\n")); }} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: i === 0 ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 11, padding: "2px 6px", cursor: i === 0 ? "default" : "pointer", fontFamily: "inherit" }}>▲</button>
@@ -826,7 +1077,7 @@ export default function AdminPage() {
                   </label>
                 </div>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  <button onClick={saveEditCustom} style={btnStyle} disabled={saving === "editCustom"}>{saving === "editCustom" ? "Saving..." : "Save Changes"}</button>
+                  <button onClick={saveEditCustom} style={btnStyle} disabled={mutationPending > 0 || saving === "editCustom"}>{saving === "editCustom" ? "Saving..." : "Save Changes"}</button>
                   <button onClick={() => setEditingCustomId(null)} style={{ padding: "10px 20px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
                   {saving === "editCustom" && <span style={{ fontSize: 12, color: "#0fa" }}>Saving...</span>}
                 </div>
@@ -848,7 +1099,7 @@ export default function AdminPage() {
 
           {/* Add Custom Listing Form */}
           <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: "rgba(255,255,255,0.7)" }}>Add Custom Listing</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+          <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
             <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Title *</label><input style={inputStyle} value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g., Luxury Downtown Suite" /></div>
             <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Location</label><input style={inputStyle} value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder="e.g., King West Village" /></div>
             <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Beds</label><input style={inputStyle} type="number" value={newBeds} onChange={(e) => setNewBeds(e.target.value)} /></div>
@@ -864,7 +1115,7 @@ export default function AdminPage() {
             {newImg.trim() && (
               <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                 {newImg.split("\n").filter(s => s.trim()).map((url, i) => (
-                  <img key={i} src={url.trim()} alt={`Preview ${i + 1}`} style={{ width: 60, height: 42, objectFit: "cover", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='42'%3E%3Crect fill='%23222' width='60' height='42'/%3E%3Ctext x='50%25' y='50%25' fill='%23f66' font-size='10' text-anchor='middle' dy='.35em'%3EBroken%3C/text%3E%3C/svg%3E"; }} />
+                  <img key={i} src={url.trim()} alt={`Preview ${i + 1}`} loading="lazy" decoding="async" style={{ width: 60, height: 42, objectFit: "cover", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }} onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='42'%3E%3Crect fill='%23222' width='60' height='42'/%3E%3Ctext x='50%25' y='50%25' fill='%23f66' font-size='10' text-anchor='middle' dy='.35em'%3EBroken%3C/text%3E%3C/svg%3E"; }} />
                 ))}
               </div>
             )}
@@ -884,11 +1135,12 @@ export default function AdminPage() {
               <Toggle checked={newFeatured} onChange={setNewFeatured} /> <span style={{ color: "#f0c040" }}>Featured</span>
             </label>
           </div>
-          <button onClick={addCustomListing} style={btnStyle}>Add Listing</button>
+          <button onClick={addCustomListing} style={btnStyle} disabled={mutationPending > 0 || saving === "addCustom"}>{saving === "addCustom" ? "Adding…" : "Add Listing"}</button>
         </div>}
 
         {/* ═══ TAB: Reviews ═══ */}
-        {activeTab === "reviews" && <div style={cardStyle}>
+        {activeTab === "reviews" && (loadStatus.admin !== "loaded" || loadStatus.listings !== "loaded") && <LoadingPanel label="Loading review management…" error={loadStatus.admin === "error" ? loadErrors.admin : loadStatus.listings === "error" ? loadErrors.listings : undefined} onRetry={() => { loadedResources.current.admin = false; loadedResources.current.listings = false; void Promise.all([loadAdminData(), loadListings()]); }} />}
+        {activeTab === "reviews" && loadStatus.admin === "loaded" && loadStatus.listings === "loaded" && <div style={cardStyle}>
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Reviews Management</h2>
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Select Listing</label>
@@ -898,7 +1150,7 @@ export default function AdminPage() {
               onChange={e => { setReviewListingId(e.target.value || null); setEditingReviewId(null); }}
             >
               <option value="">— Choose a listing —</option>
-              {listings.map(l => <option key={l.id} value={String(l.id)}>{l.title} (ID: {l.id})</option>)}
+              {listings.map(l => <option key={l.id} value={String(l.id)}>{overrides.listings[String(l.id)]?.titleOverride || l.title} (ID: {l.id})</option>)}
               {overrides.customListings.map(cl => <option key={cl.id} value={cl.id}>{cl.title} (Custom)</option>)}
             </select>
           </div>
@@ -913,7 +1165,7 @@ export default function AdminPage() {
                   <div>
                     <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Display Total Count</label>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <input type="number" min="0" value={rd.totalCount} onChange={async (e) => { await adminPost("updateReviewSettings", { listingId: reviewListingId, totalCount: Number(e.target.value) || 0 }); }} style={{ ...inputStyle, width: 80, padding: "6px 10px", textAlign: "center" }} />
+                      <ReviewCountInput value={rd.totalCount} disabled={mutationPending > 0} onSave={async (totalCount) => { await adminPost("updateReviewSettings", { listingId: reviewListingId, totalCount }); }} />
                       <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>reviews shown in header (even if fewer are written)</span>
                     </div>
                   </div>
@@ -932,7 +1184,7 @@ export default function AdminPage() {
                       <div key={r.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "12px 16px", marginBottom: 8 }}>
                         {editingReviewId === r.id ? (
                           <div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 1fr", gap: 8, marginBottom: 8 }}>
+                            <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 80px 1fr", gap: 8, marginBottom: 8 }}>
                               <input style={inputStyle} defaultValue={r.name} id={`edit-name-${r.id}`} placeholder="Name" />
                               <input style={{ ...inputStyle, textAlign: "center" }} type="number" min="1" max="5" defaultValue={r.stars} id={`edit-stars-${r.id}`} />
                               <input style={inputStyle} type="date" defaultValue={r.date} id={`edit-date-${r.id}`} />
@@ -950,9 +1202,14 @@ export default function AdminPage() {
                                 const date = (document.getElementById(`edit-date-${r.id}`) as HTMLInputElement).value;
                                 const verified = (document.getElementById(`edit-verified-${r.id}`) as HTMLInputElement).checked;
                                 const stayInfo = (document.getElementById(`edit-stayInfo-${r.id}`) as HTMLInputElement).value;
-                                await adminPost("updateReview", { listingId: reviewListingId, reviewId: r.id, name, stars, text, date, verified, stayInfo });
-                                setEditingReviewId(null);
-                              }} style={{ ...btnStyle, padding: "6px 14px", fontSize: 12 }}>Save</button>
+                                setSaving(`review-${r.id}`);
+                                try {
+                                  const result = await adminPost("updateReview", { listingId: reviewListingId, reviewId: r.id, name, stars, text, date, verified, stayInfo });
+                                  if (result.status === "success") setEditingReviewId(null);
+                                } finally {
+                                  setSaving(null);
+                                }
+                              }} disabled={mutationPending > 0 || saving === `review-${r.id}`} style={{ ...btnStyle, padding: "6px 14px", fontSize: 12 }}>{saving === `review-${r.id}` ? "Saving…" : "Save"}</button>
                               <button onClick={() => setEditingReviewId(null)} style={{ padding: "6px 14px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
                             </div>
                           </div>
@@ -970,7 +1227,7 @@ export default function AdminPage() {
                             </div>
                             <div style={{ display: "flex", gap: 6, flexShrink: 0, marginLeft: 12 }}>
                               <button onClick={() => setEditingReviewId(r.id)} style={{ background: "rgba(0,170,255,0.12)", color: "#0af", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Edit</button>
-                              <button onClick={async () => { if (confirm("Delete this review?")) await adminPost("deleteReview", { listingId: reviewListingId, reviewId: r.id }); }} style={{ background: "rgba(255,77,77,0.12)", color: "#f66", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Del</button>
+                              <button disabled={mutationPending > 0} onClick={async () => { if (confirm("Delete this review?")) await adminPost("deleteReview", { listingId: reviewListingId, reviewId: r.id }); }} style={{ background: "rgba(255,77,77,0.12)", color: "#f66", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: mutationPending > 0 ? "wait" : "pointer", opacity: mutationPending > 0 ? 0.55 : 1, fontWeight: 600, fontFamily: "inherit" }}>Del</button>
                             </div>
                           </div>
                         )}
@@ -982,7 +1239,7 @@ export default function AdminPage() {
                 {/* Add review form */}
                 <div style={{ padding: "16px 18px", background: "rgba(0,170,255,0.03)", border: "1px solid rgba(0,170,255,0.1)", borderRadius: 10 }}>
                   <h3 style={{ fontSize: 13, fontWeight: 700, color: "#0af", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.04em" }}>Add Review</h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 1fr", gap: 8, marginBottom: 8 }}>
+                  <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 80px 1fr", gap: 8, marginBottom: 8 }}>
                     <input style={inputStyle} value={revName} onChange={e => setRevName(e.target.value)} placeholder="Reviewer name" />
                     <input style={{ ...inputStyle, textAlign: "center" }} type="number" min="1" max="5" value={revStars} onChange={e => setRevStars(e.target.value)} placeholder="Stars" />
                     <input style={inputStyle} type="date" value={revDate} onChange={e => setRevDate(e.target.value)} />
@@ -995,9 +1252,16 @@ export default function AdminPage() {
                     </label>
                     <button onClick={async () => {
                       if (!revName || !revText) return alert("Name and text required");
-                      await adminPost("addReview", { listingId: reviewListingId, name: revName, stars: Number(revStars), text: revText, date: revDate, verified: revVerified, stayInfo: revStayInfo });
-                      setRevName(""); setRevStars("5"); setRevText(""); setRevDate(new Date().toISOString().split("T")[0]); setRevVerified(true); setRevStayInfo("");
-                    }} style={btnStyle}>Add Review</button>
+                      setSaving("addReview");
+                      try {
+                        const result = await adminPost("addReview", { listingId: reviewListingId, name: revName, stars: Number(revStars), text: revText, date: revDate, verified: revVerified, stayInfo: revStayInfo });
+                        if (result.status === "success") {
+                          setRevName(""); setRevStars("5"); setRevText(""); setRevDate(new Date().toISOString().split("T")[0]); setRevVerified(true); setRevStayInfo("");
+                        }
+                      } finally {
+                        setSaving(null);
+                      }
+                    }} disabled={mutationPending > 0 || saving === "addReview"} style={btnStyle}>{saving === "addReview" ? "Adding…" : "Add Review"}</button>
                   </div>
                 </div>
               </div>
@@ -1006,14 +1270,15 @@ export default function AdminPage() {
         </div>}
 
         {/* ═══ TAB: Reservations ═══ */}
-        {activeTab === "reservations" && <div style={cardStyle}>
+        {activeTab === "reservations" && loadStatus.listings !== "loaded" && <LoadingPanel label="Loading the property list…" error={loadStatus.listings === "error" ? loadErrors.listings : undefined} onRetry={() => { loadedResources.current.listings = false; void loadListings(); }} />}
+        {activeTab === "reservations" && loadStatus.listings === "loaded" && <div style={cardStyle}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
             <h2 style={{ fontSize: 18, fontWeight: 700 }}>Reservations {resLoading ? "(loading...)" : `(${filteredRes.length})`}</h2>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <input placeholder="Search guest..." value={resSearch} onChange={e => setResSearch(e.target.value)} style={{ ...inputStyle, width: 160, padding: "8px 14px" }} />
               <select value={resProperty} onChange={e => { setResProperty(e.target.value); }} style={{ ...inputStyle, width: 220, padding: "8px 14px", cursor: "pointer" }}>
                 <option value="">Select a Property</option>
-                {listings.map(l => <option key={l.id} value={String(l.id)}>{l.title}</option>)}
+                {listings.map(l => <option key={l.id} value={String(l.id)}>{overrides.listings[String(l.id)]?.titleOverride || l.title}</option>)}
               </select>
               <input type="month" value={resMonth} onChange={e => setResMonth(e.target.value)} style={{ ...inputStyle, width: 150, padding: "8px 14px" }} />
               {(resMonth || resProperty) && <button onClick={() => { setResMonth(""); setResProperty(""); setReservations([]); }} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "rgba(255,255,255,0.5)", padding: "6px 10px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Clear</button>}
@@ -1193,7 +1458,7 @@ export default function AdminPage() {
 
             return (
               <Modal open={true} onClose={() => setPayoutRes(null)} title={`Payout — ${r.guestName}`}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+                <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Property</label><div style={{ fontSize: 14, fontWeight: 600 }}>{r.listingName}</div></div>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Dates</label><div style={{ fontSize: 13 }}>{r.checkIn} → {r.checkOut} ({nights}n)</div></div>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Channel / Rate</label><div style={{ fontSize: 13 }}>{r.channelName} · ${pricePerNight}/night</div></div>

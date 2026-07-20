@@ -260,7 +260,7 @@ export default function CorporatePage() {
                 <div style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,var(--accent),var(--accent2))", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: "#fff" }}>CS</div>
                 <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>CareStay Suites</span>
               </div>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.62)", lineHeight: 1.65 }}>Premium furnished housing for healthcare professionals and corporate teams, primarily across the Greater Toronto Area.</p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.62)", lineHeight: 1.65 }}>Professionally managed furnished stays for professionals, teams, and organizations across the Greater Toronto Area.</p>
             </div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.82)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Quick Links</div>

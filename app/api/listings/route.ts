@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getListings, extractAmenityNames, extractBedroomCount } from "@/app/lib/hostaway";
 import { redis } from "@/app/lib/redis";
+import { filterPublicAmenities, getPublicListingDescription, hasRestrictedDurationLanguage } from "@/app/lib/public-listing-copy";
 
 // Upstash Redis overrides store
 interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string; sortOrder?: number; featured?: boolean; videoUrl?: string; availabilityStatus?: string }
@@ -8,6 +9,15 @@ interface CustomListing { id: string; title: string; location: string; beds: num
 interface ReviewItem { id: string; name: string; stars: number; text: string; date: string; verified: boolean; stayInfo?: string }
 interface ListingReviews { totalCount: number; items: ReviewItem[] }
 interface OverridesData { listings: Record<string, ListingOverride>; customListings: CustomListing[]; reviews?: Record<string, ListingReviews> }
+
+function getPublishedReviewMetrics(reviews?: ListingReviews): { count: number; average: number } {
+  const published = reviews?.items.filter((review) => !review.id.startsWith("rev-gen-") && !hasRestrictedDurationLanguage(review.text)) || [];
+  if (published.length === 0) return { count: 0, average: 0 };
+  return {
+    count: published.length,
+    average: Math.round((published.reduce((sum, review) => sum + review.stars, 0) / published.length) * 10) / 10,
+  };
+}
 
 const GTA_HOSPITALS = [
   { name: "Toronto General Hospital", lat: 43.6594, lng: -79.3882 },
@@ -65,9 +75,15 @@ export async function GET(request: Request) {
           sqft: l.squareFeet || 0,
           img: l.pictures?.[0]?.originalUrl || l.pictures?.[0]?.url || l.images?.[0]?.url || l.listingImages?.[0]?.url || l.thumbnailUrl || "",
           images: (l.pictures?.map((p) => p.originalUrl || p.url) || l.images?.map((p) => p.url) || l.listingImages?.map((p) => p.url) || (l.thumbnailUrl ? [l.thumbnailUrl] : [])),
-          description: ov.descriptionOverride || l.description || "",
+          description: getPublicListingDescription({
+            title: ov.titleOverride || l.name,
+            location: l.city || "Toronto",
+            beds: l.bedsNumber || l.beds || 1,
+            bedrooms: extractBedroomCount(l),
+            description: ov.descriptionOverride || l.description || "",
+          }),
           available: true,
-          amenities: extractAmenityNames(l),
+          amenities: filterPublicAmenities(extractAmenityNames(l)),
           address: l.address || "",
           latitude: l.latitude,
           longitude: l.longitude,
@@ -82,8 +98,8 @@ export async function GET(request: Request) {
           featured: ov.featured === true,
           videoUrl: ov.videoUrl || "",
           availabilityStatus: ov.availabilityStatus || "Available",
-          reviewCount: (() => { const r = overrides.reviews?.[String(l.id)]; return r ? (r.totalCount || r.items.length) : 0; })(),
-          reviewAvg: (() => { const r = overrides.reviews?.[String(l.id)]; if (!r) return 0; if (r.items.length > 0) return Math.round((r.items.reduce((a, rv) => a + rv.stars, 0) / r.items.length) * 10) / 10; return r.totalCount > 0 ? 4.7 : 0; })(),
+          reviewCount: getPublishedReviewMetrics(overrides.reviews?.[String(l.id)]).count,
+          reviewAvg: getPublishedReviewMetrics(overrides.reviews?.[String(l.id)]).average,
         };
       })
       .filter((l) => includeHidden || !l.hidden);
@@ -99,7 +115,12 @@ export async function GET(request: Request) {
       sqft: cl.sqft,
       img: cl.images?.[0] || cl.img,
       images: cl.images?.length ? cl.images : (cl.img ? [cl.img] : []),
-      description: cl.description,
+      description: getPublicListingDescription({
+        title: cl.title,
+        location: cl.location,
+        beds: cl.beds,
+        description: cl.description,
+      }),
       available: true,
       amenities: [] as string[],
       address: "",
@@ -116,8 +137,8 @@ export async function GET(request: Request) {
       featured: cl.featured === true,
       videoUrl: cl.videoUrl || "",
       availabilityStatus: cl.availabilityStatus || "Available",
-      reviewCount: (() => { const r = overrides.reviews?.[String(cl.id)]; return r ? (r.totalCount || r.items.length) : 0; })(),
-      reviewAvg: (() => { const r = overrides.reviews?.[String(cl.id)]; if (!r) return 0; if (r.items.length > 0) return Math.round((r.items.reduce((a, rv) => a + rv.stars, 0) / r.items.length) * 10) / 10; return r.totalCount > 0 ? 4.7 : 0; })(),
+      reviewCount: getPublishedReviewMetrics(overrides.reviews?.[String(cl.id)]).count,
+      reviewAvg: getPublishedReviewMetrics(overrides.reviews?.[String(cl.id)]).average,
       isCustom: true,
     })).filter((l) => includeHidden || !l.hidden);
 

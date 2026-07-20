@@ -5,6 +5,12 @@ import Link from "next/link";
 
 interface Listing { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; available: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string }
 
+function ListingPhoto({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(!src);
+  if (failed) return <div className="listing-media-fallback"><strong>CareStay Suites</strong><span>Photo unavailable</span></div>;
+  return <img src={src} alt={alt} className="listing-img" onError={() => setFailed(true)} />;
+}
+
 export default function AllListingsPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -13,14 +19,16 @@ export default function AllListingsPage() {
   const [priceFilter, setPriceFilter] = useState("all");
   const [areaFilter, setAreaFilter] = useState("all");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   useEffect(() => {
     fetch("/api/listings")
       .then(r => r.json())
       .then(data => {
         if (data.status === "success") setListings(data.listings || []);
+        else setLoadError(true);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => { setLoadError(true); setLoading(false); });
   }, []);
 
   // Dynamic cities from actual listing data
@@ -45,7 +53,11 @@ export default function AllListingsPage() {
         .listings-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
         .listing-card{background:var(--surface);border-radius:18px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);transition:transform 0.2s,box-shadow 0.2s}
         .listing-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lift)}
-        .listing-img{width:100%;height:220px;object-fit:cover;display:block}
+        .listing-media{height:220px;position:relative;overflow:hidden;background:linear-gradient(145deg,#e8eef2 0%,#f7f3ed 52%,#dfe7ed 100%)}
+        .listing-media-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink-soft);text-align:center;gap:4px}
+        .listing-media-fallback strong{font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--ink)}
+        .listing-media-fallback span{font-size:11px;font-weight:700;letter-spacing:.02em}
+        .listing-img{position:relative;z-index:1;width:100%;height:220px;object-fit:cover;display:block}
         .listing-body{padding:16px 18px}
         .listing-tag{background:rgba(23,38,48,0.82);backdrop-filter:blur(10px);color:#fff;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
         .listing-avail{background:rgba(45,43,255,0.15);color:var(--accent);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
@@ -57,7 +69,8 @@ export default function AllListingsPage() {
         .city-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;-ms-overflow-style:none;scrollbar-width:none}
         .city-scroll::-webkit-scrollbar{display:none}
         @media(max-width:900px){.listings-grid{grid-template-columns:repeat(2,1fr)}}
-        @media(max-width:600px){.listings-grid{grid-template-columns:1fr}.nav-links{display:none!important}.nav-mobile{display:block!important}.filter-dropdowns{grid-template-columns:1fr}}
+        @media(max-width:820px){.nav-links{display:none!important}.nav-mobile{display:block!important}}
+        @media(max-width:600px){.listings-grid{grid-template-columns:1fr}.filter-dropdowns{grid-template-columns:1fr}}
       ` }} />
 
       <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(255,253,249,0.95)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(30,42,50,0.06)" }}>
@@ -83,7 +96,7 @@ export default function AllListingsPage() {
       <main style={{ paddingTop: 72 }}>
         <div className="wrap" style={{ padding: "60px 24px 80px" }}>
           <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, marginBottom: 8 }}>All Suites</h1>
-          <p style={{ fontSize: 15, color: "var(--ink-soft)", marginBottom: 20 }}>{listings.length} furnished properties currently available</p>
+          <p style={{ fontSize: 15, color: "var(--ink-soft)", marginBottom: 20 }}>{loadError ? "Suite availability will be back shortly" : `${listings.length} furnished properties currently available`}</p>
 
           {/* Search */}
           <div style={{ marginBottom: 12 }}>
@@ -124,6 +137,12 @@ export default function AllListingsPage() {
 
           {loading ? (
             <div style={{ textAlign: "center", padding: 60, color: "var(--ink-soft)" }}>Loading listings...</div>
+          ) : loadError ? (
+            <div style={{ textAlign: "center", padding: "56px 20px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 18 }}>
+              <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, marginBottom: 8 }}>We couldn&apos;t load the suites</h2>
+              <p style={{ color: "var(--ink-soft)", lineHeight: 1.65 }}>Please refresh in a moment, or tell us what you need and the CareStay team will help.</p>
+              <a href="/#contact" style={{ display: "inline-block", marginTop: 18, color: "var(--accent)", fontWeight: 700, textDecoration: "none" }}>Contact CareStay →</a>
+            </div>
           ) : (() => {
             const filtered = listings.filter(l => {
               const q = search.toLowerCase();
@@ -144,9 +163,9 @@ export default function AllListingsPage() {
               {filtered.map((l) => (
                 <Link key={l.id} href={`/listings/${l.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                   <div className="listing-card">
-                    <div style={{ position: "relative", overflow: "hidden" }}>
-                      <img src={l.img} alt={l.title} className="listing-img" />
-                      <div style={{ position: "absolute", bottom: 10, left: 10, display: "flex", gap: 6 }}>
+                    <div className="listing-media">
+                      <ListingPhoto src={l.img} alt={l.title} />
+                      <div style={{ position: "absolute", zIndex: 2, bottom: 10, left: 10, display: "flex", gap: 6 }}>
                         <span className="listing-tag">{l.location}</span>
                         <span style={{ background: l.availabilityStatus === "Almost Booked" ? "rgba(255,160,0,0.9)" : l.availabilityStatus === "Waitlist Only" ? "rgba(0,112,214,0.9)" : l.availabilityStatus === "Booked" ? "rgba(196,50,50,0.9)" : "rgba(45,43,255,0.9)", color: l.availabilityStatus === "Almost Booked" ? "#1e2a32" : "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{l.availabilityStatus === "Almost Booked" ? "Almost Booked" : l.availabilityStatus === "Waitlist Only" ? "Waitlist" : l.availabilityStatus === "Booked" ? "Booked" : "Available"}</span>
                       </div>

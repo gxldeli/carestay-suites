@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { redis } from "@/app/lib/redis";
+import { buildProfessionalListingDescription } from "@/app/lib/public-listing-copy";
 
 interface CustomListing {
   id: string;
@@ -28,40 +29,8 @@ interface OverridesData {
   reviews?: Record<string, unknown>;
 }
 
-function bedDetails(beds: number): string {
-  if (beds === 0) return "Queen bed in an open-concept studio layout";
-  if (beds === 1) return "Queen bed with premium linens";
-  if (beds === 2) return "Queen bed in the primary bedroom, double bed in the second";
-  return `King bed in the primary suite, queen and double beds in the additional ${beds - 1} bedrooms`;
-}
-
 function generateDescription(cl: CustomListing): string {
-  const bedsLabel = cl.beds === 0 ? "studio" : `${cl.beds}-bedroom`;
-  const lines: string[] = [];
-
-  lines.push(`Welcome to ${cl.title} — a fully furnished ${bedsLabel} suite in ${cl.location}, ${cl.hospitalDistance || "minutes"} from ${cl.nearbyHospital || "major hospitals"}. Designed for healthcare professionals on 30+ day assignments.`);
-  lines.push("");
-  lines.push("The space");
-  lines.push(`${bedDetails(cl.beds)}. Clean, well-maintained, and professionally managed between every guest.`);
-  lines.push("");
-  lines.push("Full kitchen for meal prep.");
-  lines.push("In-unit washer and dryer.");
-  lines.push("Dedicated workspace.");
-  lines.push("High-speed WiFi throughout.");
-  lines.push("Smart TV with streaming.");
-  lines.push("Pet friendly.");
-  if (cl.soakingTub) lines.push("Deep soaking tub.");
-  lines.push("");
-  lines.push("The CareStay Standard");
-  lines.push("Every suite comes with: blue light blocking glasses, spare scrubs (S/M/L), shiatsu foot massager, blackout curtains, white noise machine, and a massage gun.");
-  lines.push("");
-  lines.push("Things to know");
-  lines.push("- Month-to-month, no long-term lease required");
-  lines.push("- All-in pricing");
-  lines.push("- Non-smoking property");
-  lines.push("- Quiet hours 10pm-8am");
-
-  return lines.join("\n");
+  return buildProfessionalListingDescription(cl);
 }
 
 export async function GET(request: Request) {

@@ -15,6 +15,7 @@ export interface ListingOverride {
   sortOrder?: number;
   featured?: boolean;
   videoUrl?: string;
+  availabilityStatus?: string;
 }
 
 export interface CustomListing {
@@ -36,6 +37,7 @@ export interface CustomListing {
   featured?: boolean;
   videoUrl?: string;
   hidden?: boolean;
+  availabilityStatus?: string;
 }
 
 export interface ReviewItem {
@@ -89,6 +91,11 @@ export async function POST(request: Request) {
     if (action === "updateListing") {
       const { id, ...fields } = payload as { id: string } & ListingOverride;
       overrides.listings[id] = { ...overrides.listings[id], ...fields };
+    } else if (action === "batchUpdateListings") {
+      const { ids, fields } = payload as { ids: string[]; fields: ListingOverride };
+      for (const id of ids) {
+        overrides.listings[id] = { ...overrides.listings[id], ...fields };
+      }
     } else if (action === "addCustomListing") {
       const listing = payload as Omit<CustomListing, "id">;
       const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -100,6 +107,23 @@ export async function POST(request: Request) {
       const { id, ...fields } = payload as { id: string } & Partial<CustomListing>;
       const idx = overrides.customListings.findIndex((l) => l.id === id);
       if (idx !== -1) overrides.customListings[idx] = { ...overrides.customListings[idx], ...fields };
+    } else if (action === "batchUpdateCustomListings") {
+      const { ids, fields } = payload as { ids: string[]; fields: Partial<CustomListing> };
+      const selectedIds = new Set(ids);
+      overrides.customListings = overrides.customListings.map((listing) =>
+        selectedIds.has(listing.id) ? { ...listing, ...fields } : listing
+      );
+    } else if (action === "reorderCustomListings") {
+      const { updates } = payload as { updates: Array<{ id: string; sortOrder: number }> };
+      const sortOrders = new Map(updates.map((update) => [update.id, update.sortOrder]));
+      overrides.customListings = overrides.customListings
+        .map((listing) => sortOrders.has(listing.id) ? { ...listing, sortOrder: sortOrders.get(listing.id) } : listing)
+        .sort((a, b) => (a.sortOrder ?? 50) - (b.sortOrder ?? 50));
+    } else if (action === "resetAllFeatured") {
+      overrides.listings = Object.fromEntries(
+        Object.entries(overrides.listings).map(([id, listing]) => [id, { ...listing, featured: false }])
+      );
+      overrides.customListings = overrides.customListings.map((listing) => ({ ...listing, featured: false }));
     } else if (action === "updateReviewSettings") {
       const { listingId, totalCount } = payload as { listingId: string; totalCount: number };
       if (!overrides.reviews) overrides.reviews = {};

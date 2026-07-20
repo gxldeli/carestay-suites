@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Wifi, Coffee, UtensilsCrossed, Snowflake, Flame, WashingMachine, Wind, Tv, Car, Dumbbell, Waves, ArrowUpDown, Sun, GlassWater, Shirt, Laptop, Bell, ShieldCheck, Droplets, Bed, Sandwich, Microwave, ShowerHead, PawPrint, Lock, Zap, Accessibility, Check, Fan, Bath, DoorOpen, ArmchairIcon, SprayCan, Refrigerator, Baby, Sofa, Wine, Cookie, Thermometer, Glasses, Footprints, Moon, HandMetal, type LucideIcon, FireExtinguisher } from "lucide-react";
 import type { ReactNode } from "react";
+import { hasRestrictedDurationLanguage } from "@/app/lib/public-listing-copy";
 
 interface ReviewItem { id: string; name: string; stars: number; text: string; date: string; verified: boolean; stayInfo?: string }
 interface ReviewData { totalCount: number; items: ReviewItem[] }
@@ -50,6 +51,7 @@ export default function ListingPage() {
   const rawId = params.id as string;
   const [listing, setListing] = useState<ListingData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [selectedImg, setSelectedImg] = useState("");
@@ -57,7 +59,6 @@ export default function ListingPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [moveIn, setMoveIn] = useState("");
-  const [moveOut, setMoveOut] = useState("");
   const [message, setMessage] = useState("");
   const inquiryRef = useRef<HTMLDivElement>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -67,22 +68,37 @@ export default function ListingPage() {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (!lightboxOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLightboxOpen(false); if (e.key === "ArrowRight") goNext(); if (e.key === "ArrowLeft") goPrev(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
-  const images = listing?.images?.length ? listing.images.slice(0, 30) : listing ? [listing.img] : [];
-  const currentImg = selectedImg || listing?.img || "";
-  const currentIdx = images.indexOf(currentImg);
-  const goNext = () => { if (images.length > 1) setSelectedImg(images[(currentIdx + 1) % images.length]); };
-  const goPrev = () => { if (images.length > 1) setSelectedImg(images[(currentIdx - 1 + images.length) % images.length]); };
+  const images = listing?.images?.length ? listing.images.slice(0, 30) : listing?.img ? [listing.img] : [];
+  const availableImages = images.filter((image) => !failedImages.has(image));
+  const currentImg = selectedImg && !failedImages.has(selectedImg) ? selectedImg : availableImages[0] || "";
+  const currentIdx = Math.max(0, availableImages.indexOf(currentImg));
+  const goNext = () => { if (availableImages.length > 1) setSelectedImg(availableImages[(currentIdx + 1) % availableImages.length]); };
+  const goPrev = () => { if (availableImages.length > 1) setSelectedImg(availableImages[(currentIdx - 1 + availableImages.length) % availableImages.length]); };
+  const markImageFailed = (image: string) => {
+    setFailedImages((current) => {
+      if (current.has(image)) return current;
+      const next = new Set(current);
+      next.add(image);
+      return next;
+    });
+    if (selectedImg === image) setSelectedImg("");
+  };
   const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const handleTouchEnd = (e: React.TouchEvent) => {
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     if (Math.abs(dx) > 50) { dx < 0 ? goNext() : goPrev(); }
   };
+  useEffect(() => {
+    setFailedImages(new Set());
+    setSelectedImg("");
+  }, [rawId]);
   useEffect(() => {
     const onScroll = () => { setScrolled(window.scrollY > 20); };
     window.addEventListener("scroll", onScroll);
@@ -104,10 +120,10 @@ export default function ListingPage() {
               maxGuests: match.maxGuests || undefined, bedrooms: match.bedrooms || undefined, availabilityStatus: match.availabilityStatus || "Available",
             });
           }
-        }
+        } else setLoadError(true);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => { setLoadError(true); setLoading(false); });
   }, [rawId]);
   useEffect(() => {
     if (!listing) return;
@@ -122,7 +138,7 @@ export default function ListingPage() {
       if (data.status === "success" && data.data?.reviews) {
         const rd = data.data.reviews[String(listing.id)] as ReviewData | undefined;
         if (rd && rd.items.length > 0) {
-          const manuallyAddedReviews = rd.items.filter((review) => !review.id.startsWith("rev-gen-"));
+          const manuallyAddedReviews = rd.items.filter((review) => !review.id.startsWith("rev-gen-") && !hasRestrictedDurationLanguage(review.text));
           setReviews(manuallyAddedReviews);
           setReviewTotalCount(manuallyAddedReviews.length);
         }
@@ -140,7 +156,7 @@ export default function ListingPage() {
   const ctaSub = isWaitlist ? "Be first to know when this suite becomes available." : isComingSoon ? "Be first to know when this suite becomes available." : "Fill out the form below and our team will follow up shortly.";
   const handleSubmit = async () => {
     const tags = isComingSoon ? ["carestay-waitlist", "listing-waitlist"] : [];
-    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, moveIn, moveOut, message, listing: listing?.title, tags }) });
+    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, moveIn, message, listing: listing?.title, tags: [...tags, "professional-stays"] }) });
     if (typeof window !== "undefined" && window.fbq) { window.fbq("track", "Lead"); }
     setSubmitted(true);
   };
@@ -156,7 +172,8 @@ export default function ListingPage() {
   if (!listing) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
-        <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700 }}>Listing not found</h1>
+        <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700 }}>{loadError ? "Suites are temporarily unavailable" : "Listing not found"}</h1>
+        {loadError && <p style={{ color: "var(--ink-soft)", textAlign: "center", maxWidth: 480 }}>Please refresh in a moment, or browse back to the CareStay homepage.</p>}
         <Link href="/#listings" style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}>Back to all suites</Link>
       </div>
     );
@@ -194,6 +211,10 @@ export default function ListingPage() {
         .gallery-thumbs::-webkit-scrollbar-track{background:var(--paper-alt);border-radius:3px}
         .gallery-thumbs::-webkit-scrollbar-thumb{background:var(--accent2);border-radius:3px}
         .gallery-thumbs{scrollbar-width:thin;scrollbar-color:var(--accent2) var(--paper-alt)}
+        .gallery-main{height:clamp(300px,55vw,500px);background:linear-gradient(145deg,#e8eef2 0%,#f7f3ed 52%,#dfe7ed 100%)}
+        .gallery-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--ink-soft);gap:5px}
+        .gallery-fallback strong{font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--ink)}
+        .gallery-fallback span{font-size:12px;font-weight:700;letter-spacing:.02em}
       ` }} />
 
       <Nav scrolled={scrolled} />
@@ -202,16 +223,20 @@ export default function ListingPage() {
         {/* Gallery */}
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px 0" }}>
           <div
+            className="gallery-main"
             style={{ borderRadius: 16, overflow: "hidden", maxHeight: 500, position: "relative", cursor: "pointer" }}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
             onClick={() => setLightboxOpen(true)}
           >
-            <img
+            {!currentImg && <div className="gallery-fallback"><strong>CareStay Suites</strong><span>Photo unavailable</span></div>}
+            {currentImg && <img
+              key={currentImg}
               src={currentImg}
               alt={listing.title}
-              style={{ width: "100%", height: "100%", maxHeight: 500, objectFit: "cover", display: "block" }}
-            />
+              onError={() => markImageFailed(currentImg)}
+              style={{ position: "relative", zIndex: 1, width: "100%", height: "100%", maxHeight: 500, objectFit: "cover", display: "block" }}
+            />}
             {/* Gallery Badges */}
             <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 8, zIndex: 2 }}>
               {listing.featured && (
@@ -221,25 +246,25 @@ export default function ListingPage() {
                 <span onClick={e => e.stopPropagation()} style={{ background: "rgba(23,38,48,0.9)", color: "#fff", padding: "5px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: "0.02em", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>◆ Highest Rated</span>
               )}
             </div>
-            {images.length > 1 && (
+            {availableImages.length > 1 && (
               <>
-                <button onClick={e => { e.stopPropagation(); goPrev(); }} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>‹</button>
-                <button onClick={e => { e.stopPropagation(); goNext(); }} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>›</button>
-                <div style={{ position: "absolute", bottom: 12, right: 12, background: "rgba(0,0,0,0.6)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>{currentIdx + 1} / {images.length}</div>
+                <button onClick={e => { e.stopPropagation(); goPrev(); }} style={{ position: "absolute", zIndex: 2, left: 12, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>‹</button>
+                <button onClick={e => { e.stopPropagation(); goNext(); }} style={{ position: "absolute", zIndex: 2, right: 12, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>›</button>
+                <div style={{ position: "absolute", zIndex: 2, bottom: 12, right: 12, background: "rgba(0,0,0,0.6)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>{currentIdx + 1} / {availableImages.length}</div>
               </>
             )}
           </div>
 
           {/* Thumbnail Strip */}
-          {listing.images && listing.images.length > 1 && (
+          {availableImages.length > 1 && (
             <div className="gallery-thumbs" style={{ display: "flex", gap: 8, overflowX: "auto", paddingTop: 12, paddingBottom: 4 }}>
-              {listing.images.slice(0, 30).map((imgUrl, i) => (
+              {availableImages.map((imgUrl, i) => (
                 <button
-                  key={i}
+                  key={imgUrl}
                   onClick={() => setSelectedImg(imgUrl)}
-                  style={{ flexShrink: 0, width: 72, height: 48, borderRadius: 8, overflow: "hidden", border: (selectedImg || listing.img) === imgUrl ? "2px solid var(--accent)" : "2px solid rgba(30,42,50,0.1)", cursor: "pointer", padding: 0, background: "none" }}
+                  style={{ flexShrink: 0, width: 72, height: 48, borderRadius: 8, overflow: "hidden", border: currentImg === imgUrl ? "2px solid var(--accent)" : "2px solid rgba(30,42,50,0.1)", cursor: "pointer", padding: 0, background: "none" }}
                 >
-                  <img src={imgUrl} alt={`${listing.title} ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <img src={imgUrl} alt={`${listing.title} ${i + 1}`} onError={() => markImageFailed(imgUrl)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 </button>
               ))}
             </div>
@@ -290,11 +315,6 @@ export default function ListingPage() {
                   listing.baths ? `${listing.baths} bath${listing.baths !== 1 ? "s" : ""}` : null,
                 ].filter(Boolean).join(" · ")}
               </p>
-              {listing.nearbyHospital && (
-                <p style={{ fontSize: 13, color: "var(--ink-soft)", marginTop: -16, marginBottom: 24 }}>
-                  🏥 Near {listing.nearbyHospital}{listing.hospitalDistance ? ` · ${listing.hospitalDistance}` : ""}
-                </p>
-              )}
 
               {/* Video Walkthrough */}
               {listing.videoUrl && (() => {
@@ -566,8 +586,8 @@ export default function ListingPage() {
                 </a>
 
                 <div style={{ marginTop: 20, padding: "14px 16px", background: "rgba(45,43,255,0.05)", borderRadius: 10, border: "1px solid rgba(45,43,255,0.1)" }}>
-                  <div style={{ fontSize: 13, color: "var(--accent)", fontWeight: 600, marginBottom: 4 }}>Healthcare Rate</div>
-                  <div style={{ fontSize: 12, color: "rgba(30,42,50,0.5)", lineHeight: 1.5 }}>Special pricing available for nurses, doctors, and medical staff with valid credentials.</div>
+                  <div style={{ fontSize: 13, color: "var(--accent)", fontWeight: 600, marginBottom: 4 }}>Professional Stay Support</div>
+                  <div style={{ fontSize: 12, color: "var(--ink-soft)", lineHeight: 1.5 }}>Ask about corporate coordination, relocation support, healthcare assignments, or insurance placements.</div>
                 </div>
               </div>
             </div>
@@ -589,22 +609,16 @@ export default function ListingPage() {
                   </div>
                   <div>
                     <div style={{ fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Email</div>
-                    <input type="email" placeholder="jane@hospital.ca" value={email} onChange={e => setEmail(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                    <input type="email" placeholder="name@email.com" value={email} onChange={e => setEmail(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Phone</div>
                   <input type="tel" placeholder="(647) 000-0000" value={phone} onChange={e => setPhone(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit" }} />
                 </div>
-                <div className="inquiry-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                  <div>
-                    <div style={{ fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Move-in Date</div>
-                    <input type="date" value={moveIn} onChange={e => setMoveIn(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit", colorScheme: "light" }} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Move-out Date</div>
-                    <input type="date" value={moveOut} onChange={e => setMoveOut(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit", colorScheme: "light" }} />
-                  </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Preferred Arrival</div>
+                  <input type="date" value={moveIn} onChange={e => setMoveIn(e.target.value)} style={{ width: "100%", background: "rgba(30,42,50,0.04)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 10, padding: "13px 16px", color: "var(--ink)", fontSize: 14, outline: "none", fontFamily: "inherit", colorScheme: "light" }} />
                 </div>
                 <div>
                   <div style={{ fontSize: 11, color: "var(--ink-soft)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Message / Special Requests</div>
@@ -676,15 +690,16 @@ export default function ListingPage() {
       {lightboxOpen && (
         <div onClick={() => setLightboxOpen(false)} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)" }}>
           <button onClick={() => setLightboxOpen(false)} style={{ position: "absolute", top: 20, right: 24, background: "none", border: "none", color: "#fff", fontSize: 32, cursor: "pointer", zIndex: 201 }}>✕</button>
-          {images.length > 1 && (
+          {availableImages.length > 1 && (
             <>
               <button onClick={e => { e.stopPropagation(); goPrev(); }} style={{ position: "absolute", left: 20, top: "50%", transform: "translateY(-50%)", width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", color: "#fff", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 201 }}>‹</button>
               <button onClick={e => { e.stopPropagation(); goNext(); }} style={{ position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)", width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", color: "#fff", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 201 }}>›</button>
             </>
           )}
-          <img onClick={e => e.stopPropagation()} src={currentImg} alt={listing.title} style={{ maxWidth: "90vw", maxHeight: "85vh", objectFit: "contain", borderRadius: 12 }} />
-          {images.length > 1 && (
-            <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", color: "rgba(255,255,255,0.72)", fontSize: 14, fontWeight: 600 }}>{currentIdx + 1} / {images.length}</div>
+          <div style={{ color: "rgba(255,255,255,0.72)", textAlign: "center", fontSize: 14 }}>Photo update in progress</div>
+          {currentImg && <img key={`lightbox-${currentImg}`} onClick={e => e.stopPropagation()} onError={() => markImageFailed(currentImg)} src={currentImg} alt={listing.title} style={{ position: "absolute", maxWidth: "90vw", maxHeight: "85vh", objectFit: "contain", borderRadius: 12 }} />}
+          {availableImages.length > 1 && (
+            <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", color: "rgba(255,255,255,0.72)", fontSize: 14, fontWeight: 600 }}>{currentIdx + 1} / {availableImages.length}</div>
           )}
         </div>
       )}

@@ -2,19 +2,15 @@
 
 import { useState, useEffect } from "react";
 
-const HOSPITALS = [
-  "Toronto General / UHN",
-  "Sunnybrook",
-  "SickKids",
-  "Mount Sinai",
-  "St. Michael's",
-  "Humber River",
-  "Scarborough Health",
-  "North York General",
-  "Credit Valley",
-  "Trillium Health",
+const STAY_TYPES = [
+  "Business travel",
+  "Relocation",
+  "Healthcare assignment",
+  "Insurance placement",
+  "Consulting or contract work",
+  "Film or project crew",
   "Other",
-  "Not Sure Yet",
+  "Not sure yet",
 ];
 
 const STORAGE_KEY = "carestay-popup-shown";
@@ -31,7 +27,7 @@ export default function EmailPopup() {
   const [submitted, setSubmitted] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [hospital, setHospital] = useState("");
+  const [stayType, setStayType] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined" && sessionStorage.getItem(STORAGE_KEY)) return;
@@ -78,7 +74,7 @@ export default function EmailPopup() {
     await fetch("/api/inquiry", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, hospital, tags: ["carestay-waitlist", "email-popup"] }),
+      body: JSON.stringify({ name, email, message: stayType ? `Stay type: ${stayType}` : "", tags: ["carestay-waitlist", "email-popup", "professional-stays"] }),
     });
     setSubmitted(true);
     setTimeout(() => setShow(false), 2000);
@@ -89,7 +85,10 @@ export default function EmailPopup() {
   if (!show) return null;
 
   const heading = settings?.emailPopupHeading || "Be First to Know";
-  const subtext = settings?.emailPopupSubtext || "New suites drop regularly. Join healthcare professionals across Canada already on our list.";
+  const legacySubtext = "New suites drop regularly. Join healthcare professionals across Canada already on our list.";
+  const subtext = !settings?.emailPopupSubtext || settings.emailPopupSubtext === legacySubtext
+    ? "New suites are added regularly. Join professionals and organizations looking for furnished stays in Toronto."
+    : settings.emailPopupSubtext;
 
   const inputStyle: React.CSSProperties = {
     width: "100%",
@@ -135,10 +134,10 @@ export default function EmailPopup() {
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <input type="text" placeholder="Name (optional)" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
                 <input type="email" placeholder="Email *" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
-                <select value={hospital} onChange={(e) => setHospital(e.target.value)} style={selectStyle}>
-                  <option value="">Hospital / Facility</option>
-                  {HOSPITALS.map((h) => (
-                    <option key={h} value={h}>{h}</option>
+                <select value={stayType} onChange={(e) => setStayType(e.target.value)} style={selectStyle}>
+                  <option value="">What brings you to Toronto?</option>
+                  {STAY_TYPES.map((option) => (
+                    <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
                 <button onClick={handleSubmit} style={{ width: "100%", padding: 14, background: "var(--accent)", color: "#fff", borderRadius: 10, fontWeight: 700, fontSize: 15, border: "none", cursor: "pointer", fontFamily: "inherit" }}>

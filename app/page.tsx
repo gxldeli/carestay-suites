@@ -4,10 +4,10 @@ declare global { interface Window { fbq: (...args: unknown[]) => void; } }
 
 import { useState, useEffect, useRef, ReactNode } from "react";
 import Link from "next/link";
-import { ShieldCheck, MapPin, ClipboardList, CalendarDays } from "lucide-react";
+import { BriefcaseBusiness, Building2, HeartPulse, ShieldCheck } from "lucide-react";
 
 /* ─── DATA ─── */
-const HOSPITALS = ["Toronto General", "SickKids", "Mount Sinai", "Sunnybrook", "St. Michael's", "Princess Margaret", "Humber River", "Scarborough Health", "North York General", "Credit Valley", "Trillium Health"];
+const PROFESSIONAL_STAYS = ["Business travel", "Relocations", "Healthcare assignments", "Insurance placements", "Consultants", "Film & project crews"];
 
 const CARESTAY_STANDARD: { icon: ReactNode; name: string; desc: string }[] = [
   { icon: "🏠", name: "Fully Furnished", desc: "Comfortable spaces ready for everyday living" },
@@ -48,12 +48,13 @@ function Styles() {
     body{font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased}
 
     .wrap{max-width:1200px;margin:0 auto;width:100%}
-    .pad{padding:80px 24px}
+    .pad{padding:56px 24px}
 
     /* Hero */
-    .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+    .hero-pad{padding-top:112px;padding-bottom:56px}
+    .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
     .hero-img-wrap{position:relative}
-    .hero-h1{font-family:'Cormorant Garamond',serif;font-size:58px;font-weight:700;line-height:1.02;color:var(--ink);letter-spacing:-0.035em}
+    .hero-h1{font-family:'Cormorant Garamond',serif;font-size:54px;font-weight:700;line-height:1.04;color:var(--ink);letter-spacing:-0.03em}
     .hero-ctas{display:flex;gap:12px;flex-wrap:wrap}
     .hero-ctas a{padding:16px 30px;border-radius:999px;font-weight:700;font-size:15px;text-decoration:none;text-align:center;transition:transform .2s ease,box-shadow .2s ease,background .2s ease}
     .hero-ctas a:hover{transform:translateY(-2px)}
@@ -61,40 +62,44 @@ function Styles() {
     .cta-secondary{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
 
     /* Stats */
-    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
-    .stat-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px 16px;text-align:center;box-shadow:var(--shadow)}
-    .stat-num{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-    .stat-label{font-size:12px;color:var(--ink-soft);margin-top:4px;font-weight:600}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .stat-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 12px;display:flex;align-items:center;justify-content:center;gap:10px;text-align:left;box-shadow:0 8px 24px rgba(30,42,50,0.05)}
+    .stat-icon{font-size:22px;line-height:1;flex:0 0 auto}
+    .stat-label{font-size:12px;color:var(--ink-soft);font-weight:700;line-height:1.3}
 
     /* Listings */
-    .listings-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+    .listings-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
     .listing-card{background:var(--surface);border-radius:18px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s}
     .listing-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lift)}
-    .listing-img{width:100%;height:220px;object-fit:cover;display:block}
-    .listing-body{padding:16px 18px}
-    .listing-tags{position:absolute;bottom:10px;left:10px;display:flex;gap:6px}
+    .listing-media{height:210px;position:relative;overflow:hidden;background:linear-gradient(145deg,#e8eef2 0%,#f7f3ed 52%,#dfe7ed 100%)}
+    .listing-media-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink-soft);text-align:center;gap:4px}
+    .listing-media-fallback strong{font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--ink)}
+    .listing-media-fallback span{font-size:11px;font-weight:700;letter-spacing:.02em}
+    .listing-img{position:relative;z-index:1;width:100%;height:210px;object-fit:cover;display:block}
+    .listing-body{padding:15px 17px}
+    .listing-tags{position:absolute;z-index:2;bottom:10px;left:10px;display:flex;gap:6px}
     .listing-tag{background:rgba(23,38,48,0.82);backdrop-filter:blur(10px);color:#fff;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
     .listing-avail{background:rgba(45,43,255,0.15);color:var(--accent);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
     .listing-wait{background:rgba(23,38,48,0.82);color:#fff;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
 
     /* Standard */
-    .standard-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
-    .standard-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px 16px;text-align:center;box-shadow:var(--shadow)}
+    .standard-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+    .standard-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 14px;text-align:center;box-shadow:var(--shadow)}
 
-    /* Healthcare */
-    .health-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
-    .pain-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    .pain-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px}
+    /* Professional paths */
+    .health-grid{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:center}
+    .pain-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .pain-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px}
 
     /* Steps */
-    .steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-    .step-card{position:relative;padding:28px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+    .steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    .step-card{position:relative;padding:24px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
 
     /* Form */
     .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .form-input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 16px;color:var(--ink);font-size:14px;outline:none;font-family:inherit}
     .form-input:focus{border-color:rgba(45,43,255,0.4)}
-    .form-label{display:block;font-size:11px;font-weight:600;color:rgba(30,42,50,0.5);margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase}
+    .form-label{display:block;font-size:11px;font-weight:600;color:rgba(30,42,50,0.5);margin-bottom:6px;letter-spacing:0.02em;text-transform:uppercase}
 
     /* Footer */
     .footer-grid{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap}
@@ -108,14 +113,14 @@ function Styles() {
     .nav-cta{background:var(--accent);color:#fff;padding:11px 22px;border-radius:999px;font-weight:700;font-size:13px;text-decoration:none}
 
     /* Section headers */
-    .sh-label{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:0.1em;text-transform:uppercase}
-    .sh-title{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:700;color:var(--ink);margin-top:10px;letter-spacing:-0.02em;line-height:1.15}
-    .sh-sub{font-size:15px;color:var(--ink-soft);margin-top:12px;line-height:1.7;max-width:520px}
+    .sh-label{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:0.04em;text-transform:uppercase}
+    .sh-title{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:700;color:var(--ink);margin-top:7px;letter-spacing:-0.02em;line-height:1.12}
+    .sh-sub{font-size:15px;color:var(--ink-soft);margin-top:9px;line-height:1.6;max-width:560px}
     .sh-center{text-align:center}
     .sh-center .sh-sub{margin-left:auto;margin-right:auto}
 
     /* Tub banner */
-    .tub-banner{background:var(--paper-alt);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:20px 24px;text-align:center}
+    .tub-banner{background:var(--paper-alt);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:16px 24px;text-align:center}
     .tub-text{font-size:15px;color:rgba(30,42,50,0.6)}
     .tub-text span{color:var(--accent);font-weight:700}
 
@@ -125,29 +130,29 @@ function Styles() {
       .hero-h1{font-size:42px}
     }
     @media(max-width:768px){
-      .hero-grid{grid-template-columns:1fr;gap:32px}
+      .hero-grid{grid-template-columns:1fr;gap:24px}
       .hero-img-wrap{display:none}
       .hero-h1{font-size:36px}
       .hero-ctas a{width:100%;padding:16px 24px;font-size:16px}
       .stats-grid{grid-template-columns:1fr 1fr}
       .listings-grid{grid-template-columns:1fr}
       .standard-grid{grid-template-columns:1fr 1fr}
+      .standard-grid>div:last-child:nth-child(odd){grid-column:1/-1;width:calc(50% - 6px);justify-self:center}
       .health-grid{grid-template-columns:1fr}
-      .pain-grid{grid-template-columns:1fr}
       .steps-grid{grid-template-columns:1fr}
       .form-grid{grid-template-columns:1fr}
       .footer-grid{flex-direction:column}
       .footer-links{flex-direction:column;gap:28px}
       .nav-links{display:none!important}
       .nav-mobile{display:block!important}
-      .pad{padding:56px 18px}
+      .pad{padding:34px 18px}
+      .hero-pad{padding-top:86px;padding-bottom:34px}
       .sh-title{font-size:28px}
-      .stat-num{font-size:30px}
     }
     @media(max-width:480px){
-      .standard-grid{grid-template-columns:1fr}
       .hero-h1{font-size:30px}
     }
+    @media(max-width:360px){.standard-grid,.pain-grid{grid-template-columns:1fr}.standard-grid>div:last-child:nth-child(odd){grid-column:auto;width:auto}}
   ` }} />;
 }
 
@@ -185,16 +190,16 @@ function Hero({ tagline }: { tagline?: string }) {
     : tagline;
 
   return (
-    <section style={{ minHeight: "100vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden", background: "linear-gradient(155deg,#f7f3ed 0%,#fffdf9 48%,#e8eff3 100%)" }}>
+    <section style={{ display: "flex", alignItems: "center", position: "relative", overflow: "hidden", background: "linear-gradient(155deg,#f7f3ed 0%,#fffdf9 48%,#e8eff3 100%)" }}>
       <div style={{ position: "absolute", inset: 0, opacity: 0.04, backgroundImage: "radial-gradient(circle at 1px 1px,rgba(30,42,50,0.3) 1px,transparent 0)", backgroundSize: "40px 40px" }} />
       <div style={{ position: "absolute", top: "10%", right: "5%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(45,43,255,0.06) 0%,transparent 70%)", filter: "blur(60px)" }} />
-      <div className="pad" style={{ maxWidth: 1200, margin: "0 auto", width: "100%", position: "relative", zIndex: 1, paddingTop: 120, paddingBottom: 80 }}>
+      <div className="pad hero-pad" style={{ maxWidth: 1200, margin: "0 auto", width: "100%", position: "relative", zIndex: 1 }}>
         <div className="hero-grid">
           <div>
             <FadeIn>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(45,43,255,0.08)", border: "1px solid rgba(45,43,255,0.2)", borderRadius: 100, padding: "8px 18px", marginBottom: 28 }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(45,43,255,0.08)", border: "1px solid rgba(45,43,255,0.2)", borderRadius: 100, padding: "7px 15px", marginBottom: 20 }}>
                 <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--accent)", animation: "pulse 2s infinite" }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Furnished stays across Toronto</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.035em", textTransform: "uppercase" }}>Furnished stays across Toronto</span>
               </div>
             </FadeIn>
             <FadeIn delay={0.1}>
@@ -204,7 +209,7 @@ function Hero({ tagline }: { tagline?: string }) {
               </h1>
             </FadeIn>
             <FadeIn delay={0.2}>
-              <p style={{ fontSize: 17, lineHeight: 1.7, color: "rgba(30,42,50,0.55)", maxWidth: 500, margin: "24px 0 36px" }}>
+              <p style={{ fontSize: 17, lineHeight: 1.6, color: "rgba(30,42,50,0.58)", maxWidth: 500, margin: "18px 0 28px" }}>
                 {heroTagline}
               </p>
             </FadeIn>
@@ -217,15 +222,8 @@ function Hero({ tagline }: { tagline?: string }) {
           </div>
           <FadeIn delay={0.2}>
             <div className="hero-img-wrap">
-              <div style={{ borderRadius: 24, overflow: "hidden", boxShadow: "0 28px 64px rgba(30,42,50,0.2)", border: "1px solid rgba(30,42,50,0.08)" }}>
-                <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80" alt="Luxury furnished suite" style={{ width: "100%", height: 440, objectFit: "cover", display: "block" }} />
-              </div>
-              <div style={{ position: "absolute", bottom: -16, left: -16, background: "rgba(255,253,249,0.92)", backdropFilter: "blur(20px)", border: "1px solid rgba(30,42,50,0.08)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 42, height: 42, borderRadius: 10, background: "linear-gradient(135deg,var(--accent),var(--accent2))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800 }}>✓</div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>Professionally Managed</div>
-                  <div style={{ fontSize: 11, color: "rgba(30,42,50,0.5)" }}>Real suites · responsive local support</div>
-                </div>
+              <div style={{ borderRadius: 20, overflow: "hidden", boxShadow: "0 22px 52px rgba(30,42,50,0.18)", border: "1px solid rgba(30,42,50,0.08)" }}>
+                <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80" alt="Luxury furnished suite" style={{ width: "100%", height: 400, objectFit: "cover", display: "block" }} />
               </div>
             </div>
           </FadeIn>
@@ -239,19 +237,19 @@ function Hero({ tagline }: { tagline?: string }) {
 function Stats() {
   const [ref, inView] = useInView();
   const trustPoints = [
-    { n: "✓", l: "Professionally Managed" },
-    { n: "✓", l: "Fully Equipped Suites" },
-    { n: "✓", l: "Flexible Arrangements" },
-    { n: "✓", l: "Responsive Local Support" },
+    { icon: "🛎️", label: "Professionally Managed" },
+    { icon: "🏡", label: "Fully Equipped Suites" },
+    { icon: "📅", label: "Flexible Arrangements" },
+    { icon: "💬", label: "Responsive Local Support" },
   ];
   return (
     <section ref={ref} style={{ background: "var(--paper-alt)", borderTop: "1px solid rgba(30,42,50,0.05)", borderBottom: "1px solid rgba(30,42,50,0.05)" }}>
-      <div className="pad" style={{ maxWidth: 1200, margin: "0 auto", paddingTop: 40, paddingBottom: 40 }}>
+      <div className="pad" style={{ maxWidth: 1200, margin: "0 auto", paddingTop: 24, paddingBottom: 24 }}>
         <div className="stats-grid">
           {trustPoints.map((s, i) => (
-            <div key={i} className="stat-card" style={{ opacity: inView ? 1 : 0, transform: inView ? "translateY(0)" : "translateY(20px)", transition: `all 0.6s ease ${i * 0.1}s` }}>
-              <div className="stat-num">{s.n}</div>
-              <div className="stat-label">{s.l}</div>
+            <div key={s.label} className="stat-card" style={{ opacity: inView ? 1 : 0, transform: inView ? "translateY(0)" : "translateY(14px)", transition: `all 0.45s ease ${i * 0.06}s` }}>
+              <div className="stat-icon" aria-hidden="true">{s.icon}</div>
+              <div className="stat-label">{s.label}</div>
             </div>
           ))}
         </div>
@@ -262,6 +260,12 @@ function Stats() {
 
 /* ─── LISTINGS ─── */
 interface ListingCard { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; featured?: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string }
+
+function ListingPhoto({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(!src);
+  if (failed) return <div className="listing-media-fallback"><strong>CareStay Suites</strong><span>Photo unavailable</span></div>;
+  return <img src={src} alt={alt} className="listing-img" onError={() => setFailed(true)} />;
+}
 
 function ListingsSection() {
   const [apiListings, setApiListings] = useState<ListingCard[]>([]);
@@ -291,23 +295,23 @@ function ListingsSection() {
   return (
     <section id="listings" className="pad" style={{ background: "var(--paper)" }}>
       <div className="wrap">
+        <FadeIn>
+          <div className="sh-center" style={{ marginBottom: 30 }}>
+            <div className="sh-label">Explore Our Suites</div>
+            <h2 className="sh-title">Hand-picked suites by CareStay</h2>
+            <p className="sh-sub">Professionally managed, furnished suites for work assignments, relocations, insurance placements, and extended travel.</p>
+          </div>
+        </FadeIn>
         {featuredListings.length > 0 && (
-          <>
-            <FadeIn>
-              <div className="sh-center" style={{ marginBottom: 32 }}>
-                <div className="sh-label" style={{ color: "var(--gold)" }}>★ Featured Suites</div>
-                <h2 className="sh-title">Hand-Picked by CareStay</h2>
-              </div>
-            </FadeIn>
-            <div className="listings-grid" style={{ marginBottom: 64 }}>
-              {featuredListings.map((l, i) => (
+          <div className="listings-grid" style={{ marginBottom: 32 }}>
+            {featuredListings.map((l, i) => (
                 <FadeIn key={`featured-${l.id}`} delay={i * 0.06}>
                   <Link href={`/listings/${l.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                     <div className="listing-card" style={{ border: "1px solid rgba(240,192,64,0.3)", boxShadow: "0 0 20px rgba(240,192,64,0.08)" }}>
-                      <div style={{ position: "relative", overflow: "hidden" }}>
-                        <img src={l.img} alt={l.title} className="listing-img" />
+                      <div className="listing-media">
+                        <ListingPhoto src={l.img} alt={l.title} />
                         <div className="listing-tags">
-                          <span style={{ background: "rgba(240,192,64,0.9)", color: "#000", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>★ FEATURED</span>
+                          <span style={{ background: "rgba(240,192,64,0.9)", color: "#000", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, letterSpacing: "0.025em" }}>★ FEATURED</span>
                           <span className="listing-tag">{l.tag}</span>
                           <span style={{ background: l.availabilityStatus === "Almost Booked" ? "rgba(255,160,0,0.9)" : l.availabilityStatus === "Waitlist Only" ? "rgba(0,112,214,0.9)" : l.availabilityStatus === "Booked" ? "rgba(196,50,50,0.9)" : "rgba(45,43,255,0.9)", color: l.availabilityStatus === "Almost Booked" ? "#1e2a32" : "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{l.availabilityStatus === "Almost Booked" ? "Almost Booked" : l.availabilityStatus === "Waitlist Only" ? "Waitlist" : l.availabilityStatus === "Booked" ? "Booked" : "Available"}</span>
                         </div>
@@ -334,24 +338,16 @@ function ListingsSection() {
                     </div>
                   </Link>
                 </FadeIn>
-              ))}
-            </div>
-          </>
-        )}
-        <FadeIn>
-          <div className="sh-center" style={{ marginBottom: 48 }}>
-            <div className="sh-label">All Suites</div>
-            <h2 className="sh-title">Curated Properties Near You</h2>
-            <p className="sh-sub">Professionally managed, furnished suites for work assignments, relocations, insurance placements, and extended travel.</p>
+            ))}
           </div>
-        </FadeIn>
+        )}
         <div className="listings-grid">
           {displayedListings.map((l, i) => (
             <FadeIn key={l.id} delay={i * 0.06}>
               <Link href={`/listings/${l.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                 <div className="listing-card">
-                  <div style={{ position: "relative", overflow: "hidden" }}>
-                    <img src={l.img} alt={l.title} className="listing-img" />
+                  <div className="listing-media">
+                    <ListingPhoto src={l.img} alt={l.title} />
                     <div className="listing-tags">
                       <span className="listing-tag">{l.tag}</span>
                       <span style={{ background: l.availabilityStatus === "Almost Booked" ? "rgba(255,160,0,0.9)" : l.availabilityStatus === "Waitlist Only" ? "rgba(0,112,214,0.9)" : l.availabilityStatus === "Booked" ? "rgba(196,50,50,0.9)" : "rgba(45,43,255,0.9)", color: l.availabilityStatus === "Almost Booked" ? "#1e2a32" : "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{l.availabilityStatus === "Almost Booked" ? "Almost Booked" : l.availabilityStatus === "Waitlist Only" ? "Waitlist" : l.availabilityStatus === "Booked" ? "Booked" : "Available"}</span>
@@ -388,14 +384,14 @@ function ListingsSection() {
         )}
         {hasMore && (
           <FadeIn delay={0.3}>
-            <div style={{ textAlign: "center", marginTop: 36 }}>
+            <div style={{ textAlign: "center", marginTop: 28 }}>
               <Link href="/listings" style={{ display: "inline-block", background: "rgba(45,43,255,0.1)", color: "var(--accent)", padding: "12px 28px", borderRadius: 10, fontSize: 14, fontWeight: 700, textDecoration: "none", border: "1px solid rgba(45,43,255,0.2)" }}>View All Suites →</Link>
             </div>
           </FadeIn>
         )}
         <FadeIn delay={0.3}>
           <div style={{ textAlign: "center", marginTop: 20 }}>
-            <a href="#contact" style={{ color: "var(--accent)", fontSize: 14, fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(45,43,255,0.3)", paddingBottom: 2 }}>Don&apos;t see what you need? Tell us your requirements →</a>
+            <a href="#contact" style={{ color: "var(--accent)", fontSize: 14, fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(45,43,255,0.3)", paddingBottom: 2 }}>Need something different? Tell us →</a>
           </div>
         </FadeIn>
       </div>
@@ -403,12 +399,12 @@ function ListingsSection() {
   );
 }
 
-/* ─── HOSPITAL SCROLL ─── */
-function HospitalBanner() {
+/* ─── PROFESSIONAL STAY TYPES ─── */
+function ProfessionalBanner() {
   return (
-    <div style={{ background: "var(--night)", padding: "32px 0", overflow: "hidden", borderTop: "1px solid rgba(255,255,255,0.08)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-      <div style={{ display: "flex", gap: 48, animation: "scroll 25s linear infinite", whiteSpace: "nowrap" }}>
-        {[...HOSPITALS, ...HOSPITALS].map((h, i) => <span key={i} style={{ fontSize: 14, color: "rgba(255,255,255,0.68)", fontWeight: 600 }}>{h}</span>)}
+    <div style={{ background: "var(--night)", padding: "22px 0", overflow: "hidden", borderTop: "1px solid rgba(255,255,255,0.08)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <div style={{ display: "flex", gap: 40, animation: "scroll 25s linear infinite", whiteSpace: "nowrap" }}>
+        {[...PROFESSIONAL_STAYS, ...PROFESSIONAL_STAYS].map((stayType, i) => <span key={i} style={{ fontSize: 14, color: "rgba(255,255,255,0.72)", fontWeight: 600 }}>•&nbsp; {stayType}</span>)}
       </div>
     </div>
   );
@@ -421,7 +417,7 @@ function Standard() {
       <section id="about" className="pad" style={{ background: "var(--surface-blue)" }}>
         <div className="wrap">
           <FadeIn>
-            <div className="sh-center" style={{ marginBottom: 40 }}>
+            <div className="sh-center" style={{ marginBottom: 28 }}>
               <div className="sh-label">The CareStay Standard</div>
               <h2 className="sh-title">Every Suite, Thoughtfully Equipped.</h2>
               <p className="sh-sub">Comfort comes down to the details. CareStay suites pair the everyday essentials with practical touches designed for demanding schedules.</p>
@@ -431,7 +427,7 @@ function Standard() {
             {CARESTAY_STANDARD.map((item, i) => (
               <FadeIn key={i} delay={i * 0.06}>
                 <div className="standard-card">
-                  <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
+                  <div style={{ fontSize: 32, marginBottom: 9 }}>{item.icon}</div>
                   <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", marginBottom: 6 }}>{item.name}</h3>
                   <p style={{ fontSize: 12, color: "var(--ink-soft)", lineHeight: 1.5 }}>{item.desc}</p>
                 </div>
@@ -447,35 +443,37 @@ function Standard() {
   );
 }
 
-/* ─── HEALTHCARE ─── */
-function Healthcare() {
-  const points: { icon: ReactNode; title: string; desc: string }[] = [
-    { icon: <ShieldCheck size={28} strokeWidth={1.5} style={{ color: "var(--accent)" }} />, title: "Verified & Scam-Free", desc: "Every property personally inspected. No fake listings." },
-    { icon: <MapPin size={28} strokeWidth={1.5} style={{ color: "var(--accent)" }} />, title: "Well Located", desc: "Convenient options near major hospitals and Toronto neighbourhoods." },
-    { icon: <ClipboardList size={28} strokeWidth={1.5} style={{ color: "var(--accent)" }} />, title: "Move-In Ready", desc: "Fully furnished with everything from day one." },
-    { icon: <CalendarDays size={28} strokeWidth={1.5} style={{ color: "var(--accent)" }} />, title: "Flexible Terms", desc: "Stay arrangements built around your assignment." },
+/* ─── PROFESSIONAL PATHS ─── */
+function ProfessionalPaths() {
+  const points: { icon: ReactNode; title: string; desc: string; href?: string; linkLabel?: string }[] = [
+    { icon: <BriefcaseBusiness size={28} strokeWidth={1.5} style={{ color: "var(--accent)" }} />, title: "Independent Professionals", desc: "Comfortable, work-ready suites for consultants, contractors, and business travellers." },
+    { icon: <Building2 size={28} strokeWidth={1.5} style={{ color: "var(--accent)" }} />, title: "Companies & Teams", desc: "Coordinated stays for relocations, project teams, and employee placements.", href: "/corporate", linkLabel: "Corporate stays" },
+    { icon: <HeartPulse size={28} strokeWidth={1.5} style={{ color: "var(--accent)" }} />, title: "Healthcare", desc: "Furnished stays near major medical hubs for healthcare professionals on assignment.", href: "/healthcare", linkLabel: "Healthcare stays" },
+    { icon: <ShieldCheck size={28} strokeWidth={1.5} style={{ color: "var(--accent)" }} />, title: "Insurance & Relocation", desc: "A dependable place to land during a move, repair, or temporary displacement." },
   ];
   return (
-    <section id="healthcare" className="pad" style={{ background: "var(--paper-alt)" }}>
+    <section id="professional-stays" className="pad" style={{ background: "var(--paper-alt)" }}>
       <div className="wrap">
         <div className="health-grid">
           <FadeIn>
             <div>
-              <div className="sh-label">For Healthcare Professionals</div>
-              <h2 className="sh-title">Housing That Understands Your Assignment</h2>
-              <p className="sh-sub" style={{ maxWidth: 460 }}>We know the frustration — fake listings, unresponsive hosts, deposits that vanish. CareStay exists because healthcare professionals deserve better.</p>
-              <div style={{ marginTop: 28 }}>
-                <a href="#contact" className="cta-primary" style={{ display: "inline-block", padding: "14px 32px", borderRadius: 10, fontWeight: 700, fontSize: 15, textDecoration: "none" }}>Join the Waitlist</a>
+              <div className="sh-label">Built for Professional Stays</div>
+              <h2 className="sh-title">One Place to Start, Whatever Brings You Here</h2>
+              <p className="sh-sub" style={{ maxWidth: 460 }}>CareStay helps professionals and organizations find well-managed furnished suites without the uncertainty of a typical listing search.</p>
+              <div style={{ marginTop: 22, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <a href="/listings" className="cta-primary" style={{ display: "inline-block", padding: "13px 26px", borderRadius: 999, fontWeight: 700, fontSize: 14, textDecoration: "none" }}>Browse Suites</a>
+                <a href="#contact" className="cta-secondary" style={{ display: "inline-block", padding: "13px 26px", borderRadius: 999, fontWeight: 700, fontSize: 14, textDecoration: "none" }}>Tell Us What You Need</a>
               </div>
             </div>
           </FadeIn>
           <div className="pain-grid">
             {points.map((p, i) => (
               <FadeIn key={i} delay={i * 0.08}>
-                <div className="pain-card">
+                <div className="pain-card" style={{ height: "100%" }}>
                   <div style={{ fontSize: 28, marginBottom: 10 }}>{p.icon}</div>
                   <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", marginBottom: 6 }}>{p.title}</h3>
                   <p style={{ fontSize: 13, color: "var(--ink-soft)", lineHeight: 1.5 }}>{p.desc}</p>
+                  {p.href && <a href={p.href} style={{ display: "inline-block", color: "var(--accent)", fontSize: 12, fontWeight: 700, textDecoration: "none", marginTop: 10 }}>{p.linkLabel} →</a>}
                 </div>
               </FadeIn>
             ))}
@@ -497,7 +495,7 @@ function HowItWorks() {
     <section id="how-it-works" className="pad" style={{ background: "var(--surface)" }}>
       <div className="wrap">
         <FadeIn>
-          <div className="sh-center" style={{ marginBottom: 48 }}>
+          <div className="sh-center" style={{ marginBottom: 30 }}>
             <div className="sh-label">How It Works</div>
             <h2 className="sh-title">Move In, Not Stressed Out</h2>
           </div>
@@ -507,7 +505,7 @@ function HowItWorks() {
             <FadeIn key={i} delay={i * 0.1}>
               <div className="step-card">
                 <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 800, fontSize: 48, color: "rgba(45,43,255,0.08)", position: "absolute", top: 14, right: 18 }}>{s.n}</div>
-                <div style={{ width: 46, height: 46, borderRadius: 12, background: "linear-gradient(135deg,rgba(45,43,255,0.1),rgba(94,129,148,0.1))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: 16, color: "var(--accent)", fontWeight: 800 }}>{s.n}</div>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,rgba(45,43,255,0.1),rgba(94,129,148,0.1))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, marginBottom: 12, color: "var(--accent)", fontWeight: 800 }}>{s.n}</div>
                 <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 22, color: "var(--ink)", marginBottom: 8 }}>{s.t}</h3>
                 <p style={{ fontSize: 14, color: "var(--ink-soft)", lineHeight: 1.6 }}>{s.d}</p>
               </div>
@@ -520,16 +518,16 @@ function HowItWorks() {
 }
 
 /* ─── CONTACT / WAITLIST ─── */
-const HOSPITAL_OPTIONS = ["Toronto General / UHN", "Sunnybrook", "SickKids", "Mount Sinai", "St. Michael's", "Humber River", "Scarborough Health", "North York General", "Credit Valley", "Trillium Health", "Other", "Not Sure Yet"];
+const STAY_TYPE_OPTIONS = ["Business travel", "Relocation", "Healthcare assignment", "Insurance placement", "Consulting or contract work", "Film or project crew", "Other", "Not sure yet"];
 
 function Contact() {
   const [done, setDone] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [hospital, setHospital] = useState("");
+  const [stayType, setStayType] = useState("");
   const handleSubmit = async () => {
     if (!email) return;
-    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, hospital, tags: ["carestay-waitlist", "homepage-signup"] }) });
+    await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, message: stayType ? `Stay type: ${stayType}` : "", tags: ["carestay-waitlist", "homepage-signup", "professional-stays"] }) });
     if (typeof window !== "undefined" && window.fbq) { window.fbq("track", "Lead"); }
     setDone(true);
   };
@@ -537,23 +535,23 @@ function Contact() {
     <section id="contact" className="pad" style={{ background: "var(--surface-blue)" }}>
       <div style={{ maxWidth: 560, margin: "0 auto" }}>
         <FadeIn>
-          <div className="sh-center" style={{ marginBottom: 36 }}>
+          <div className="sh-center" style={{ marginBottom: 28 }}>
             <div className="sh-label">Stay Updated</div>
             <h2 className="sh-title">Be the First to Know When New Suites Drop</h2>
-            <p className="sh-sub" style={{ marginLeft: "auto", marginRight: "auto" }}>Join healthcare professionals across Canada on our waitlist.</p>
+            <p className="sh-sub" style={{ marginLeft: "auto", marginRight: "auto" }}>Join professionals and organizations looking for furnished stays in Toronto.</p>
           </div>
         </FadeIn>
         {!done ? (
           <FadeIn delay={0.1}>
-            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 20, padding: "28px 22px", boxShadow: "var(--shadow)" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 20, padding: "24px 22px", boxShadow: "var(--shadow)" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div><label className="form-label">Name (optional)</label><input type="text" placeholder="Jane Smith" className="form-input" value={name} onChange={e => setName(e.target.value)} /></div>
-                <div><label className="form-label">Email *</label><input type="email" placeholder="jane@hospital.ca" className="form-input" value={email} onChange={e => setEmail(e.target.value)} /></div>
+                <div><label className="form-label">Email *</label><input type="email" placeholder="name@email.com" className="form-input" value={email} onChange={e => setEmail(e.target.value)} /></div>
                 <div>
-                  <label className="form-label">Hospital / Facility</label>
-                  <select className="form-input" value={hospital} onChange={e => setHospital(e.target.value)} style={{ appearance: "none", WebkitAppearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(30,42,50,0.4)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 32, cursor: "pointer" }}>
-                    <option value="">Select hospital...</option>
-                    {HOSPITAL_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                  <label className="form-label">What brings you to Toronto?</label>
+                  <select className="form-input" value={stayType} onChange={e => setStayType(e.target.value)} style={{ appearance: "none", WebkitAppearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(30,42,50,0.4)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 32, cursor: "pointer" }}>
+                    <option value="">Select a stay type...</option>
+                    {STAY_TYPE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
                   </select>
                 </div>
               </div>
@@ -563,7 +561,7 @@ function Contact() {
           </FadeIn>
         ) : (
           <FadeIn>
-            <div style={{ textAlign: "center", padding: 60, background: "rgba(45,43,255,0.04)", border: "1px solid rgba(45,43,255,0.15)", borderRadius: 20 }}>
+            <div style={{ textAlign: "center", padding: 48, background: "rgba(45,43,255,0.04)", border: "1px solid rgba(45,43,255,0.15)", borderRadius: 20 }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
               <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 28, color: "var(--ink)", marginBottom: 8 }}>You&apos;re on the list!</h3>
               <p style={{ fontSize: 15, color: "rgba(30,42,50,0.5)" }}>We&apos;ll notify you when new suites drop.</p>
@@ -590,11 +588,11 @@ function Footer({ address }: { address?: string }) {
           </div>
           <div className="footer-links">
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.82)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Quick Links</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.82)", marginBottom: 12, letterSpacing: "0.035em", textTransform: "uppercase" }}>Quick Links</div>
               {[{ label: "Listings", href: "/listings" }, { label: "Healthcare", href: "/healthcare" }, { label: "Corporate", href: "/corporate" }, { label: "About", href: "/about" }, { label: "Contact", href: "#contact" }].map(l => <a key={l.label} href={l.href} style={{ display: "block", fontSize: 13, color: "rgba(255,255,255,0.58)", textDecoration: "none", marginBottom: 8 }}>{l.label}</a>)}
             </div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.82)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Contact</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.82)", marginBottom: 12, letterSpacing: "0.035em", textTransform: "uppercase" }}>Contact</div>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.58)", marginBottom: 8 }}>info@carestaysuites.com</p>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.58)", marginBottom: 8 }}>{address || "35 Mariner Terrace, Toronto, ON M5V 3V9"}</p>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.58)" }}>Toronto, Ontario</p>
@@ -631,9 +629,9 @@ export default function Home() {
       <Hero tagline={siteSettings?.heroTagline} />
       <Stats />
       <ListingsSection />
-      <HospitalBanner />
+      <ProfessionalBanner />
       <Standard />
-      <Healthcare />
+      <ProfessionalPaths />
       <HowItWorks />
       <Contact />
       <Footer address={siteSettings?.companyAddress} />

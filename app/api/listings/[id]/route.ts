@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getListing, extractAmenityNames, extractBedroomCount } from "@/app/lib/hostaway";
 import { redis } from "@/app/lib/redis";
+import { filterPublicAmenities, getPublicListingDescription } from "@/app/lib/public-listing-copy";
 
 interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean; sortOrder?: number; featured?: boolean; videoUrl?: string; hidden?: boolean }
 interface OverridesData { listings: Record<string, unknown>; customListings: CustomListing[] }
@@ -25,7 +26,7 @@ export async function GET(
           id: cl.id, title: cl.title, location: cl.location, beds: cl.beds, baths: cl.baths,
           price: cl.price, sqft: cl.sqft, img: cl.images?.[0] || cl.img,
           images: cl.images?.length ? cl.images : (cl.img ? [cl.img] : []),
-          description: cl.description, available: true, amenities: [],
+          description: getPublicListingDescription({ title: cl.title, location: cl.location, beds: cl.beds, description: cl.description }), available: true, amenities: [],
           address: "", latitude: 0, longitude: 0,
           maxGuests: cl.beds * 2 || 2, bedrooms: cl.beds || 1,
           soakingTub: cl.soakingTub, carestayStandard: cl.carestayStandard,
@@ -56,9 +57,15 @@ export async function GET(
       sqft: listing.squareFeet || 0,
       img: listing.pictures?.[0]?.originalUrl || listing.pictures?.[0]?.url || listing.images?.[0]?.url || listing.listingImages?.[0]?.url || listing.thumbnailUrl || "",
       images: (listing.pictures?.map((p) => p.originalUrl || p.url) || listing.images?.map((p) => p.url) || listing.listingImages?.map((p) => p.url) || (listing.thumbnailUrl ? [listing.thumbnailUrl] : [])),
-      description: listing.description || "",
+      description: getPublicListingDescription({
+        title: listing.name,
+        location: listing.city || "Toronto",
+        beds: listing.bedsNumber || listing.beds || 1,
+        bedrooms: extractBedroomCount(listing),
+        description: listing.description || "",
+      }),
       available: true,
-      amenities: extractAmenityNames(listing),
+      amenities: filterPublicAmenities(extractAmenityNames(listing)),
       address: listing.address || "",
       latitude: listing.latitude,
       longitude: listing.longitude,

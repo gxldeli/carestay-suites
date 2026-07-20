@@ -1,17 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 const STORAGE_KEY = "carestay-banner-dismissed";
 
 export default function AnnouncementBanner() {
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [text, setText] = useState("");
   const [buttonText, setButtonText] = useState("Join");
   const [linkUrl, setLinkUrl] = useState("/#contact");
 
   useEffect(() => {
-    if (typeof window !== "undefined" && sessionStorage.getItem(STORAGE_KEY)) return;
+    if (pathname.startsWith("/admin")) {
+      setVisible(false);
+      return;
+    }
+    if (typeof window !== "undefined" && sessionStorage.getItem(STORAGE_KEY)) {
+      setVisible(false);
+      return;
+    }
     fetch("/api/settings")
       .then((r) => r.json())
       .then((d) => {
@@ -20,12 +29,15 @@ export default function AnnouncementBanner() {
           const usesLegacyMessage = !d.settings.bannerText || d.settings.bannerText === legacyText;
           setText(usesLegacyMessage ? "Furnished stays across the GTA" : d.settings.bannerText);
           setButtonText(usesLegacyMessage && (!d.settings.bannerButtonText || d.settings.bannerButtonText === "Join") ? "Inquire" : d.settings.bannerButtonText || "Learn More");
-          setLinkUrl(d.settings.bannerLinkUrl || "/#contact");
+          const configuredLink = d.settings.bannerLinkUrl || "/#contact";
+          setLinkUrl(configuredLink.startsWith("#") ? `/${configuredLink}` : configuredLink);
           setVisible(true);
+        } else {
+          setVisible(false);
         }
       })
       .catch(() => {});
-  }, []);
+  }, [pathname]);
 
   const dismiss = () => {
     setVisible(false);
@@ -33,12 +45,12 @@ export default function AnnouncementBanner() {
   };
 
   useEffect(() => {
-    if (visible) document.body.classList.add("has-banner");
+    if (visible && !pathname.startsWith("/admin")) document.body.classList.add("has-banner");
     else document.body.classList.remove("has-banner");
     return () => document.body.classList.remove("has-banner");
-  }, [visible]);
+  }, [pathname, visible]);
 
-  if (!visible) return null;
+  if (!visible || pathname.startsWith("/admin")) return null;
 
   return (
     <>

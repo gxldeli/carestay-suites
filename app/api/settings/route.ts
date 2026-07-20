@@ -18,13 +18,13 @@ export interface SiteSettings {
 const DEFAULTS: SiteSettings = {
   contactEmail: "info@carestaysuites.com",
   companyAddress: "35 Mariner Terrace, Toronto, ON M5V 3V9",
-  heroTagline: "Move-in ready suites primarily across the Greater Toronto Area and beyond. Verified properties. No scams, no deposits lost, no bait-and-switch. Trusted by nurses, physicians, and medical staff.",
+  heroTagline: "Comfortable, fully equipped suites with flexible stays, easy self check-in, and responsive local support from arrival to departure.",
   statProperties: "60+",
   statHealthcarePros: "150+",
   statHospitalPartnerships: "30+",
   statAverageRating: "4.9",
   bannerEnabled: true,
-  bannerText: "🏥 New suites dropping soon — join the waitlist",
+  bannerText: "New furnished suites are added regularly",
   bannerButtonText: "Join",
   bannerLinkUrl: "/#contact",
 };
