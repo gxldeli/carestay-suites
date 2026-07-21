@@ -2,7 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { redis } from "@/app/lib/redis";
 
 export const ADMIN_PASSWORD_HEADER = "x-admin-password";
-const FALLBACK_PASSWORD_DIGEST = Buffer.from("87cac0cf5c796b4231bae592e1258e185b9aee6de96ec57ec56b24104236b045", "hex");
+const FALLBACK_PASSWORD_DIGEST = Buffer.from("f7d9ab455ebec39e500fcef9524c206b492b3c08c0cd7d5781731a4900acfc46", "hex");
 const MAX_FAILED_ATTEMPTS = 8;
 const LOCKOUT_SECONDS = 15 * 60;
 
