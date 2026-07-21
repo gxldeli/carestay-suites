@@ -297,7 +297,7 @@ function Hero({ tagline }: { tagline?: string }) {
 }
 
 /* ─── LISTINGS ─── */
-interface ListingCard { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; featured?: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string; isCustom?: boolean; bookable?: boolean }
+interface ListingCard { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; featured?: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string; publicStatus?: string; isCustom?: boolean; bookable?: boolean }
 
 function ListingPhoto({ src, alt }: { src: string; alt: string }) {
   const [failed, setFailed] = useState(!src);
@@ -306,9 +306,9 @@ function ListingPhoto({ src, alt }: { src: string; alt: string }) {
 }
 
 function AvailabilityBadge({ listing }: { listing: ListingCard }) {
-  const status = listing.isCustom ? "Booked" : listing.availabilityStatus || "Available";
-  const label = status === "Almost Booked" ? "Almost booked" : status === "Waitlist Only" || status === "Booked" ? "Fully booked" : "Check dates";
-  const background = status === "Almost Booked" ? "rgba(205,119,20,.94)" : status === "Waitlist Only" || status === "Booked" ? "rgba(30,42,50,.9)" : "rgba(45,43,255,.92)";
+  const status = listing.publicStatus || listing.availabilityStatus || "Available";
+  const label = listing.isCustom ? status : status === "Almost Booked" ? "Almost booked" : status === "Waitlist Only" || status === "Booked" ? "Fully booked" : "Check dates";
+  const background = status === "Almost Booked" ? "rgba(205,119,20,.94)" : listing.isCustom || status === "Waitlist Only" || status === "Booked" ? "rgba(30,42,50,.9)" : "rgba(45,43,255,.92)";
   return <span style={{ background, color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{label}</span>;
 }
 
@@ -325,11 +325,11 @@ function ListingsSection() {
       .then(r => r.json())
       .then(data => {
         if (data.status === "success" && data.listings) {
-          setApiListings(data.listings.map((l: { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; available?: boolean; featured?: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string; isCustom?: boolean; bookable?: boolean }) => ({
+          setApiListings(data.listings.map((l: { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; available?: boolean; featured?: boolean; maxGuests?: number; bedrooms?: number; reviewCount?: number; reviewAvg?: number; availabilityStatus?: string; publicStatus?: string; isCustom?: boolean; bookable?: boolean }) => ({
             id: l.id, title: l.title, location: l.location, beds: l.beds, baths: l.baths,
             price: l.price, sqft: l.sqft, img: l.img, tag: l.location || "Toronto", available: l.available !== false, featured: l.featured === true,
             maxGuests: l.maxGuests || 0, bedrooms: l.bedrooms || 0, reviewCount: l.reviewCount || 0, reviewAvg: l.reviewAvg || 0,
-            availabilityStatus: l.availabilityStatus || "Available", isCustom: l.isCustom === true, bookable: l.bookable !== false,
+            availabilityStatus: l.availabilityStatus || "Available", publicStatus: l.publicStatus, isCustom: l.isCustom === true, bookable: l.bookable !== false,
           })));
         }
       })
@@ -337,9 +337,8 @@ function ListingsSection() {
       .finally(() => setListingsLoaded(true));
   }, []);
 
-  const activeListings = apiListings.filter((listing) => !listing.isCustom && listing.bookable !== false);
-  const featuredListings = activeListings.filter(l => l.featured);
-  const allListings = activeListings.filter(l => !l.featured);
+  const featuredListings = apiListings.filter(l => l.featured);
+  const allListings = apiListings.filter(l => !l.featured);
   const displayedListings = allListings.slice(0, 6);
   const hasMore = apiListings.length > featuredListings.length + displayedListings.length;
 

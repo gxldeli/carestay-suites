@@ -45,7 +45,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
   );
 }
 
-interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; hospitalDistance?: string; featured?: boolean; videoUrl?: string; amenities?: string[]; maxGuests?: number; bedrooms?: number; availabilityStatus?: string; isCustom?: boolean; bookable?: boolean }
+interface ListingData { id: number | string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; tag: string; available: boolean; desc: string; description?: string; images?: string[]; nearbyHospital?: string; hospitalDistance?: string; featured?: boolean; videoUrl?: string; amenities?: string[]; maxGuests?: number; bedrooms?: number; availabilityStatus?: string; publicStatus?: string; portfolioRelationship?: "managed" | "past-stay" | "coming-soon"; isCustom?: boolean; bookable?: boolean }
 
 export default function ListingPage() {
   const params = useParams();
@@ -137,6 +137,7 @@ export default function ListingPage() {
               available: match.available !== false, desc: match.description || "", description: match.description, images: match.images,
               nearbyHospital: match.nearbyHospital || "", hospitalDistance: match.hospitalDistance || "", featured: match.featured || false, videoUrl: match.videoUrl || "", amenities: match.amenities || [],
               maxGuests: match.maxGuests || undefined, bedrooms: match.bedrooms || undefined, availabilityStatus: match.availabilityStatus || "Available",
+              publicStatus: match.publicStatus || undefined, portfolioRelationship: match.portfolioRelationship || undefined,
               isCustom: match.isCustom === true, bookable: match.bookable !== false,
             });
         } else setLoadError(true);
@@ -165,13 +166,14 @@ export default function ListingPage() {
   const avgStars = reviews.length > 0 ? reviews.reduce((a, r) => a + r.stars, 0) / reviews.length : 0;
   const ratingLabel = avgStars >= 4.5 ? "Exceptional" : avgStars >= 4.0 ? "Excellent" : avgStars >= 3.5 ? "Very Good" : "Good";
   const displayTotalCount = reviewTotalCount || reviews.length;
-  const isShowcase = listing?.isCustom === true;
-  const isComingSoon = listing ? !listing.available && !isShowcase : false;
-  const availStatus = isShowcase ? "Example" : listing?.availabilityStatus || "Available";
-  const isWaitlist = !isShowcase && (availStatus === "Waitlist Only" || availStatus === "Booked");
-  const ctaLabel = isShowcase ? "Ask About Similar Suites" : isWaitlist || isComingSoon ? "Join Waitlist" : "Inquire Now";
-  const ctaHeading = isShowcase ? "Looking for a Suite Like This?" : isWaitlist || isComingSoon ? "Join the Waitlist for This Suite" : "Inquire About This Suite";
-  const ctaSub = isShowcase ? "This is a non-bookable example. Tell us what you need and we’ll look for a real match." : isWaitlist || isComingSoon ? "Be first to know when this suite becomes available." : "Fill out the form below and our team will follow up shortly.";
+  const isPortfolioListing = listing?.isCustom === true;
+  const isPastStay = listing?.portfolioRelationship === "past-stay";
+  const isComingSoon = listing?.portfolioRelationship === "coming-soon" || (listing ? !listing.available && !isPortfolioListing : false);
+  const availStatus = listing?.publicStatus || listing?.availabilityStatus || "Available";
+  const isWaitlist = !isPastStay && (isPortfolioListing || availStatus === "Waitlist Only" || availStatus === "Booked");
+  const ctaLabel = isPastStay ? "Ask About Similar Suites" : isWaitlist || isComingSoon ? "Join Waitlist" : "Inquire Now";
+  const ctaHeading = isPastStay ? "Looking for a Suite Like This?" : isWaitlist || isComingSoon ? "Join the Waitlist for This Suite" : "Inquire About This Suite";
+  const ctaSub = isPastStay ? "This past CareStay stay is not currently available. Tell us what you need and we’ll help find a current match." : isWaitlist || isComingSoon ? "Be first to know when this suite becomes available." : "Fill out the form below and our team will follow up shortly.";
   const today = getTorontoToday();
   const departureMin = getNextDateInput(moveIn) || today;
   const returnParams = new URLSearchParams();
@@ -333,8 +335,8 @@ export default function ListingPage() {
               {/* Badges */}
               <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                 <span style={{ background: "rgba(94,129,148,0.1)", color: "var(--accent2)", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{listing.tag}</span>
-                <span style={{ background: availStatus === "Almost Booked" ? "rgba(205,119,20,0.12)" : availStatus === "Example" || availStatus === "Waitlist Only" || availStatus === "Booked" ? "rgba(30,42,50,0.1)" : "rgba(45,43,255,0.1)", color: availStatus === "Almost Booked" ? "#a75d10" : availStatus === "Example" || availStatus === "Waitlist Only" || availStatus === "Booked" ? "var(--ink)" : "var(--accent)", padding: "5px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                  {availStatus === "Example" ? "Example · not bookable" : availStatus === "Almost Booked" ? "Limited availability" : availStatus === "Waitlist Only" || availStatus === "Booked" ? "Fully booked" : "Check your dates"}
+                <span style={{ background: availStatus === "Almost Booked" ? "rgba(205,119,20,0.12)" : isPortfolioListing || availStatus === "Waitlist Only" || availStatus === "Booked" ? "rgba(30,42,50,0.1)" : "rgba(45,43,255,0.1)", color: availStatus === "Almost Booked" ? "#a75d10" : isPortfolioListing || availStatus === "Waitlist Only" || availStatus === "Booked" ? "var(--ink)" : "var(--accent)", padding: "5px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                  {isPortfolioListing ? availStatus : availStatus === "Almost Booked" ? "Limited availability" : availStatus === "Waitlist Only" || availStatus === "Booked" ? "Fully booked" : "Check your dates"}
                 </span>
                 {listing.featured && (
                   <span style={{ background: "rgba(185,130,79,0.15)", color: "var(--gold)", padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>★ Featured</span>

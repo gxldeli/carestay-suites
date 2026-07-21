@@ -2,11 +2,18 @@ import { NextResponse } from "next/server";
 import { getListings, extractAmenityNames, extractBedroomCount } from "@/app/lib/hostaway";
 import { redis } from "@/app/lib/redis";
 import { filterPublicAmenities, getPublicListingDescription, hasRestrictedDurationLanguage } from "@/app/lib/public-listing-copy";
-import { getPublicAreaLabel, getPublicShowcaseDescription, getPublicShowcaseImages } from "@/app/lib/public-location";
+import {
+  getPortfolioStatusLabel,
+  getPublicAreaLabel,
+  getPublicPortfolioDescription,
+  getPublicPortfolioImages,
+  isPublishablePortfolioRelationship,
+  type PortfolioRelationship,
+} from "@/app/lib/public-location";
 
 // Upstash Redis overrides store
 interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string; sortOrder?: number; featured?: boolean; videoUrl?: string; availabilityStatus?: string }
-interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean; sortOrder?: number; featured?: boolean; videoUrl?: string; hidden?: boolean; availabilityStatus?: string }
+interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean; sortOrder?: number; featured?: boolean; videoUrl?: string; hidden?: boolean; availabilityStatus?: string; published?: boolean; portfolioRelationship?: PortfolioRelationship }
 interface ReviewItem { id: string; name: string; stars: number; text: string; date: string; verified: boolean; stayInfo?: string }
 interface ListingReviews { totalCount: number; items: ReviewItem[] }
 interface OverridesData { listings: Record<string, ListingOverride>; customListings: CustomListing[]; reviews?: Record<string, ListingReviews> }
@@ -106,13 +113,16 @@ export async function GET(_request: Request) {
       })
       .filter((l) => !l.hidden);
 
-    // Append custom listings
-    const custom = overrides.customListings.map((cl) => {
+    // Append only custom portfolio records whose real relationship has been confirmed in admin.
+    const custom = overrides.customListings.flatMap((cl) => {
+      if (cl.published !== true || cl.hidden || !isPublishablePortfolioRelationship(cl.portfolioRelationship)) return [];
       const publicLocation = getPublicAreaLabel(cl.location);
-      const publicImages = getPublicShowcaseImages(cl.title, cl.images?.length ? cl.images : (cl.img ? [cl.img] : []));
-      return {
+      const relationship = cl.portfolioRelationship;
+      const publicImages = getPublicPortfolioImages(cl.title, cl.images?.length ? cl.images : (cl.img ? [cl.img] : []));
+      const publicStatus = getPortfolioStatusLabel(relationship);
+      return [{
         id: cl.id,
-        title: `Example · ${cl.title}`,
+        title: cl.title,
         location: publicLocation,
         beds: cl.beds,
         baths: cl.baths,
@@ -120,7 +130,7 @@ export async function GET(_request: Request) {
         sqft: cl.sqft,
         img: publicImages[0] || "",
         images: publicImages,
-        description: getPublicShowcaseDescription(cl.title, publicLocation),
+        description: getPublicPortfolioDescription(cl.title, publicLocation, relationship),
         available: false,
         amenities: [] as string[],
         maxGuests: 0,
@@ -133,14 +143,16 @@ export async function GET(_request: Request) {
         sortOrder: cl.sortOrder ?? 50,
         featured: cl.featured === true,
         videoUrl: cl.videoUrl || "",
-        availabilityStatus: "Example",
+        availabilityStatus: publicStatus,
+        publicStatus,
+        portfolioRelationship: relationship,
         reviewCount: getPublishedReviewMetrics(overrides.reviews?.[String(cl.id)]).count,
         reviewAvg: getPublishedReviewMetrics(overrides.reviews?.[String(cl.id)]).average,
         isCustom: true,
-        inventorySource: "showcase" as const,
+        inventorySource: "portfolio" as const,
         bookable: false,
-      };
-    }).filter((l) => !l.hidden);
+      }];
+    });
 
     const all = [...transformed, ...custom].sort((a, b) => (a.sortOrder ?? 50) - (b.sortOrder ?? 50));
 

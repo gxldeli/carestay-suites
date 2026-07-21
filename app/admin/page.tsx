@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useDeferredValue, useMemo, useRef } from "react";
+import type { PortfolioRelationship } from "@/app/lib/public-location";
 
 interface ListingOverride {
   priceOverride?: number;
@@ -49,6 +50,8 @@ interface CustomListing {
   videoUrl?: string;
   hidden?: boolean;
   availabilityStatus?: string;
+  published?: boolean;
+  portfolioRelationship?: PortfolioRelationship;
 }
 
 interface ReviewItem {
@@ -191,8 +194,8 @@ function StatusBadge({ status }: { status?: string }) {
 
 const TABS = [
   { key: "settings", label: "Site Settings" },
-  { key: "hostaway", label: "HostAway Listings" },
-  { key: "custom", label: "Custom Listings" },
+  { key: "hostaway", label: "Connected Listings" },
+  { key: "custom", label: "Public Portfolio" },
   { key: "reviews", label: "Reviews" },
   { key: "reservations", label: "Reservations" },
 ] as const;
@@ -276,6 +279,8 @@ export default function AdminPage() {
   const [editVideoUrl, setEditVideoUrl] = useState("");
   const [editHidden, setEditHidden] = useState(false);
   const [editAvailStatus, setEditAvailStatus] = useState("Available");
+  const [editPublished, setEditPublished] = useState(false);
+  const [editPortfolioRelationship, setEditPortfolioRelationship] = useState<PortfolioRelationship>("unverified");
   const [addPhotoInput, setAddPhotoInput] = useState("");
   const [bulkPhotoInput, setBulkPhotoInput] = useState("");
 
@@ -317,11 +322,13 @@ export default function AdminPage() {
     setEditVideoUrl(cl.videoUrl || "");
     setEditHidden(!!cl.hidden);
     setEditAvailStatus(cl.availabilityStatus || "Available");
+    setEditPublished(cl.published === true);
+    setEditPortfolioRelationship(cl.portfolioRelationship || "unverified");
     setAddPhotoInput("");
   };
 
   const saveEditCustom = async () => {
-    if (!editingCustomId || !editTitle || !editPrice) return alert("Title and price required");
+    if (!editingCustomId || !editTitle) return alert("Title is required");
     const imgLines = editImg.split("\n").map(s => s.trim()).filter(Boolean);
     setSaving("editCustom");
     try {
@@ -332,6 +339,8 @@ export default function AdminPage() {
         description: editDesc, nearbyHospital: editHospital, hospitalDistance: editDistance,
         soakingTub: editTub, carestayStandard: editStandard, featured: editFeatured, sortOrder: Number(editSortOrder),
         videoUrl: editVideoUrl, hidden: editHidden, availabilityStatus: editAvailStatus,
+        published: editPortfolioRelationship !== "unverified" && editPublished,
+        portfolioRelationship: editPortfolioRelationship,
       });
       if (result.status === "success") setEditingCustomId(null);
     } finally {
@@ -350,6 +359,24 @@ export default function AdminPage() {
     try {
       await adminPost("reorderCustomListings", {
         updates: reordered.map((listing, index) => ({ id: listing.id, sortOrder: (index + 1) * 10 })),
+      });
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const moveHostawayListing = async (id: number, direction: "up" | "down") => {
+    const ordered = [...listings].sort((a, b) =>
+      (overrides.listings[String(a.id)]?.sortOrder ?? 50) - (overrides.listings[String(b.id)]?.sortOrder ?? 50)
+    );
+    const idx = ordered.findIndex((listing) => listing.id === id);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (idx === -1 || swapIdx < 0 || swapIdx >= ordered.length) return;
+    [ordered[idx], ordered[swapIdx]] = [ordered[swapIdx], ordered[idx]];
+    setSaving("moveHostaway");
+    try {
+      await adminPost("reorderListings", {
+        updates: ordered.map((listing, index) => ({ id: String(listing.id), sortOrder: (index + 1) * 10 })),
       });
     } finally {
       setSaving(null);
@@ -595,23 +622,8 @@ export default function AdminPage() {
     }
   };
 
-  const SHOWCASE_PRESETS = [
-    { title: "Yorkville Penthouse", location: "Downtown Toronto", beds: "2", baths: "2", price: "4500", sqft: "950", hospital: "Mount Sinai", distance: "5 min walk", desc: "Luxury penthouse in Toronto's most prestigious neighborhood. Walking distance to Mount Sinai and SickKids.", imgs: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800\nhttps://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800", tub: true, standard: true },
-    { title: "Liberty Village Loft", location: "Liberty Village", beds: "1", baths: "1", price: "2700", sqft: "620", hospital: "St. Joseph's", distance: "8 min drive", desc: "Industrial-chic loft with high ceilings and exposed brick.", imgs: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800\nhttps://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800", tub: false, standard: true },
-    { title: "Vaughan Metropolitan", location: "Vaughan", beds: "2", baths: "1", price: "3000", sqft: "780", hospital: "Mackenzie Health", distance: "12 min drive", desc: "Brand new condo at VMC with direct subway access.", imgs: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800\nhttps://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=800", tub: false, standard: false },
-    { title: "SickKids Quarter", location: "University District", beds: "1", baths: "1", price: "3100", sqft: "540", hospital: "SickKids", distance: "5 min walk", desc: "Steps from SickKids and Princess Margaret. Ideal for pediatric nurses.", imgs: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800\nhttps://images.unsplash.com/photo-1484154218962-a197022b5858?w=800", tub: true, standard: true },
-    { title: "Burlington Lakefront", location: "Burlington", beds: "2", baths: "1", price: "3100", sqft: "810", hospital: "Joseph Brant", distance: "10 min drive", desc: "Waterfront living with charming downtown Burlington nearby.", imgs: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800\nhttps://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=800", tub: false, standard: true },
-  ];
-
-  const applyPreset = (idx: number) => {
-    const p = SHOWCASE_PRESETS[idx];
-    setNewTitle(p.title); setNewLocation(p.location); setNewBeds(p.beds); setNewBaths(p.baths);
-    setNewPrice(p.price); setNewSqft(p.sqft); setNewHospital(p.hospital); setNewDistance(p.distance);
-    setNewDesc(p.desc); setNewImg(p.imgs); setNewTub(p.tub); setNewStandard(p.standard);
-  };
-
   const addCustomListing = async () => {
-    if (!newTitle || !newPrice) return alert("Title and price are required");
+    if (!newTitle) return alert("Title is required");
     const imgLines = newImg.split("\n").map(s => s.trim()).filter(Boolean);
     setSaving("addCustom");
     try {
@@ -619,6 +631,7 @@ export default function AdminPage() {
         title: newTitle, location: newLocation, beds: Number(newBeds), baths: Number(newBaths),
         price: Number(newPrice), sqft: Number(newSqft), img: imgLines[0] || "", images: imgLines, description: newDesc,
         nearbyHospital: newHospital, hospitalDistance: newDistance, soakingTub: newTub, carestayStandard: newStandard, featured: newFeatured, availabilityStatus: "Available",
+        published: false, portfolioRelationship: "unverified",
       });
       if (result.status === "success") {
         setNewTitle(""); setNewLocation(""); setNewBeds("1"); setNewBaths("1"); setNewPrice(""); setNewSqft("");
@@ -679,7 +692,9 @@ export default function AdminPage() {
     const q = deferredHaSearch.toLowerCase();
     const ov = overrides.listings[String(l.id)] || {};
     return (ov.titleOverride || l.title).toLowerCase().includes(q) || l.location.toLowerCase().includes(q);
-  }), [deferredHaSearch, listings, overrides.listings]);
+  }).sort((a, b) =>
+    (overrides.listings[String(a.id)]?.sortOrder ?? 50) - (overrides.listings[String(b.id)]?.sortOrder ?? 50)
+  ), [deferredHaSearch, listings, overrides.listings]);
 
   const filteredCustom = useMemo(() => overrides.customListings.filter(cl => {
     if (!deferredClSearch) return true;
@@ -876,7 +891,10 @@ export default function AdminPage() {
         {activeTab === "hostaway" && (loadStatus.admin !== "loaded" || loadStatus.listings !== "loaded") && <LoadingPanel label="Loading your HostAway controls…" error={loadStatus.admin === "error" ? loadErrors.admin : loadStatus.listings === "error" ? loadErrors.listings : undefined} onRetry={() => { loadedResources.current.admin = false; loadedResources.current.listings = false; void Promise.all([loadAdminData(), loadListings()]); }} />}
         {activeTab === "hostaway" && loadStatus.admin === "loaded" && loadStatus.listings === "loaded" && <div style={cardStyle}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 16, flexWrap: "wrap" }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700 }}>HostAway Listings ({filteredHostaway.length})</h2>
+            <div>
+              <h2 style={{ fontSize: 18, fontWeight: 700 }}>Connected Listings ({filteredHostaway.length})</h2>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,.42)", marginTop: 5 }}>These verified HostAway properties publish automatically. Feature and rank the ones visitors should see first.</p>
+            </div>
             <input placeholder="Search by title or location..." value={haSearch} onChange={e => setHaSearch(e.target.value)} style={{ ...inputStyle, width: 280, padding: "8px 14px" }} />
           </div>
           {selectedHostaway.size > 0 && (
@@ -900,6 +918,7 @@ export default function AdminPage() {
                   <th style={thStyle}>Status</th>
                   <th style={thStyle}>Featured</th>
                   <th style={thStyle}>Visible</th>
+                  <th style={thStyle}>Order</th>
                   <th style={thStyle}></th>
                 </tr>
               </thead>
@@ -923,6 +942,12 @@ export default function AdminPage() {
                       <td style={tdStyle}><StatusBadge status={ov.availabilityStatus} /></td>
                       <td style={tdStyle}><Toggle checked={!!ov.featured} disabled={mutationPending > 0 || saving === `${l.id}-featured`} onChange={(v) => updateOverride(l.id, "featured", v)} /></td>
                       <td style={tdStyle}><Toggle checked={!ov.hidden} disabled={mutationPending > 0 || saving === `${l.id}-hidden`} onChange={(v) => updateOverride(l.id, "hidden", !v)} /></td>
+                      <td style={tdStyle}>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button aria-label={`Move ${ov.titleOverride || l.title} up`} disabled={mutationPending > 0 || Boolean(haSearch.trim()) || l.id === filteredHostaway[0]?.id} onClick={() => moveHostawayListing(l.id, "up")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: mutationPending > 0 || haSearch.trim() || l.id === filteredHostaway[0]?.id ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 12, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}>▲</button>
+                          <button aria-label={`Move ${ov.titleOverride || l.title} down`} disabled={mutationPending > 0 || Boolean(haSearch.trim()) || l.id === filteredHostaway[filteredHostaway.length - 1]?.id} onClick={() => moveHostawayListing(l.id, "down")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: mutationPending > 0 || haSearch.trim() || l.id === filteredHostaway[filteredHostaway.length - 1]?.id ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 12, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}>▼</button>
+                        </div>
+                      </td>
                       <td style={tdStyle}><button onClick={() => setExpandedId(l.id)} style={{ background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)", borderRadius: 6, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Edit</button></td>
                     </tr>
                   );
@@ -995,7 +1020,10 @@ export default function AdminPage() {
         {activeTab === "custom" && loadStatus.admin !== "loaded" && <LoadingPanel label="Loading custom listings…" error={loadStatus.admin === "error" ? loadErrors.admin : undefined} onRetry={() => { loadedResources.current.admin = false; void loadAdminData(); }} />}
         {activeTab === "custom" && loadStatus.admin === "loaded" && <div style={cardStyle}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 16, flexWrap: "wrap" }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700 }}>Custom Listings ({filteredCustom.length})</h2>
+            <div>
+              <h2 style={{ fontSize: 18, fontWeight: 700 }}>Public Portfolio ({filteredCustom.length})</h2>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,.42)", marginTop: 5, maxWidth: 680 }}>Add and rank portfolio records here. New entries stay private until you confirm the real CareStay relationship and publish them.</p>
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
               <input placeholder="Search by title or location..." value={clSearch} onChange={e => setClSearch(e.target.value)} style={{ ...inputStyle, width: 280, padding: "8px 14px" }} />
               {clSearch.trim() && <span style={{ fontSize: 10, color: "rgba(255,255,255,.35)", textAlign: "right" }}>Clear search to reorder suites</span>}
@@ -1004,9 +1032,8 @@ export default function AdminPage() {
           {selectedCustom.size > 0 && (
             <div aria-busy={saving === "bulkCustom"} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 16, padding: "12px 16px", background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", borderRadius: 10, opacity: mutationPending > 0 ? 0.65 : 1, pointerEvents: mutationPending > 0 ? "none" : "auto" }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#14b8a6", marginRight: 8 }}>{saving === "bulkCustom" ? "Updating…" : `${selectedCustom.size} selected`}</span>
-              <select onChange={e => { if (e.target.value) { bulkCustom("availabilityStatus", e.target.value); e.target.value = ""; } }} style={{ ...inputStyle, width: "auto", padding: "6px 10px", fontSize: 12 }}><option value="">Set Status...</option><option value="Available">Available</option><option value="Almost Booked">Almost Booked</option><option value="Waitlist Only">Waitlist Only</option><option value="Booked">Booked</option></select>
-              <button onClick={() => bulkCustom("hidden", false)} style={{ padding: "6px 12px", background: "rgba(0,255,170,0.12)", color: "#0fa", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Show</button>
-              <button onClick={() => bulkCustom("hidden", true)} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Hide</button>
+              <select onChange={e => { if (e.target.value) { bulkCustom("portfolioRelationship", e.target.value); e.target.value = ""; } }} style={{ ...inputStyle, width: "auto", padding: "6px 10px", fontSize: 12 }}><option value="">Set Relationship...</option><option value="managed">Managed by CareStay</option><option value="past-stay">Past CareStay stay</option><option value="coming-soon">Confirmed coming soon</option><option value="unverified">Unverified / private</option></select>
+              <button onClick={() => bulkCustom("published", false)} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Make Private</button>
               <button onClick={() => bulkCustom("featured", true)} style={{ padding: "6px 12px", background: "rgba(240,192,64,0.12)", color: "#f0c040", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Feature</button>
               <button onClick={() => bulkCustom("featured", false)} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Unfeature</button>
             </div>
@@ -1019,10 +1046,9 @@ export default function AdminPage() {
                     <th style={thStyle}><input type="checkbox" checked={filteredCustom.length > 0 && filteredCustom.every(cl => selectedCustom.has(cl.id))} onChange={e => { if (e.target.checked) setSelectedCustom(new Set(filteredCustom.map(cl => cl.id))); else setSelectedCustom(new Set()); }} /></th>
                     <th style={thStyle}>Listing</th>
                     <th style={thStyle}>Location</th>
-                    <th style={thStyle}>Price</th>
-                    <th style={thStyle}>Status</th>
+                    <th style={thStyle}>Relationship</th>
+                    <th style={thStyle}>Published</th>
                     <th style={thStyle}>Featured</th>
-                    <th style={thStyle}>Visible</th>
                     <th style={thStyle}>Order</th>
                     <th style={thStyle}>Actions</th>
                   </tr>
@@ -1041,10 +1067,16 @@ export default function AdminPage() {
                         </div>
                       </td>
                       <td style={tdStyle}>{cl.location}</td>
-                      <td style={tdStyle}>${cl.price.toLocaleString()}/mo</td>
-                      <td style={tdStyle}><StatusBadge status={cl.availabilityStatus} /></td>
+                      <td style={tdStyle}>
+                        <select aria-label={`Relationship for ${cl.title}`} value={cl.portfolioRelationship || "unverified"} onChange={(event) => updateCustomField(cl.id, "portfolioRelationship", event.target.value)} style={{ ...inputStyle, minWidth: 170, padding: "7px 9px", fontSize: 12 }}>
+                          <option value="unverified">Unverified / private</option>
+                          <option value="managed">Managed by CareStay</option>
+                          <option value="past-stay">Past CareStay stay</option>
+                          <option value="coming-soon">Confirmed coming soon</option>
+                        </select>
+                      </td>
+                      <td style={tdStyle}><Toggle checked={cl.published === true} disabled={mutationPending > 0 || !cl.portfolioRelationship || cl.portfolioRelationship === "unverified"} onChange={(v) => updateCustomField(cl.id, "published", v)} /></td>
                       <td style={tdStyle}><Toggle checked={!!cl.featured} disabled={mutationPending > 0 || saving === `custom-${cl.id}-featured`} onChange={(v) => updateCustomField(cl.id, "featured", v)} /></td>
-                      <td style={tdStyle}><Toggle checked={!cl.hidden} disabled={mutationPending > 0 || saving === `custom-${cl.id}-hidden`} onChange={(v) => updateCustomField(cl.id, "hidden", !v)} /></td>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", gap: 4 }}>
                           <button disabled={mutationPending > 0 || Boolean(clSearch.trim()) || idx === 0} onClick={() => moveCustomListing(cl.id, "up")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: mutationPending > 0 || clSearch.trim() || idx === 0 ? "rgba(255,255,255,0.15)" : "#fff", fontSize: 12, padding: "2px 8px", cursor: mutationPending > 0 || clSearch.trim() || idx === 0 ? "default" : "pointer", fontFamily: "inherit" }}>▲</button>
@@ -1074,7 +1106,7 @@ export default function AdminPage() {
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Location</label><input style={inputStyle} value={editLocation} onChange={e => setEditLocation(e.target.value)} /></div>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Beds</label><input style={inputStyle} type="number" value={editBeds} onChange={e => setEditBeds(e.target.value)} /></div>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Baths</label><input style={inputStyle} type="number" value={editBaths} onChange={e => setEditBaths(e.target.value)} /></div>
-                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Monthly Price * ($)</label><input style={inputStyle} type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} /></div>
+                  <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Internal Price ($, optional)</label><input style={inputStyle} type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} /></div>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Sqft</label><input style={inputStyle} type="number" value={editSqft} onChange={e => setEditSqft(e.target.value)} /></div>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Nearby Hospital</label><input style={inputStyle} value={editHospital} onChange={e => setEditHospital(e.target.value)} /></div>
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Hospital Distance</label><input style={inputStyle} value={editDistance} onChange={e => setEditDistance(e.target.value)} /></div>
@@ -1121,6 +1153,16 @@ export default function AdminPage() {
                   <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Sort Order</label><input style={{ ...inputStyle, width: 100 }} type="number" value={editSortOrder} onChange={e => setEditSortOrder(e.target.value)} /></div>
                 </div>
                 <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>CareStay Relationship</label>
+                  <select style={{ ...inputStyle, width: 260, cursor: "pointer" }} value={editPortfolioRelationship} onChange={e => { const relationship = e.target.value as PortfolioRelationship; setEditPortfolioRelationship(relationship); if (relationship === "unverified") setEditPublished(false); }}>
+                    <option value="unverified">Unverified / private</option>
+                    <option value="managed">Managed by CareStay</option>
+                    <option value="past-stay">Past CareStay stay</option>
+                    <option value="coming-soon">Confirmed coming soon</option>
+                  </select>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,.36)", lineHeight: 1.5, marginTop: 6 }}>Public labels are generated from this relationship: currently unavailable, past stay, or coming soon.</p>
+                </div>
+                <div style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Availability Status</label>
                   <select style={{ ...inputStyle, width: 220, cursor: "pointer" }} value={editAvailStatus} onChange={e => setEditAvailStatus(e.target.value)}>
                     <option value="Available">Available</option>
@@ -1131,7 +1173,10 @@ export default function AdminPage() {
                 </div>
                 <div style={{ display: "flex", gap: 24, marginBottom: 16, flexWrap: "wrap" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
-                    <Toggle checked={!editHidden} onChange={v => setEditHidden(!v)} /> Visible
+                    <Toggle checked={editPublished} disabled={editPortfolioRelationship === "unverified"} onChange={setEditPublished} /> Published
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+                    <Toggle checked={!editHidden} onChange={v => setEditHidden(!v)} /> Active in admin
                   </label>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
                     <Toggle checked={editTub} onChange={setEditTub} /> Soaking Tub
@@ -1152,26 +1197,15 @@ export default function AdminPage() {
             );
           })()}
 
-          {/* Quick Add Showcase */}
-          <div style={{ marginBottom: 20, padding: "14px 16px", background: "rgba(0,170,255,0.04)", border: "1px solid rgba(0,170,255,0.12)", borderRadius: 10 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#0af", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>Quick Add Showcase</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {SHOWCASE_PRESETS.map((p, i) => (
-                <button key={i} onClick={() => applyPreset(i)} style={{ padding: "6px 14px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                  {p.title}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Add Custom Listing Form */}
-          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: "rgba(255,255,255,0.7)" }}>Add Custom Listing</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: "rgba(255,255,255,0.7)" }}>Add a Private Portfolio Record</h3>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,.4)", lineHeight: 1.5, marginBottom: 16 }}>It will not appear on the website until you edit it, confirm the relationship, and turn on Published.</p>
           <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
             <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Title *</label><input style={inputStyle} value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g., Luxury Downtown Suite" /></div>
             <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Location</label><input style={inputStyle} value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder="e.g., King West Village" /></div>
             <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Beds</label><input style={inputStyle} type="number" value={newBeds} onChange={(e) => setNewBeds(e.target.value)} /></div>
             <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Baths</label><input style={inputStyle} type="number" value={newBaths} onChange={(e) => setNewBaths(e.target.value)} /></div>
-            <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Monthly Price * ($)</label><input style={inputStyle} type="number" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} placeholder="3200" /></div>
+            <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Internal Price ($, optional)</label><input style={inputStyle} type="number" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} placeholder="3200" /></div>
             <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Sqft</label><input style={inputStyle} type="number" value={newSqft} onChange={(e) => setNewSqft(e.target.value)} placeholder="750" /></div>
             <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Nearby Hospital</label><input style={inputStyle} value={newHospital} onChange={(e) => setNewHospital(e.target.value)} placeholder="Toronto General" /></div>
             <div><label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>Hospital Distance</label><input style={inputStyle} value={newDistance} onChange={(e) => setNewDistance(e.target.value)} placeholder="5 min walk" /></div>
@@ -1202,7 +1236,7 @@ export default function AdminPage() {
               <Toggle checked={newFeatured} onChange={setNewFeatured} /> <span style={{ color: "#f0c040" }}>Featured</span>
             </label>
           </div>
-          <button onClick={addCustomListing} style={btnStyle} disabled={mutationPending > 0 || saving === "addCustom"}>{saving === "addCustom" ? "Adding…" : "Add Listing"}</button>
+          <button onClick={addCustomListing} style={btnStyle} disabled={mutationPending > 0 || saving === "addCustom"}>{saving === "addCustom" ? "Adding…" : "Add Private Record"}</button>
         </div>}
 
         {/* ═══ TAB: Reviews ═══ */}

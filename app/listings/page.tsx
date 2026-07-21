@@ -23,6 +23,8 @@ interface Listing {
   isCustom?: boolean;
   bookable?: boolean;
   featured?: boolean;
+  publicStatus?: string;
+  portfolioRelationship?: "managed" | "past-stay" | "coming-soon";
 }
 
 type AvailabilityState = "idle" | "loading" | "verified" | "error";
@@ -38,7 +40,7 @@ function isUnavailable(listing: Listing): boolean {
 }
 
 function StatusPill({ listing, dateMatched }: { listing: Listing; dateMatched: boolean }) {
-  if (listing.isCustom) return <span className="status-pill status-booked">Example · not bookable</span>;
+  if (listing.isCustom) return <span className="status-pill status-booked">{listing.publicStatus || listing.availabilityStatus || "Currently unavailable"}</span>;
   if (isUnavailable(listing)) return <span className="status-pill status-booked">Fully booked</span>;
   if (dateMatched) return <span className="status-pill status-match">Date match</span>;
   if (listing.availabilityStatus === "Almost Booked") return <span className="status-pill status-limited">Limited</span>;
@@ -159,7 +161,7 @@ export default function AllListingsPage() {
   }, [checkIn, checkOut, guests]);
 
   const cities = useMemo(() => {
-    const unique = Array.from(new Set(listings.filter((listing) => !listing.isCustom).map((listing) => listing.location).filter(Boolean)));
+    const unique = Array.from(new Set(listings.map((listing) => listing.location).filter(Boolean)));
     return unique.sort((a, b) => a.localeCompare(b));
   }, [listings]);
 
@@ -190,10 +192,7 @@ export default function AllListingsPage() {
     .filter((listing) => availabilityState !== "verified" || dateMatchedIds.has(String(listing.id)))
     .sort((a, b) => Number(b.featured || false) - Number(a.featured || false));
   const unavailableMatches = listings
-    .filter((listing) => !listing.isCustom && isUnavailable(listing))
-    .filter((listing) => matchesFilters(listing, false));
-  const showcaseMatches = listings
-    .filter((listing) => listing.isCustom)
+    .filter((listing) => isUnavailable(listing))
     .filter((listing) => matchesFilters(listing, false));
 
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
@@ -304,11 +303,7 @@ export default function AllListingsPage() {
           </section>
 
           {!loading && !loadError && unavailableMatches.length > 0 && (
-            <section className="secondary-results" aria-labelledby="unavailable-title"><div className="results-head"><div><h2 id="unavailable-title">Currently unavailable</h2><p className="results-note" style={{ marginTop: 7 }}>These connected suites are not currently accepting inquiries for new stays.</p></div></div><ul className="listings-grid">{unavailableMatches.map((listing) => <ListingCard key={listing.id} listing={listing} href={`/listings/${listing.id}${queryString ? `?${queryString}` : ""}`} dateMatched={false} />)}</ul></section>
-          )}
-
-          {!loading && !loadError && showcaseMatches.length > 0 && (
-            <section className="secondary-results" aria-labelledby="showcase-title"><div className="results-head"><div><h2 id="showcase-title">Suite inspiration</h2><p className="results-note" style={{ marginTop: 7 }}>These are non-bookable examples, shown for style and neighbourhood inspiration. They are not active CareStay listings.</p></div></div><ul className="listings-grid">{showcaseMatches.map((listing) => <ListingCard key={listing.id} listing={listing} href={`/listings/${listing.id}${queryString ? `?${queryString}` : ""}`} dateMatched={false} />)}</ul></section>
+            <section className="secondary-results" aria-labelledby="unavailable-title"><div className="results-head"><div><h2 id="unavailable-title">Currently unavailable</h2><p className="results-note" style={{ marginTop: 7 }}>More from the CareStay portfolio, including suites that are fully booked, past stays, or coming soon.</p></div></div><ul className="listings-grid">{unavailableMatches.map((listing) => <ListingCard key={listing.id} listing={listing} href={`/listings/${listing.id}${queryString ? `?${queryString}` : ""}`} dateMatched={false} />)}</ul></section>
           )}
         </div>
       </main>

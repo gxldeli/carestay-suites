@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { redis } from "@/app/lib/redis";
 import { isAdminRequestAuthorized } from "@/app/lib/admin-auth";
+import { isPublishablePortfolioRelationship, type PortfolioRelationship } from "@/app/lib/public-location";
 
 /* ─── Upstash Redis overrides store ─── */
 
@@ -39,6 +40,8 @@ export interface CustomListing {
   videoUrl?: string;
   hidden?: boolean;
   availabilityStatus?: string;
+  published?: boolean;
+  portfolioRelationship?: PortfolioRelationship;
 }
 
 export interface ReviewItem {
@@ -107,7 +110,7 @@ export async function POST(request: Request) {
     } else if (action === "addCustomListing") {
       const listing = payload as Omit<CustomListing, "id">;
       const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      overrides.customListings.push({ ...listing, id });
+      overrides.customListings.push({ ...listing, published: false, portfolioRelationship: "unverified", id });
     } else if (action === "deleteCustomListing") {
       const { id } = payload as { id: string };
       overrides.customListings = overrides.customListings.filter((l) => l.id !== id);
@@ -127,6 +130,11 @@ export async function POST(request: Request) {
       overrides.customListings = overrides.customListings
         .map((listing) => sortOrders.has(listing.id) ? { ...listing, sortOrder: sortOrders.get(listing.id) } : listing)
         .sort((a, b) => (a.sortOrder ?? 50) - (b.sortOrder ?? 50));
+    } else if (action === "reorderListings") {
+      const { updates } = payload as { updates: Array<{ id: string; sortOrder: number }> };
+      for (const update of updates) {
+        overrides.listings[update.id] = { ...overrides.listings[update.id], sortOrder: update.sortOrder };
+      }
     } else if (action === "resetAllFeatured") {
       overrides.listings = Object.fromEntries(
         Object.entries(overrides.listings).map(([id, listing]) => [id, { ...listing, featured: false }])
@@ -157,6 +165,12 @@ export async function POST(request: Request) {
     } else {
       return NextResponse.json({ status: "error", message: "Unknown action" }, { status: 400 });
     }
+
+    overrides.customListings = overrides.customListings.map((listing) =>
+      isPublishablePortfolioRelationship(listing.portfolioRelationship)
+        ? listing
+        : { ...listing, published: false }
+    );
 
     await setOverrides(overrides);
     return NextResponse.json({ status: "success", data: overrides });

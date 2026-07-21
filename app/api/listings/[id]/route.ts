@@ -2,10 +2,17 @@ import { NextResponse } from "next/server";
 import { getListing, extractAmenityNames, extractBedroomCount } from "@/app/lib/hostaway";
 import { redis } from "@/app/lib/redis";
 import { filterPublicAmenities, getPublicListingDescription } from "@/app/lib/public-listing-copy";
-import { getPublicAreaLabel, getPublicShowcaseDescription, getPublicShowcaseImages } from "@/app/lib/public-location";
+import {
+  getPortfolioStatusLabel,
+  getPublicAreaLabel,
+  getPublicPortfolioDescription,
+  getPublicPortfolioImages,
+  isPublishablePortfolioRelationship,
+  type PortfolioRelationship,
+} from "@/app/lib/public-location";
 
 interface ListingOverride { priceOverride?: number; hidden?: boolean; soakingTub?: boolean; carestayStandard?: boolean; titleOverride?: string; descriptionOverride?: string; nearbyHospital?: string; hospitalDistance?: string; sortOrder?: number; featured?: boolean; videoUrl?: string; availabilityStatus?: string }
-interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean; sortOrder?: number; featured?: boolean; videoUrl?: string; hidden?: boolean }
+interface CustomListing { id: string; title: string; location: string; beds: number; baths: number; price: number; sqft: number; img: string; images: string[]; description: string; nearbyHospital: string; hospitalDistance: string; soakingTub: boolean; carestayStandard: boolean; sortOrder?: number; featured?: boolean; videoUrl?: string; hidden?: boolean; published?: boolean; portfolioRelationship?: PortfolioRelationship }
 interface OverridesData { listings: Record<string, ListingOverride>; customListings: CustomListing[] }
 
 export async function GET(
@@ -19,23 +26,26 @@ export async function GET(
     // Check if this is a custom listing (string ID like "custom-...")
     if (rawId.startsWith("custom-")) {
       const cl = overrides.customListings.find(c => c.id === rawId);
-      if (!cl || cl.hidden) {
+      if (!cl || cl.hidden || cl.published !== true || !isPublishablePortfolioRelationship(cl.portfolioRelationship)) {
         return NextResponse.json({ status: "error", message: "Listing not found" }, { status: 404 });
       }
       const publicLocation = getPublicAreaLabel(cl.location);
-      const publicImages = getPublicShowcaseImages(cl.title, cl.images?.length ? cl.images : (cl.img ? [cl.img] : []));
+      const relationship = cl.portfolioRelationship;
+      const publicImages = getPublicPortfolioImages(cl.title, cl.images?.length ? cl.images : (cl.img ? [cl.img] : []));
+      const publicStatus = getPortfolioStatusLabel(relationship);
       return NextResponse.json({
         status: "success",
         listing: {
-          id: cl.id, title: `Example · ${cl.title}`, location: publicLocation, beds: cl.beds, baths: cl.baths,
+          id: cl.id, title: cl.title, location: publicLocation, beds: cl.beds, baths: cl.baths,
           price: 0, sqft: cl.sqft, img: publicImages[0] || "",
           images: publicImages,
-          description: getPublicShowcaseDescription(cl.title, publicLocation), available: false, amenities: [],
+          description: getPublicPortfolioDescription(cl.title, publicLocation, relationship), available: false, amenities: [],
           maxGuests: 0, bedrooms: cl.beds || 1,
           soakingTub: cl.soakingTub, carestayStandard: cl.carestayStandard,
           nearbyHospital: cl.nearbyHospital, hospitalDistance: cl.hospitalDistance,
           sortOrder: cl.sortOrder ?? 50, featured: cl.featured || false, videoUrl: cl.videoUrl || "", isCustom: true,
-          inventorySource: "showcase", bookable: false, availabilityStatus: "Example",
+          inventorySource: "portfolio", bookable: false, availabilityStatus: publicStatus, publicStatus,
+          portfolioRelationship: relationship,
         },
       });
     }
