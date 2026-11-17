@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Corporate Housing Toronto | CareStay Suites",
-  description: "Furnished corporate housing in Toronto for relocations, consultants, project teams, and insurance placements.",
+  title: "Business Travel Suites in Toronto | CareStay Suites",
+  description: "Same suite every week, your things waiting between trips. Private Toronto suites with a real kitchen, a real desk and itemized invoices, for business travellers and the companies that send them.",
   alternates: { canonical: "/corporate" },
 };
 

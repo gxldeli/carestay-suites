@@ -3,8 +3,8 @@ import crypto from "crypto";
 import { redis } from "@/app/lib/redis";
 
 const FB_PIXEL_ID = "1241092834855360";
-const ALLOWED_TAGS = new Set(["carestay-waitlist", "homepage-signup", "email-popup", "listing-waitlist", "professional-stays", "healthcare", "corporate"]);
-const ALLOWED_SOURCES = new Set(["healthcare", "corporate"]);
+const ALLOWED_TAGS = new Set(["carestay-waitlist", "homepage-signup", "email-popup", "listing-waitlist", "professional-stays", "healthcare", "corporate", "business-travel", "home-base", "couples", "couples-gift"]);
+const ALLOWED_SOURCES = new Set(["healthcare", "corporate", "couples"]);
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function cleanText(value: unknown, maxLength: number): string {
@@ -67,6 +67,7 @@ export async function POST(request: Request) {
     const requestedTags = Array.isArray(body.tags) ? body.tags.filter((tag: unknown): tag is string => typeof tag === "string" && ALLOWED_TAGS.has(tag)) : [];
     if (source === "healthcare") requestedTags.push("healthcare", "professional-stays");
     if (source === "corporate") requestedTags.push("corporate", "professional-stays");
+    if (source === "couples") requestedTags.push("couples");
     const tags = Array.from(new Set(requestedTags));
 
     const ghlWebhook = process.env.GHL_WEBHOOK_URL;

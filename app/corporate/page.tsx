@@ -1,299 +1,357 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState } from "react";
+import { Icon, ClosetScene } from "@/app/components/landing/illustrations";
+import { Faq, LandingFooter, LandingNav, SectionHead, Steps, StickyCta, SuitesSection, scrollToForm, sendInquiry, type SubmitState } from "@/app/components/landing/Landing";
+import { SUITES } from "@/app/components/landing/suites";
 
-function Nav({ scrolled }: { scrolled: boolean }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: scrolled ? "rgba(255,253,249,0.96)" : "rgba(255,253,249,0.9)", backdropFilter: "blur(20px)", borderBottom: "1px solid var(--line)", boxShadow: scrolled ? "0 12px 32px rgba(30,42,50,0.08)" : "none", transition: "all 0.35s ease" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", display: "flex", justifyContent: "space-between", alignItems: "center", height: 72 }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,var(--accent),var(--accent2))", boxShadow: "0 8px 18px rgba(45,43,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#fff" }}>CS</div>
-          <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: "var(--ink)" }}>CareStay <span style={{ fontWeight: 400, color: "rgba(30,42,50,0.6)" }}>Suites</span></span>
-        </Link>
-        <div className="nav-links">
-          {[{ label: "Listings", href: "/listings" }, { label: "Healthcare", href: "/healthcare" }, { label: "Corporate", href: "/corporate" }, { label: "About", href: "/about" }, { label: "Contact", href: "/#contact" }].map(i => <a key={i.label} href={i.href} className="nav-link">{i.label}</a>)}
-          <a href="/#contact" className="nav-cta">Inquire Now</a>
-        </div>
-        <button className="nav-mobile" aria-label="Toggle navigation" aria-expanded={open} onClick={() => setOpen(!open)} style={{ background: "none", border: "none", fontSize: 28, color: "var(--ink)", cursor: "pointer" }}>{open ? "\u2715" : "\u2630"}</button>
-      </div>
-      {open && (
-        <div style={{ background: "rgba(255,253,249,0.98)", padding: "16px 24px 24px", borderTop: "1px solid rgba(30,42,50,0.06)" }}>
-          {[{ label: "Listings", href: "/listings" }, { label: "Healthcare", href: "/healthcare" }, { label: "Corporate", href: "/corporate" }, { label: "About", href: "/about" }, { label: "Contact", href: "/#contact" }].map(i => <a key={i.label} href={i.href} onClick={() => setOpen(false)} style={{ display: "block", color: "rgba(30,42,50,0.8)", textDecoration: "none", fontSize: 17, padding: "14px 0", borderBottom: "1px solid rgba(30,42,50,0.06)" }}>{i.label}</a>)}
-          <a href="/#contact" onClick={() => setOpen(false)} style={{ display: "block", background: "var(--accent)", color: "#fff", textAlign: "center", padding: 16, borderRadius: 999, fontWeight: 700, fontSize: 16, marginTop: 16, textDecoration: "none", boxShadow: "0 12px 24px rgba(45,43,255,0.2)" }}>Inquire Now</a>
-        </div>
-      )}
-    </nav>
-  );
-}
+/* Avatar: the independent business traveller in Toronto Mon–Thu, plus the companies who book for them.
+   Copy is built from the Nov 2026 Reddit deep dive (Marketing/Avatar Research — Reddit Deep Dive). */
 
-const WHO_ITS_FOR = [
-  { icon: "🏢", title: "Relocating Employees", desc: "Staff relocating who need furnished housing while they settle in." },
-  { icon: "👥", title: "Project Teams", desc: "Teams on-site for project stays who need comfortable, central accommodation." },
-  { icon: "💼", title: "Executives", desc: "C-suite and senior staff who expect a premium standard of living." },
-  { icon: "🏠", title: "Insurance Displacement", desc: "Families and individuals displaced by home damage who need comfortable furnished housing." },
+const PAINS = [
+  { icon: "cutlery", title: "Dinner with a plastic fork", body: "No fridge, no plate, no knife. The per diem goes to takeout and you eat it sitting on the bed." },
+  { icon: "mask", title: "Blinking lights at 2 a.m.", body: "Gappy curtains, a glowing smoke detector, an AC that clicks off at 3. You've started packing tape for the LEDs." },
+  { icon: "bag", title: "The same bag, every Sunday", body: "Shirts, chargers, gym shoes, the monitor you can't bring. Pack it, haul it, unpack it. Every single week." },
+  { icon: "key", title: "A stranger every Monday", body: "New room, new rules, new Wi-Fi password, and a front desk that's never heard of you." },
 ];
 
-const WHATS_INCLUDED = [
-  { icon: "📶", title: "High-Speed WiFi", desc: "Reliable internet for remote work and video conferencing." },
-  { icon: "🖥️", title: "Dedicated Workspace", desc: "Desk, monitor-friendly setup, and ergonomic chair." },
-  { icon: "🍳", title: "Full Kitchen", desc: "Stainless steel appliances, cookware, and everything you need." },
-  { icon: "🚗", title: "Parking Included", desc: "Free parking at most locations. Underground where available." },
-  { icon: "📅", title: "Flexible Terms", desc: "Stay arrangements designed around each assignment and placement." },
-  { icon: "🧾", title: "Invoicing Available", desc: "Corporate invoicing, direct billing, and expense-friendly receipts." },
+const HOME_BASE = [
+  { icon: "bin", title: "A leave-it-here bin", body: "Shirts, shoes, chargers, your monitor. We store it between stays and set it back out before you land." },
+  { icon: "calendar", title: "The same suite, every time", body: "Same bed, same desk, same shower. No learning a new room at 10 p.m. on a Monday." },
+  { icon: "thermo", title: "Your preferences on file", body: "Pillow, thermostat, coffee order. Set before you walk in, every week, without asking twice." },
+  { icon: "receipt", title: "A standing-week rate", body: "Book the season, not the night. Weekly and standing-week rates, quoted up front." },
 ];
 
-const LOCATIONS = [
-  "Downtown Toronto", "Midtown Toronto", "North York", "Scarborough",
-  "Etobicoke", "Mississauga", "Brampton", "Vaughan",
-  "Markham", "Oakville", "Burlington", "Liberty Village",
+const WEEK = [
+  { d: "Mon", s: "Walk in. It's set up.", in: true },
+  { d: "Tue", s: "Cook. Sleep.", in: true },
+  { d: "Wed", s: "Work. Laundry.", in: true },
+  { d: "Thu", s: "Leave your bin.", in: true },
+  { d: "Fri", s: "We store it.", in: false },
+  { d: "Sat", s: "You're home.", in: false },
+  { d: "Sun", s: "Pack light.", in: false },
+];
+
+const AMENITIES = [
+  { icon: "sleep", title: "Sleep", items: ["A real bedroom with a door", "Extra pillows + blankets", "Air conditioning + heat you control", "Fresh linens + towels"] },
+  { icon: "desk", title: "Work", items: ["A proper desk, not a vanity", "Fast Wi-Fi", "A dining table for spreading out", "Smart TV with Netflix for after"] },
+  { icon: "cutlery", title: "Eat", items: ["Full kitchen: stove, oven, fridge, freezer", "Real cutlery, sharp knives, pots + pans", "Coffee maker with coffee stocked", "Microwave + wine glasses"] },
+  { icon: "washer", title: "Live", items: ["Washer + dryer in the suite", "Shampoo, conditioner, body wash", "Closet space + hangers", "Cleaning supplies, so it stays yours"] },
+];
+
+const EXTRAS = [
+  { icon: "mask", title: "Blackout, no blinking lights", body: "Curtains that close all the way. Every LED covered." },
+  { icon: "plug", title: "Power on both sides of the bed", body: "Plus USB-C at the desk and a spare strip." },
+  { icon: "desk", title: "A monitor on the desk", body: "Plug in your laptop and get a second screen." },
+  { icon: "board", title: "First-night fridge", body: "Send a grocery list. It's stocked when you arrive." },
+  { icon: "tray", title: "Grab-and-go breakfast", body: "Packed and waiting for the 6 a.m. flight home." },
+  { icon: "iron", title: "Steamer, set up", body: "Shirts out of the bin and straight onto your back." },
+];
+
+const TEAMS = [
+  { icon: "home", title: "Relocations", body: "A furnished base while a new hire finds a place." },
+  { icon: "team", title: "Project teams", body: "Rotating staff, one suite, one invoice." },
+  { icon: "briefcase", title: "Consultants + executives", body: "Recurring weeks for people who'd rather not live in a lobby." },
+  { icon: "shield", title: "Insurance placements", body: "A comfortable, private home while theirs is repaired." },
 ];
 
 const STEPS = [
-  { num: "01", title: "Contact Our Corporate Team", desc: "Share your company's needs — number of units, preferred locations, timing, and budget." },
-  { num: "02", title: "Get a Custom Proposal", desc: "We'll prepare a tailored housing package with corporate rates and invoicing options." },
-  { num: "03", title: "Move Your Team In", desc: "Keys, Wi-Fi credentials, and a welcome package. Your people are settled from arrival." },
+  { icon: "calendar", title: "Tell us your weeks", body: "Your first night, which nights, and how often. It takes about thirty seconds." },
+  { icon: "receipt", title: "Get your rate", body: "We reply with open dates and your weekly or standing-week rate. No surprises at checkout." },
+  { icon: "key", title: "Walk in Monday", body: "Self check-in. Your bin is unpacked, your coffee's stocked, the Wi-Fi password is on the desk." },
 ];
 
-export default function CorporatePage() {
-  const [scrolled, setScrolled] = useState(false);
-  const [done, setDone] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [company, setCompany] = useState("");
-  const [moveIn, setMoveIn] = useState("");
+const FAQ = [
+  { q: "Can I expense it?", a: "Yes. Every stay gets an itemized invoice with your company name, dates, nightly rate and tax lines shown separately, emailed when you check out. Companies can also be billed directly." },
+  { q: "How does leaving my things actually work?", a: "On a standing schedule you get a labelled bin. Leave it in the suite when you check out. We store it and set everything back out before your next arrival: shirts on hangers, shoes by the door, monitor on the desk." },
+  { q: "Do I have to commit to every week?", a: "No. Book one week to try it. If it works, lock in a schedule: every week, every other week, or around your project." },
+  { q: "How does check-in work?", a: "Self check-in. Arrival instructions come before your first night, so there's no key handoff and no waiting around. If anything's off, a real person answers by text." },
+  { q: "Is there parking?", a: "Parking is included at The Earl. Ask us about options near the Bathurst suites." },
+  { q: "What if my trip changes?", a: "Tell us as early as you can. Change and cancellation terms are spelled out on your quote before you book anything." },
+  { q: "Where are the suites?", a: "Downtown near Wellesley & Sherbourne, and in the Annex on Bathurst near Bloor. Both are a walk from the subway. More Toronto suites are on the way." },
+];
 
-  useEffect(() => {
-    const h = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", h);
-    return () => window.removeEventListener("scroll", h);
-  }, []);
+const FREQUENCY = ["One week to try it", "Every week", "Every other week", "A few times a month", "One longer stay (project or relocation)"];
+const NIGHTS = ["1–2 nights", "3 nights (Mon–Thu)", "4 nights", "5+ nights", "A month or longer"];
 
-  const handleSubmit = async () => {
-    if (!email) { setSubmitError("Please add your email address."); return; }
-    setSubmitting(true);
-    setSubmitError("");
-    try {
-      const response = await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, company, moveIn, source: "corporate" }) });
-      if (!response.ok) throw new Error("Inquiry could not be sent");
-      setDone(true);
-    } catch {
-      setSubmitError("We couldn’t send that inquiry. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
+function InquiryForm({ suite, setSuite }: { suite: string; setSuite: (s: string) => void }) {
+  const [who, setWho] = useState<"me" | "company">("me");
+  const [state, setState] = useState<SubmitState>("idle");
+  const [error, setError] = useState("");
+  const [f, setF] = useState({ name: "", email: "", phone: "", company: "", firstNight: "", frequency: FREQUENCY[1], nights: NIGHTS[1], people: "1", notes: "" });
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!f.email) { setError("Add your email so we can send your rate."); return; }
+    setState("sending"); setError("");
+    const recurring = f.frequency !== FREQUENCY[0] && f.frequency !== FREQUENCY[4];
+    const message = [
+      `Booking for: ${who === "me" ? "myself" : "my company / team"}`,
+      `How often: ${f.frequency}`,
+      `Nights per stay: ${f.nights}`,
+      who === "company" ? `People / suites needed: ${f.people}` : "",
+      `Suite: ${suite || "No preference"}`,
+      f.notes ? `Notes: ${f.notes}` : "",
+    ].filter(Boolean).join("\n");
+    const ok = await sendInquiry({
+      name: f.name, email: f.email, phone: f.phone, company: f.company, moveIn: f.firstNight, message, listing: suite,
+      source: "corporate", tags: ["business-travel", ...(recurring ? ["home-base"] : [])],
+    });
+    setState(ok ? "done" : "error");
+    if (!ok) setError("That didn't send. Try again, or email info@carestaysuites.com.");
   };
 
+  if (state === "done") {
+    return (
+      <div className="lp-form lp-done">
+        <Icon name="check" size={64} />
+        <h3>Got it.</h3>
+        <p>We&apos;ll reply by email with open dates and your rate. Keep an eye on your inbox (and spam, just in case).</p>
+        <a href="#suites" className="lp-btn lp-btn--ghost">Look at the suites again</a>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: `
-        *{box-sizing:border-box;margin:0;padding:0}
-        html{scroll-behavior:smooth}
-        body{font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased}
-        .wrap{max-width:1200px;margin:0 auto;width:100%;padding:0 24px}
-        .nav-links{display:flex;align-items:center;gap:28px}
-        .nav-mobile{display:none}
-        .nav-link{color:rgba(30,42,50,0.7);text-decoration:none;font-size:14px;font-weight:500;transition:color .2s ease}
-        .nav-link:hover{color:var(--accent)}
-        .nav-cta{background:var(--accent);color:#fff;padding:11px 22px;border-radius:999px;font-weight:700;font-size:13px;text-decoration:none;box-shadow:0 10px 22px rgba(45,43,255,0.2);transition:transform .2s ease,box-shadow .2s ease}
-        .nav-cta:hover{transform:translateY(-1px);box-shadow:0 14px 26px rgba(45,43,255,0.25)}
-        .hero-primary,.hero-secondary{transition:transform .2s ease,box-shadow .2s ease,background .2s ease}
-        .hero-primary:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(45,43,255,0.24)!important}
-        .hero-secondary:hover{transform:translateY(-2px);background:var(--surface)!important;box-shadow:var(--shadow-soft)}
-        .hospitality-card{transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease}
-        .hospitality-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-soft);border-color:rgba(94,129,148,0.25)!important}
-        .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-        .form-input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;color:var(--ink);font-size:14px;outline:none;font-family:inherit;transition:border-color .2s ease,box-shadow .2s ease}
-        .form-input:focus{border-color:rgba(45,43,255,0.45);box-shadow:0 0 0 4px rgba(45,43,255,0.08)}
-        .form-label{display:block;font-size:11px;font-weight:600;color:rgba(30,42,50,0.5);margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase}
-        .footer-link{transition:color .2s ease}
-        .footer-link:hover{color:#fff!important}
-        @media(max-width:768px){
-          .nav-links{display:none!important}
-          .nav-mobile{display:block!important}
-          .who-grid{grid-template-columns:1fr!important}
-          .included-grid{grid-template-columns:1fr 1fr!important}
-          .location-grid{grid-template-columns:1fr 1fr!important}
-          .steps-grid{grid-template-columns:1fr!important}
-          .form-grid{grid-template-columns:1fr}
-          .footer-cols{grid-template-columns:1fr!important}
-          .hero-h1{font-size:36px!important}
-        }
-        @media(max-width:480px){
-          .included-grid{grid-template-columns:1fr!important}
-        }
-      ` }} />
+    <form className="lp-form" onSubmit={submit} noValidate>
+      <div className="lp-seg" role="tablist" aria-label="Who is this for">
+        <button type="button" className={who === "me" ? "is-on" : ""} onClick={() => setWho("me")}>Just me</button>
+        <button type="button" className={who === "company" ? "is-on" : ""} onClick={() => setWho("company")}>My company or team</button>
+      </div>
+      <div className="lp-form-row">
+        <div className="lp-field"><label htmlFor="b-name">Name</label><input id="b-name" autoComplete="name" value={f.name} onChange={set("name")} placeholder="Sam Patel" /></div>
+        <div className="lp-field"><label htmlFor="b-email">Email</label><input id="b-email" type="email" autoComplete="email" required value={f.email} onChange={set("email")} placeholder="sam@company.com" /></div>
+      </div>
+      <div className="lp-form-row">
+        <div className="lp-field"><label htmlFor="b-phone">Phone</label><input id="b-phone" type="tel" autoComplete="tel" value={f.phone} onChange={set("phone")} placeholder="(647) 000-0000" /></div>
+        <div className="lp-field"><label htmlFor="b-company">Company{who === "me" ? " (for the invoice)" : ""}</label><input id="b-company" autoComplete="organization" value={f.company} onChange={set("company")} placeholder="Company name" /></div>
+      </div>
+      <div className="lp-form-row">
+        <div className="lp-field"><label htmlFor="b-first">First night</label><input id="b-first" type="date" value={f.firstNight} onChange={set("firstNight")} /></div>
+        <div className="lp-field"><label htmlFor="b-freq">How often</label><select id="b-freq" value={f.frequency} onChange={set("frequency")}>{FREQUENCY.map((o) => <option key={o}>{o}</option>)}</select></div>
+      </div>
+      <div className="lp-form-row">
+        <div className="lp-field"><label htmlFor="b-nights">Nights per stay</label><select id="b-nights" value={f.nights} onChange={set("nights")}>{NIGHTS.map((o) => <option key={o}>{o}</option>)}</select></div>
+        {who === "company" ? (
+          <div className="lp-field"><label htmlFor="b-people">People</label><input id="b-people" inputMode="numeric" value={f.people} onChange={set("people")} placeholder="How many people?" /></div>
+        ) : (
+          <div className="lp-field"><label htmlFor="b-suite">Suite</label><select id="b-suite" value={suite} onChange={(e) => setSuite(e.target.value)}><option value="">No preference</option>{SUITES.map((s) => <option key={s.id}>{s.name}</option>)}<option>Waitlist: new Toronto suites</option></select></div>
+        )}
+      </div>
+      <div className="lp-field"><label htmlFor="b-notes">Anything we should know?</label><textarea id="b-notes" value={f.notes} onChange={set("notes")} placeholder="Early arrival, parking, a monitor, a grocery list for the first night…" /></div>
+      {error && <p className="lp-form-error" role="alert">{error}</p>}
+      <button className="lp-btn" type="submit" disabled={state === "sending"}>{state === "sending" ? "Sending…" : who === "me" ? "Get my weekly rate" : "Request a company proposal"}</button>
+      <p className="lp-form-note">We reply by email. No spam, no sharing your details.</p>
+    </form>
+  );
+}
 
-      <Nav scrolled={scrolled} />
+export default function CorporatePage() {
+  const [suite, setSuite] = useState("");
+  const ask = (name: string) => { setSuite(name); scrollToForm(); };
 
-      <main style={{ paddingTop: 72 }}>
-        {/* Hero */}
-        <section style={{ padding: "96px 24px 78px", background: "linear-gradient(145deg,var(--paper) 0%,var(--surface) 48%,var(--surface-blue) 100%)", position: "relative", overflow: "hidden", borderBottom: "1px solid var(--line)" }}>
-          <div style={{ position: "absolute", top: "-28%", right: "-5%", width: 620, height: 620, borderRadius: "50%", background: "radial-gradient(circle,rgba(94,129,148,0.16) 0%,rgba(94,129,148,0.04) 45%,transparent 72%)", filter: "blur(16px)" }} />
-          <div style={{ position: "absolute", bottom: "-45%", left: "-10%", width: 520, height: 520, borderRadius: "50%", background: "radial-gradient(circle,rgba(196,151,88,0.12) 0%,transparent 68%)" }} />
-          <div className="wrap" style={{ position: "relative", zIndex: 1 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,253,249,0.74)", border: "1px solid rgba(94,129,148,0.25)", borderRadius: 100, padding: "8px 18px", marginBottom: 28, boxShadow: "0 8px 24px rgba(30,42,50,0.06)" }}>
-              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--accent2)" }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent2)", letterSpacing: "0.06em", textTransform: "uppercase" }}>Corporate &amp; Relocation</span>
+  return (
+    <div className="lp lp--biz">
+      <LandingNav cta="Get my weekly rate" />
+
+      {/* 1. Hero: call out the avatar */}
+      <header className="lp-hero">
+        <div className="lp-wrap lp-hero-grid">
+          <div>
+            <div className="lp-kicker">For people who work in Toronto but don&apos;t live here</div>
+            <h1 className="lp-h1">Same suite. Every week. <em>Your stuff already here.</em></h1>
+            <p className="lp-hero-sub">Private one-bedroom suites for consultants, project leads and anyone in Toronto Monday to Thursday. A real kitchen, a real desk, a dark, quiet bedroom, and a closet that keeps your things between trips.</p>
+            <div className="lp-hero-ctas">
+              <a href="#inquiry" className="lp-btn">Get my weekly rate</a>
+              <a href="#suites" className="lp-btn lp-btn--light">See the 3 suites</a>
             </div>
-            <h1 className="hero-h1" style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 58, fontWeight: 700, lineHeight: 1.03, color: "var(--ink)", letterSpacing: "-0.035em", maxWidth: 780, marginBottom: 24 }}>
-              Corporate Housing &amp; Employee Relocation
-            </h1>
-            <p style={{ fontSize: 18, lineHeight: 1.7, color: "rgba(30,42,50,0.55)", maxWidth: 600, marginBottom: 32 }}>
-              Fully furnished suites for relocating employees, project teams, and executives. Flexible terms, corporate billing, premium standard.
-            </p>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <a className="hero-primary" href="#inquiry" style={{ padding: "16px 32px", borderRadius: 999, fontWeight: 700, fontSize: 15, textDecoration: "none", background: "var(--accent)", color: "#fff", boxShadow: "0 12px 26px rgba(45,43,255,0.2)" }}>Get a Proposal</a>
-              <Link className="hero-secondary" href="/#listings" style={{ padding: "16px 32px", borderRadius: 999, fontWeight: 700, fontSize: 15, textDecoration: "none", background: "rgba(255,253,249,0.68)", color: "var(--ink)", border: "1px solid rgba(30,42,50,0.14)" }}>Browse Listings</Link>
+            <ul className="lp-proof">
+              <li><Icon name="receipt" size={26} />Itemized invoices</li>
+              <li><Icon name="washer" size={26} />Washer + dryer in every suite</li>
+              <li><Icon name="key" size={26} />Self check-in</li>
+            </ul>
+          </div>
+          <div className="lp-mosaic-wrap" style={{ position: "relative" }}>
+            <div className="lp-mosaic">
+              <figure><img src="/suites/bathurst3-living.webp" alt="Bathurst Suite 3 living room with a work desk" /><figcaption>Bathurst Suite 3</figcaption></figure>
+              <figure><img src="/suites/earl-kitchen.webp" alt="The Earl kitchen with gas range" /><figcaption>A real kitchen</figcaption></figure>
+              <figure><img src="/suites/bathurst2-bedroom-desk.webp" alt="Bedroom with a desk" /><figcaption>A real desk</figcaption></figure>
+            </div>
+            <div className="lp-float">
+              <h4>Expense-ready, every stay</h4>
+              <small>Emailed the day you check out</small>
+              <ul>
+                <li><Icon name="check" size={20} />Your company name on it</li>
+                <li><Icon name="check" size={20} />Dates + nightly rate</li>
+                <li><Icon name="check" size={20} />Tax lines shown separately</li>
+              </ul>
             </div>
           </div>
-        </section>
+        </div>
+      </header>
 
-        {/* Who It's For */}
-        <section style={{ padding: "88px 24px", background: "var(--paper)" }}>
-          <div className="wrap">
-            <div style={{ textAlign: "center", marginBottom: 48 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent2)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>Who It&apos;s For</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: "var(--ink)", lineHeight: 1.15 }}>Housing Solutions for Every Business Need</h2>
-            </div>
-            <div className="who-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 20 }}>
-              {WHO_ITS_FOR.map(w => (
-                <div className="hospitality-card" key={w.title} style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 18, padding: 28, display: "flex", gap: 18, alignItems: "flex-start", boxShadow: "0 12px 32px rgba(30,42,50,0.055)" }}>
-                  <span style={{ width: 52, height: 52, borderRadius: 16, background: "var(--surface-blue)", display: "grid", placeItems: "center", fontSize: 27, flexShrink: 0 }}>{w.icon}</span>
-                  <div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: "var(--ink)", marginBottom: 6 }}>{w.title}</div>
-                    <div style={{ fontSize: 14, color: "var(--ink-soft)", lineHeight: 1.65 }}>{w.desc}</div>
-                  </div>
+      <main>
+        {/* 2. Agitate: the hotel week */}
+        <section className="lp-section">
+          <div className="lp-wrap">
+            <SectionHead eyebrow="The hotel week" title={<>You know exactly <em>how it goes.</em></>} />
+            <div className="lp-pains">
+              {PAINS.map((p) => (
+                <div className="lp-pain" key={p.title}>
+                  <Icon name={p.icon} size={52} />
+                  <h3>{p.title}</h3>
+                  <p>{p.body}</p>
                 </div>
               ))}
             </div>
+            <p className="lp-pain-turn">A hotel is built for one night. You&apos;re here every week. You need a home base.</p>
           </div>
         </section>
 
-        {/* What's Included */}
-        <section style={{ padding: "88px 24px", background: "var(--surface-blue)", borderTop: "1px solid rgba(94,129,148,0.12)", borderBottom: "1px solid rgba(94,129,148,0.12)" }}>
-          <div className="wrap">
-            <div style={{ textAlign: "center", marginBottom: 48 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>What&apos;s Included</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: "var(--ink)", lineHeight: 1.15 }}>Everything Your Team Needs</h2>
-              <p style={{ fontSize: 15, color: "var(--ink-soft)", marginTop: 12, maxWidth: 520, margin: "12px auto 0" }}>Move-in ready suites with all the essentials for productive, comfortable stays.</p>
-            </div>
-            <div className="included-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
-              {WHATS_INCLUDED.map(item => (
-                <div className="hospitality-card" key={item.title} style={{ background: "var(--surface)", border: "1px solid rgba(94,129,148,0.18)", borderRadius: 16, padding: 24, boxShadow: "0 12px 30px rgba(32,55,67,0.06)" }}>
-                  <span style={{ fontSize: 28, display: "block", marginBottom: 12 }}>{item.icon}</span>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", marginBottom: 6 }}>{item.title}</div>
-                  <div style={{ fontSize: 13, color: "var(--ink-soft)", lineHeight: 1.65 }}>{item.desc}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Locations */}
-        <section style={{ padding: "88px 24px", background: "var(--surface)" }}>
-          <div className="wrap">
-            <div style={{ textAlign: "center", marginBottom: 48 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent2)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>Locations</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: "var(--ink)", lineHeight: 1.15 }}>Furnished Stays Across the GTA</h2>
-              <p style={{ fontSize: 15, color: "var(--ink-soft)", marginTop: 12, maxWidth: 560, margin: "12px auto 0" }}>A growing portfolio in well-connected locations across the Greater Toronto Area and select Ontario communities.</p>
-            </div>
-            <div className="location-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
-              {LOCATIONS.map(loc => (
-                <div key={loc} style={{ background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 12, padding: "15px 18px", fontSize: 14, color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 22px rgba(30,42,50,0.04)" }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent2)", flexShrink: 0 }} />
-                  {loc}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* How It Works */}
-        <section style={{ padding: "88px 24px", background: "var(--paper-alt)", borderTop: "1px solid rgba(196,151,88,0.12)", borderBottom: "1px solid rgba(196,151,88,0.12)" }}>
-          <div className="wrap">
-            <div style={{ textAlign: "center", marginBottom: 48 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>How It Works</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: "var(--ink)", lineHeight: 1.15 }}>Simple Corporate Booking</h2>
-            </div>
-            <div className="steps-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 24 }}>
-              {STEPS.map(s => (
-                <div className="hospitality-card" key={s.num} style={{ position: "relative", padding: 30, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 18, boxShadow: "0 12px 32px rgba(30,42,50,0.055)" }}>
-                  <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 48, fontWeight: 700, background: "linear-gradient(135deg,var(--accent),var(--accent2))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: 16 }}>{s.num}</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)", marginBottom: 8 }}>{s.title}</div>
-                  <div style={{ fontSize: 14, color: "var(--ink-soft)", lineHeight: 1.65 }}>{s.desc}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Inquiry Form */}
-        <section id="inquiry" style={{ padding: "92px 24px", background: "linear-gradient(145deg,var(--surface-blue) 0%,var(--paper) 74%)" }}>
-          <div style={{ maxWidth: 680, margin: "0 auto" }}>
-            <div style={{ textAlign: "center", marginBottom: 36 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent2)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>Get Started</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 38, fontWeight: 700, color: "var(--ink)", lineHeight: 1.15 }}>Request a Corporate Proposal</h2>
-              <p style={{ fontSize: 15, color: "var(--ink-soft)", marginTop: 12 }}>Tell us what your team needs and our corporate team will follow up with a tailored proposal.</p>
-            </div>
-            {!done ? (
-              <div style={{ background: "var(--surface)", border: "1px solid rgba(94,129,148,0.18)", borderRadius: 22, padding: "30px 24px", boxShadow: "0 24px 60px rgba(30,42,50,0.1)" }}>
-                <div className="form-grid" style={{ marginBottom: 14 }}>
-                  <div><label className="form-label">Full Name</label><input type="text" placeholder="John Smith" className="form-input" value={name} onChange={e => setName(e.target.value)} /></div>
-                  <div><label className="form-label">Email</label><input type="email" placeholder="john@company.com" className="form-input" value={email} onChange={e => setEmail(e.target.value)} /></div>
-                  <div><label className="form-label">Phone</label><input type="tel" placeholder="(647) 000-0000" className="form-input" value={phone} onChange={e => setPhone(e.target.value)} /></div>
-                  <div><label className="form-label">Company Name</label><input type="text" placeholder="Acme Corp" className="form-input" value={company} onChange={e => setCompany(e.target.value)} /></div>
-                </div>
-                <div style={{ marginBottom: 14 }}><label className="form-label">Arrival Details &amp; # of Units</label><input type="text" placeholder="e.g., preferred arrival date, locations, and 3 units" className="form-input" value={moveIn} onChange={e => setMoveIn(e.target.value)} /></div>
-                {submitError && <p role="alert" style={{ color: "#a13c34", fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{submitError}</p>}
-                <button onClick={handleSubmit} disabled={submitting} style={{ width: "100%", background: "var(--accent)", color: "#fff", padding: 16, borderRadius: 999, fontWeight: 800, fontSize: 16, border: "none", cursor: submitting ? "wait" : "pointer", opacity: submitting ? .7 : 1, fontFamily: "inherit", boxShadow: "0 12px 26px rgba(45,43,255,0.2)" }}>{submitting ? "Sending…" : "Submit Corporate Inquiry"}</button>
-                <p style={{ fontSize: 11, color: "var(--ink-faint)", textAlign: "center", marginTop: 12 }}>Direct billing available.</p>
+        {/* 3. The mechanism: Home Base */}
+        <section className="lp-section lp-section--alt">
+          <div className="lp-wrap lp-split">
+            <div className="lp-art"><ClosetScene /></div>
+            <div>
+              <SectionHead eyebrow="Home Base" title={<>Toronto, <em>without the suitcase.</em></>} sub="Book the same suite on a standing schedule: every week, every other week, whatever your project runs. Between trips, your things stay with us. Before you land, they're back in the suite." />
+              <div className="lp-week" aria-label="A Home Base week">
+                {WEEK.map((w) => <div key={w.d} className={`lp-day${w.in ? " is-in" : ""}`}>{w.d}<span>{w.s}</span></div>)}
               </div>
-            ) : (
-              <div style={{ textAlign: "center", padding: 60, background: "var(--surface)", border: "1px solid rgba(94,129,148,0.2)", borderRadius: 22, boxShadow: "0 24px 60px rgba(30,42,50,0.1)" }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
-                <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 28, color: "var(--ink)", marginBottom: 8 }}>Inquiry Received</h3>
-                <p style={{ fontSize: 15, color: "var(--ink-soft)" }}>Our corporate team will review your details and follow up with a custom proposal.</p>
+              <div className="lp-week-key"><span><i style={{ background: "var(--lp-accent)" }} />You&apos;re in the suite</span><span><i style={{ background: "var(--lp-paper)", border: "1px solid var(--lp-line)" }} />Your bin is stored</span></div>
+              <ul className="lp-perks">
+                {HOME_BASE.map((p) => (
+                  <li key={p.title}><Icon name={p.icon} size={52} /><div><h3>{p.title}</h3><p>{p.body}</p></div></li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Amenities we already have + the Home Base extras */}
+        <section className="lp-section">
+          <div className="lp-wrap">
+            <SectionHead eyebrow="In every suite" title={<>Everything a hotel room <em>is missing.</em></>} sub="Every CareStay suite is a full one-bedroom apartment, not a room. This is what's already there when you walk in." />
+            <div className="lp-amen">
+              {AMENITIES.map((a) => (
+                <div className="lp-amen-card" key={a.title}>
+                  <header><Icon name={a.icon} size={44} /><h3>{a.title}</h3></header>
+                  <ul>{a.items.map((i) => <li key={i}>{i}</li>)}</ul>
+                </div>
+              ))}
+            </div>
+            <div className="lp-extras">
+              <div className="lp-extras-head">
+                <div><span className="lp-pill" style={{ background: "rgba(255,255,255,.12)", color: "#fff" }}>Home Base guests</span><h3 style={{ marginTop: 10 }}>The little things you&apos;d otherwise pack.</h3></div>
+                <p>Frequent travellers pack these because hotels don&apos;t have them. We put them in the suite instead.</p>
               </div>
-            )}
+              <div className="lp-extras-grid">
+                {EXTRAS.map((x) => (
+                  <div className="lp-extra" key={x.title}><Icon name={x.icon} size={44} /><div><h4>{x.title}</h4><p>{x.body}</p></div></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 5. Remove the expense objection */}
+        <section className="lp-section lp-section--alt">
+          <div className="lp-wrap lp-split lp-split--flip">
+            <div className="lp-invoice" aria-label="Example of a CareStay invoice">
+              <div className="lp-invoice-top"><strong>CareStay Suites</strong><span>Invoice</span></div>
+              <div className="lp-invoice-row"><b>Billed to</b><span>Your company name</span></div>
+              <div className="lp-invoice-row"><b>Guest</b><span>You</span></div>
+              <div className="lp-invoice-row"><b>Stay</b><span>Mon → Thu · 3 nights</span></div>
+              <div className="lp-invoice-row"><b>Nightly rate × 3</b><span className="lp-bar" style={{ width: 70 }} /></div>
+              <div className="lp-invoice-row"><b>Taxes, line by line</b><span className="lp-bar" style={{ width: 46 }} /></div>
+              <div className="lp-invoice-total"><span>Total</span><span className="lp-bar" style={{ width: 84, background: "var(--lp-ink)", opacity: .2 }} /></div>
+              <div className="lp-invoice-stamp"><Icon name="check" size={20} />Emailed at checkout</div>
+            </div>
+            <div>
+              <SectionHead eyebrow="Expenses" title={<>The receipt your <em>finance team</em> wants.</>} sub="Expense rules are a big reason frequent travellers stay stuck in hotels. So our paperwork looks like a hotel's." />
+              <ul className="lp-ticks">
+                <li><Icon name="check" size={24} />Company name and billing address on every invoice</li>
+                <li><Icon name="check" size={24} />Dates, nightly rate and each tax on its own line</li>
+                <li><Icon name="check" size={24} />Emailed the day you check out. No chasing.</li>
+                <li><Icon name="check" size={24} />Direct billing for companies booking their people</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* 6. Honest comparison */}
+        <section className="lp-section">
+          <div className="lp-wrap" style={{ maxWidth: 900 }}>
+            <SectionHead center eyebrow="Hotel vs. Home Base" title={<>A hotel still wins on points. <em>We win after 6 p.m.</em></>} />
+            <table className="lp-compare">
+              <thead><tr><th scope="col">&nbsp;</th><th scope="col">Hotel room</th><th scope="col">CareStay Home Base</th></tr></thead>
+              <tbody>
+                <tr><td>A bedroom with a door</td><td>Rarely</td><td className="lp-yes">Always</td></tr>
+                <tr><td>A full kitchen</td><td>Mini-fridge, if lucky</td><td className="lp-yes">Stove, oven, real knives</td></tr>
+                <tr><td>Laundry</td><td>Per item, by tomorrow</td><td className="lp-yes">Washer + dryer in the suite</td></tr>
+                <tr><td>Leave your things</td><td>Bag hold, maybe</td><td className="lp-yes">Stored + set back out</td></tr>
+                <tr><td>Same room every week</td><td>Luck of the draw</td><td className="lp-yes">Same suite</td></tr>
+                <tr><td>Itemized invoice</td><td>Yes</td><td className="lp-yes">Yes</td></tr>
+                <tr><td>Points + a lobby</td><td>Yes</td><td>No. That&apos;s the trade.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* 7. Proof: the actual suites */}
+        <SuitesSection mode="business" eyebrow="The suites" title={<>Three suites. <em>Real photos.</em></>} sub="No stock images, no 'similar unit.' This is exactly where you'd stay." onAsk={ask} />
+
+        {/* 8. Companies: the original corporate audience */}
+        <section className="lp-section lp-section--dark">
+          <div className="lp-wrap">
+            <SectionHead eyebrow="For companies" title={<>Booking for <em>someone else?</em></>} sub="Relocations, project rotations and placements. One contact, direct billing, a proposal built around your dates and headcount." />
+            <div className="lp-teams">
+              {TEAMS.map((t) => <div className="lp-team" key={t.title}><Icon name={t.icon} size={46} /><h3>{t.title}</h3><p>{t.body}</p></div>)}
+            </div>
+            <div className="lp-teams-cta">
+              <a href="#inquiry" className="lp-btn">Request a company proposal</a>
+              <p>Tell us headcount and dates. We&apos;ll come back with options.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* 9. How it works */}
+        <section className="lp-section">
+          <div className="lp-wrap">
+            <SectionHead center eyebrow="How it works" title={<>Three steps. <em>Then Monday&apos;s easy.</em></>} />
+            <Steps steps={STEPS} />
+          </div>
+        </section>
+
+        {/* 10. Objections */}
+        <section className="lp-section lp-section--alt">
+          <div className="lp-wrap">
+            <SectionHead center eyebrow="Questions" title={<>Before you <em>ask.</em></>} />
+            <Faq items={FAQ} />
+          </div>
+        </section>
+
+        {/* 11. Convert */}
+        <section className="lp-form-section" id="inquiry">
+          <div className="lp-wrap lp-form-grid">
+            <div className="lp-form-aside">
+              <div className="lp-eyebrow" style={{ color: "#c9cdff" }}>Get your rate</div>
+              <h2 className="lp-h2">Tell us your weeks. <em style={{ color: "#c9cdff" }}>We&apos;ll do the rest.</em></h2>
+              <p className="lp-sub">We reply with open dates and your weekly or standing-week rate. Try one week before you commit to anything.</p>
+              <ul>
+                <li><Icon name="calendar" size={30} />Weekly and standing-week rates</li>
+                <li><Icon name="receipt" size={30} />Itemized invoice every stay</li>
+                <li><Icon name="bin" size={30} />Leave your things between trips</li>
+                <li><Icon name="pin" size={30} />Downtown + the Annex, more coming</li>
+              </ul>
+            </div>
+            <InquiryForm suite={suite} setSuite={setSuite} />
           </div>
         </section>
       </main>
 
-      {/* Footer */}
-      <footer style={{ background: "var(--night)", borderTop: "1px solid rgba(255,255,255,0.08)", padding: "52px 24px 32px" }}>
-        <div className="wrap">
-          <div className="footer-cols" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 32 }}>
-            <div style={{ maxWidth: 280 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,var(--accent),var(--accent2))", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: "#fff" }}>CS</div>
-                <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>CareStay Suites</span>
-              </div>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.62)", lineHeight: 1.65 }}>Professionally managed furnished stays for professionals, teams, and organizations across the Greater Toronto Area.</p>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.82)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Quick Links</div>
-              {[{ label: "Browse Suites", href: "/listings" }, { label: "Healthcare", href: "/healthcare" }, { label: "Corporate", href: "/corporate" }, { label: "About", href: "/about" }, { label: "Contact", href: "/#contact" }].map(l => (
-                <a className="footer-link" key={l.label} href={l.href} style={{ display: "block", fontSize: 13, color: "rgba(255,255,255,0.62)", textDecoration: "none", marginBottom: 8 }}>{l.label}</a>
-              ))}
-            </div>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.82)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Contact</div>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.62)", marginBottom: 8 }}>info@carestaysuites.com</p>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.62)", marginBottom: 8 }}>35 Mariner Terrace, Toronto, ON M5V 3V9</p>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.62)" }}>Toronto, Ontario</p>
-            </div>
-          </div>
-          <div style={{ marginTop: 36, paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.42)" }}>&copy; 2026 CareStay Suites. All rights reserved.</span>
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.42)" }}>Operated by BookedHosts</span>
-          </div>
-        </div>
-      </footer>
-    </>
+      <LandingFooter line="Private furnished suites in Toronto for people who work here every week, and the companies that send them." />
+      <StickyCta label="Get my rate" note="Weekly rates · Toronto" />
+    </div>
   );
 }
